@@ -1,0 +1,70 @@
+import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { api } from '../api/client';
+import type { User } from '../types/financial';
+
+type AuthContextValue = {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signOut: () => void;
+};
+
+const AuthContext = createContext({} as AuthContextValue);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('@minha-receita:token'));
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUser() {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data } = await api.get('/users/me');
+        setUser(data.user);
+      } catch {
+        localStorage.removeItem('@minha-receita:token');
+        setToken(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUser();
+  }, [token]);
+
+  async function signIn(email: string, password: string) {
+    const { data } = await api.post('/auth/login', { email, password });
+    localStorage.setItem('@minha-receita:token', data.token);
+    setToken(data.token);
+    setUser(data.user);
+  }
+
+  async function signUp(name: string, email: string, password: string) {
+    const { data } = await api.post('/auth/register', { name, email, password });
+    localStorage.setItem('@minha-receita:token', data.token);
+    setToken(data.token);
+    setUser(data.user);
+  }
+
+  function signOut() {
+    localStorage.removeItem('@minha-receita:token');
+    setToken(null);
+    setUser(null);
+  }
+
+  const value = useMemo(() => ({ user, token, loading, signIn, signUp, signOut }), [user, token, loading]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
