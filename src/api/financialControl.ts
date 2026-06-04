@@ -2,6 +2,8 @@ import { api } from './client';
 import type {
   DayControl,
   FinancialCalendar,
+  FinancialGoal,
+  FinancialGoalStatus,
   FinancialItem,
   MonthControl,
   PaymentStatus,
@@ -39,6 +41,17 @@ export type SavingPayload = {
   month?: number;
   year?: number;
   goalId?: string | null;
+};
+
+export type FinancialGoalPayload = {
+  title: string;
+  description?: string | null;
+  targetAmount: number;
+  currentAmount?: number;
+  startDate: string;
+  targetDate?: string | null;
+  category?: string | null;
+  status?: FinancialGoalStatus;
 };
 
 export async function getYearControl(year: number) {
@@ -157,4 +170,23 @@ export async function deleteSaving(id: string) {
 export async function getSavingsSummary(month: number, year: number) {
   const { data } = await api.get<{ summary: SavingsSummary }>('/savings/summary', { params: { month, year } });
   return data.summary;
+}
+
+export async function listFinancialGoals(params?: { status?: FinancialGoalStatus }) {
+  const { data } = await api.get<{ goals: FinancialGoal[] }>('/financial-goals', { params });
+  return data.goals;
+}
+
+export async function createFinancialGoal(payload: FinancialGoalPayload) {
+  const { data } = await api.post<{ goal: FinancialGoal }>('/financial-goals', payload);
+  return data.goal;
+}
+
+export async function updateFinancialGoal(id: string, payload: Partial<FinancialGoalPayload>) {
+  const { data } = await api.put<{ goal: FinancialGoal }>(`/financial-goals/${id}`, payload);
+  return data.goal;
+}
+
+export async function deleteFinancialGoal(id: string) {
+  await api.delete(`/financial-goals/${id}`);
 }

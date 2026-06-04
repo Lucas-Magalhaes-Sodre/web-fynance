@@ -2,6 +2,7 @@ export type FinancialItemType = 'INCOME' | 'EXPENSE' | 'FIXED_EXPENSE' | 'EXTRA_
 export type EntryType = 'INCOME' | 'EXPENSE';
 export type RecurrenceType = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
+export type FinancialGoalStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 
 export type User = {
   id: string;
@@ -165,4 +166,24 @@ export type FinancialCalendar = {
   month: number;
   year: number;
   days: FinancialCalendarDay[];
+};
+
+export type FinancialGoal = {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string | null;
+  targetAmount: number;
+  currentAmount: number;
+  linkedSavings: number;
+  remainingAmount: number;
+  progressPercent: number;
+  averageMonthlySavings: number;
+  estimatedCompletionMonths?: number | null;
+  startDate: string;
+  targetDate?: string | null;
+  category?: string | null;
+  status: FinancialGoalStatus;
+  createdAt: string;
+  updatedAt: string;
 };
