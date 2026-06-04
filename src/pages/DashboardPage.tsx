@@ -14,10 +14,10 @@ import { Plus, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { api } from '../api/client';
-import { getPaymentSummary, getSavingsSummary } from '../api/financialControl';
+import { getPaymentSummary, getSavingsSummary, listFinancialGoals } from '../api/financialControl';
 import { FinancialItemForm } from '../components/FinancialItemForm';
 import { StatCard } from '../components/StatCard';
-import type { DashboardTotals, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
+import type { DashboardTotals, FinancialGoal, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
 import { financeColors, formatDate, formatMoney, typeLabels } from '../utils/format';
 
 export function DashboardPage() {
@@ -25,6 +25,7 @@ export function DashboardPage() {
   const [recentItems, setRecentItems] = useState<FinancialItem[]>([]);
   const [savingsSummary, setSavingsSummary] = useState<SavingsSummary | null>(null);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
+  const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [formOpen, setFormOpen] = useState(false);
 
   async function loadDashboard() {
@@ -32,14 +33,16 @@ export function DashboardPage() {
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
     const { data } = await api.get('/financial-items/dashboard/summary');
-    const [nextSavingsSummary, nextPaymentSummary] = await Promise.all([
+    const [nextSavingsSummary, nextPaymentSummary, nextGoals] = await Promise.all([
       getSavingsSummary(month, year),
-      getPaymentSummary({ month, year })
+      getPaymentSummary({ month, year }),
+      listFinancialGoals({ status: 'ACTIVE' })
     ]);
     setTotals(data.totals);
     setRecentItems(data.recentItems);
     setSavingsSummary(nextSavingsSummary);
     setPaymentSummary(nextPaymentSummary);
+    setGoals(nextGoals);
   }
 
   useEffect(() => {
@@ -116,6 +119,46 @@ export function DashboardPage() {
             </Box>
           </Stack>
         </Stack>
+      </Paper>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} mb={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>Metas em andamento</Typography>
+            <Typography color="text.secondary">Principais objetivos conectados as suas economias.</Typography>
+          </Box>
+          <Typography fontWeight={950} color={financeColors.saving}>
+            {goals.length} ativa(s)
+          </Typography>
+        </Stack>
+        <Grid container spacing={2}>
+          {goals.slice(0, 3).map((goal) => (
+            <Grid item xs={12} md={4} key={goal.id}>
+              <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid rgba(15,23,42,0.08)', boxShadow: 'none' }}>
+                <Stack spacing={1.25}>
+                  <Typography fontWeight={950}>{goal.title}</Typography>
+                  <Box>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="caption" color="text.secondary" fontWeight={800}>{formatMoney(goal.currentAmount)}</Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={800}>{goal.progressPercent.toFixed(0)}%</Typography>
+                    </Stack>
+                    <Box height={8} borderRadius={999} bgcolor={financeColors.savingSoft} overflow="hidden" mt={0.75}>
+                      <Box height="100%" width={`${Math.min(100, goal.progressPercent)}%`} bgcolor={financeColors.saving} />
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Falta {formatMoney(goal.remainingAmount)}
+                  </Typography>
+                </Stack>
+              </Paper>
+            </Grid>
+          ))}
+          {!goals.length ? (
+            <Grid item xs={12}>
+              <Typography color="text.secondary">Nenhuma meta ativa cadastrada.</Typography>
+            </Grid>
+          ) : null}
+        </Grid>
       </Paper>
 
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
