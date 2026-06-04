@@ -14,20 +14,32 @@ import { Plus, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { api } from '../api/client';
+import { getPaymentSummary, getSavingsSummary } from '../api/financialControl';
 import { FinancialItemForm } from '../components/FinancialItemForm';
 import { StatCard } from '../components/StatCard';
-import type { DashboardTotals, FinancialItem } from '../types/financial';
+import type { DashboardTotals, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
 import { financeColors, formatDate, formatMoney, typeLabels } from '../utils/format';
 
 export function DashboardPage() {
   const [totals, setTotals] = useState<DashboardTotals | null>(null);
   const [recentItems, setRecentItems] = useState<FinancialItem[]>([]);
+  const [savingsSummary, setSavingsSummary] = useState<SavingsSummary | null>(null);
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   async function loadDashboard() {
+    const today = new Date();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
     const { data } = await api.get('/financial-items/dashboard/summary');
+    const [nextSavingsSummary, nextPaymentSummary] = await Promise.all([
+      getSavingsSummary(month, year),
+      getPaymentSummary({ month, year })
+    ]);
     setTotals(data.totals);
     setRecentItems(data.recentItems);
+    setSavingsSummary(nextSavingsSummary);
+    setPaymentSummary(nextPaymentSummary);
   }
 
   useEffect(() => {
@@ -71,7 +83,40 @@ export function DashboardPage() {
         <Grid item xs={12} md={3}><StatCard label="Receitas extras" value={totals?.extraIncomes ?? 0} tone="income" /></Grid>
         <Grid item xs={12} md={3}><StatCard label="Despesas fixas" value={totals?.fixedExpenses ?? 0} tone="expense" /></Grid>
         <Grid item xs={12} md={3}><StatCard label="Despesas extras" value={totals?.extraExpenses ?? 0} tone="expense" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Economias registradas no mes" value={savingsSummary?.monthlyRegisteredSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Economia sugerida no mes" value={savingsSummary?.suggestedSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Economia acumulada" value={savingsSummary?.accumulatedSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Contas pagas" value={paymentSummary?.paidTotal ?? 0} tone="balance" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Total pendente" value={paymentSummary?.pendingTotal ?? 0} tone="neutral" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Total atrasado" value={paymentSummary?.overdueTotal ?? 0} tone="expense" /></Grid>
       </Grid>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>Contas do mes</Typography>
+            <Typography color="text.secondary">Pagamentos separados por situacao.</Typography>
+          </Box>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Box>
+              <Typography variant="body2" color="text.secondary" fontWeight={800}>Pagas</Typography>
+              <Typography fontWeight={950} color={financeColors.positive}>{paymentSummary?.paidCount ?? 0}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" fontWeight={800}>Pendentes</Typography>
+              <Typography fontWeight={950} color={financeColors.neutral}>{paymentSummary?.pendingCount ?? 0}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" fontWeight={800}>Atrasadas</Typography>
+              <Typography fontWeight={950} color={financeColors.negative}>{paymentSummary?.overdueCount ?? 0}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" fontWeight={800}>Canceladas</Typography>
+              <Typography fontWeight={950} color={financeColors.neutral}>{paymentSummary?.canceledCount ?? 0}</Typography>
+            </Box>
+          </Stack>
+        </Stack>
+      </Paper>
 
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1} mb={2}>

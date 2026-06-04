@@ -1,18 +1,26 @@
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import { ArrowDownRight, ArrowUpRight, Landmark } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Landmark, PiggyBank, Wallet } from 'lucide-react';
 import { amountToneColor, formatMoney } from '../utils/format';
 
 type StatCardProps = {
   label: string;
   value: number;
-  tone: 'income' | 'expense' | 'balance';
+  tone: 'income' | 'expense' | 'balance' | 'saving' | 'neutral';
 };
 
 export function StatCard({ label, value, tone }: StatCardProps) {
   const color = amountToneColor(tone, value);
-  const Icon = tone === 'expense' ? ArrowDownRight : tone === 'income' ? ArrowUpRight : Landmark;
+  const Icon = tone === 'expense'
+    ? ArrowDownRight
+    : tone === 'income'
+      ? ArrowUpRight
+      : tone === 'saving'
+        ? PiggyBank
+        : tone === 'neutral'
+          ? Wallet
+          : Landmark;
 
   return (
     <Paper className="soft-card" sx={{ p: 2.75, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>

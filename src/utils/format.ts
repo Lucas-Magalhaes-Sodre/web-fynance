@@ -55,6 +55,8 @@ export const financeColors = {
   incomeSoft: '#EFF6FF',
   expense: '#EA580C',
   expenseSoft: '#FFF7ED',
+  saving: '#0D9488',
+  savingSoft: '#F0FDFA',
   positive: '#16A34A',
   positiveSoft: '#F0FDF4',
   negative: '#DC2626',
@@ -69,8 +71,10 @@ export function balanceColor(value: number) {
   return financeColors.neutral;
 }
 
-export function amountToneColor(tone: 'income' | 'expense' | 'balance', value = 0) {
+export function amountToneColor(tone: 'income' | 'expense' | 'balance' | 'saving' | 'neutral', value = 0) {
   if (tone === 'income') return financeColors.income;
   if (tone === 'expense') return financeColors.expense;
+  if (tone === 'saving') return financeColors.saving;
+  if (tone === 'neutral') return financeColors.neutral;
   return balanceColor(value);
 }
