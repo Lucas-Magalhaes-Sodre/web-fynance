@@ -28,6 +28,7 @@ const collapsedDrawerWidth = 76;
 const links = [
   { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
+  { to: '/app/savings', label: 'Economias', icon: <SavingsIcon /> },
   { to: '/app/fixed-expenses', label: 'Despesas fixas', icon: <PaymentsIcon /> },
   { to: '/app/extra-expenses', label: 'Despesas extras', icon: <PaymentsIcon /> },
   { to: '/app/fixed-incomes', label: 'Receitas fixas', icon: <SavingsIcon /> },

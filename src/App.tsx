@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SavingsPage } from './pages/SavingsPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="control" element={<FinancialControlPage />} />
+          <Route path="savings" element={<SavingsPage />} />
           <Route path="fixed-expenses" element={<FinancialItemsPage title="Despesas fixas" description="Contas recorrentes do mes." type="FIXED_EXPENSE" />} />
           <Route path="extra-expenses" element={<FinancialItemsPage title="Despesas extras" description="Gastos ocasionais e variaveis." type="EXTRA_EXPENSE" />} />
           <Route path="fixed-incomes" element={<FinancialItemsPage title="Receitas fixas" description="Entradas recorrentes." type="FIXED_INCOME" />} />
