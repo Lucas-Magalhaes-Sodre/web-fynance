@@ -1,7 +1,7 @@
 export type FinancialItemType = 'INCOME' | 'EXPENSE' | 'FIXED_EXPENSE' | 'EXTRA_EXPENSE' | 'FIXED_INCOME' | 'EXTRA_INCOME';
 export type EntryType = 'INCOME' | 'EXPENSE';
 export type RecurrenceType = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
-export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO';
+export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
 
 export type User = {
   id: string;
@@ -32,6 +32,39 @@ export type FinancialItem = {
   year: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type Saving = {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string | null;
+  amount: number;
+  date: string;
+  month: number;
+  year: number;
+  goalId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SavingsSummary = {
+  monthlyRegisteredSavings: number;
+  accumulatedSavings: number;
+  suggestedSavings: number;
+  monthlyIncome: number;
+  monthlyExpense: number;
+  monthlyBalance: number;
+};
+
+export type PaymentSummary = {
+  paidCount: number;
+  pendingCount: number;
+  overdueCount: number;
+  canceledCount: number;
+  paidTotal: number;
+  pendingTotal: number;
+  overdueTotal: number;
 };
 
 export type ValueUpdateScope = 'ONLY_THIS_PERIOD' | 'FROM_THIS_PERIOD_FORWARD' | 'ALL_YEAR';
