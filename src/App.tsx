@@ -3,6 +3,7 @@ import { AppLayout } from './layouts/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { FinancialItemsPage } from './pages/FinancialItemsPage';
 import { FinancialControlPage } from './pages/FinancialControlPage';
+import { FinancialGoalsPage } from './pages/FinancialGoalsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -22,6 +23,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="control" element={<FinancialControlPage />} />
           <Route path="savings" element={<SavingsPage />} />
+          <Route path="goals" element={<FinancialGoalsPage />} />
           <Route path="fixed-expenses" element={<FinancialItemsPage title="Despesas fixas" description="Contas recorrentes do mes." type="FIXED_EXPENSE" />} />
           <Route path="extra-expenses" element={<FinancialItemsPage title="Despesas extras" description="Gastos ocasionais e variaveis." type="EXTRA_EXPENSE" />} />
           <Route path="fixed-incomes" element={<FinancialItemsPage title="Receitas fixas" description="Entradas recorrentes." type="FIXED_INCOME" />} />

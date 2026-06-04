@@ -1,6 +1,7 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import FlagIcon from '@mui/icons-material/Flag';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
@@ -29,6 +30,7 @@ const links = [
   { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
   { to: '/app/savings', label: 'Economias', icon: <SavingsIcon /> },
+  { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> },
   { to: '/app/fixed-expenses', label: 'Despesas fixas', icon: <PaymentsIcon /> },
   { to: '/app/extra-expenses', label: 'Despesas extras', icon: <PaymentsIcon /> },
   { to: '/app/fixed-incomes', label: 'Receitas fixas', icon: <SavingsIcon /> },
