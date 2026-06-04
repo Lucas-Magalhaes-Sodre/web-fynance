@@ -52,6 +52,25 @@ export async function deleteEntry(id: string) {
   await api.delete(`/financial-items/${id}`);
 }
 
+export async function renameCategory(payload: {
+  type: 'INCOME' | 'EXPENSE';
+  category: string;
+  newCategory: string;
+  year?: number;
+}) {
+  const { data } = await api.patch('/financial-items/category', payload);
+  return data;
+}
+
+export async function deleteCategoryLine(payload: {
+  type: 'INCOME' | 'EXPENSE';
+  category: string;
+  year?: number;
+}) {
+  const { data } = await api.delete('/financial-items/category', { data: payload });
+  return data;
+}
+
 export async function updateEntryValue(id: string, payload: {
   amount: number;
   date: string;

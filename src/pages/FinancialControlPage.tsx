@@ -1,45 +1,78 @@
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import Grid from '@mui/material/Grid';
-import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
-import Paper from '@mui/material/Paper';
-import Stack from '@mui/material/Stack';
-import Tab from '@mui/material/Tab';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import { useEffect, useMemo, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from 'recharts';
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Tabs from "@mui/material/Tabs";
+import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as ChartTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   createEntry,
+  deleteCategoryLine,
   deleteEntry,
   FinancialEntryPayload,
   getDayControl,
   getMonthControl,
   getWeekControl,
   getYearControl,
+  renameCategory,
   updateEntry,
-  updateEntryValue
-} from '../api/financialControl';
-import { EmptyState } from '../components/EmptyState';
-import { FinancialEntryForm } from '../components/FinancialEntryForm';
-import { PeriodSummaryCards } from '../components/PeriodSummaryCards';
-import { ValueEditModal } from '../components/ValueEditModal';
-import type { DayControl, EntryType, FinancialItem, MonthControl, ValueUpdateScope, WeekControl, YearControl } from '../types/financial';
-import { balanceColor, financeColors, formatDate, formatMoney, isoDate, months, typeLabels, weekRange } from '../utils/format';
+  updateEntryValue,
+} from "../api/financialControl";
+import { EmptyState } from "../components/EmptyState";
+import { FinancialEntryForm } from "../components/FinancialEntryForm";
+import { PeriodSummaryCards } from "../components/PeriodSummaryCards";
+import { ValueEditModal } from "../components/ValueEditModal";
+import type {
+  DayControl,
+  EntryType,
+  FinancialItem,
+  MonthControl,
+  ValueUpdateScope,
+  WeekControl,
+  YearControl,
+} from "../types/financial";
+import {
+  balanceColor,
+  financeColors,
+  formatDate,
+  formatMoney,
+  isoDate,
+  months,
+  typeLabels,
+  weekRange,
+} from "../utils/format";
 
-type ViewMode = 'day' | 'week' | 'month' | 'year';
+type ViewMode = "day" | "week" | "month" | "year";
 
 const current = new Date();
 const realCurrentMonth = new Date().getMonth() + 1;
@@ -50,14 +83,23 @@ function amountColor(value: number) {
 }
 
 function itemDateLabel(item: FinancialItem) {
-  return item.type.includes('INCOME') ? 'Data do recebimento' : 'Data da saida';
+  return item.type.includes("INCOME") ? "Data do recebimento" : "Data da saida";
 }
 
-function EntryRows({ items, onEdit, onDelete }: { items: FinancialItem[]; onEdit: (item: FinancialItem) => void; onDelete: (item: FinancialItem) => void }) {
-  if (!items.length) return <EmptyState message="Nada cadastrado para este periodo." />;
+function EntryRows({
+  items,
+  onEdit,
+  onDelete,
+}: {
+  items: FinancialItem[];
+  onEdit: (item: FinancialItem) => void;
+  onDelete: (item: FinancialItem) => void;
+}) {
+  if (!items.length)
+    return <EmptyState message="Nada cadastrado para este periodo." />;
 
   return (
-    <Paper className="soft-card" sx={{ borderRadius: 4, overflow: 'hidden' }}>
+    <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -76,25 +118,65 @@ function EntryRows({ items, onEdit, onDelete }: { items: FinancialItem[]; onEdit
               <TableCell>{item.name ?? item.title}</TableCell>
               <TableCell>{item.category}</TableCell>
               <TableCell>
-                <Typography variant="caption" color="text.secondary" display="block">{itemDateLabel(item)}</Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  {itemDateLabel(item)}
+                </Typography>
                 {formatDate(item.date)}
               </TableCell>
               <TableCell>
-                {item.type.includes('EXPENSE') ? (
+                {item.type.includes("EXPENSE") ? (
                   <Stack spacing={0.5}>
-                    <Chip size="small" label={item.status} color={item.status === 'PAGO' ? 'success' : item.status === 'ATRASADO' ? 'error' : 'warning'} />
+                    <Chip
+                      size="small"
+                      label={item.status}
+                      color={
+                        item.status === "PAGO"
+                          ? "success"
+                          : item.status === "ATRASADO"
+                            ? "error"
+                            : "warning"
+                      }
+                    />
                     <Typography variant="caption" color="text.secondary">
                       Vencimento: {formatDate(item.dueDate)}
                     </Typography>
-                    {item.paymentDate ? <Typography variant="caption" color="text.secondary">Pagamento: {formatDate(item.paymentDate)}</Typography> : null}
+                    {item.paymentDate ? (
+                      <Typography variant="caption" color="text.secondary">
+                        Pagamento: {formatDate(item.paymentDate)}
+                      </Typography>
+                    ) : null}
                   </Stack>
-                ) : 'Recebido'}
+                ) : (
+                  "Recebido"
+                )}
               </TableCell>
               <TableCell>{typeLabels[item.type]}</TableCell>
-              <TableCell align="right" sx={{ color: item.type.includes('EXPENSE') ? financeColors.expense : financeColors.income, fontWeight: 800 }}>{formatMoney(item.amount)}</TableCell>
+              <TableCell
+                align="right"
+                sx={{
+                  color: item.type.includes("EXPENSE")
+                    ? financeColors.expense
+                    : financeColors.income,
+                  fontWeight: 800,
+                }}
+              >
+                {formatMoney(item.amount)}
+              </TableCell>
               <TableCell align="right">
-                <Tooltip title="Editar"><IconButton onClick={() => onEdit(item)}><EditIcon /></IconButton></Tooltip>
-                <Tooltip title="Excluir"><IconButton color="error" onClick={() => onDelete(item)}><DeleteIcon /></IconButton></Tooltip>
+                <Tooltip title="Editar">
+                  <IconButton onClick={() => onEdit(item)}>
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Excluir">
+                  <IconButton color="error" onClick={() => onDelete(item)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
               </TableCell>
             </TableRow>
           ))}
@@ -105,7 +187,7 @@ function EntryRows({ items, onEdit, onDelete }: { items: FinancialItem[]; onEdit
 }
 
 export function FinancialControlPage() {
-  const [mode, setMode] = useState<ViewMode>('year');
+  const [mode, setMode] = useState<ViewMode>("year");
   const [year, setYear] = useState(current.getFullYear());
   const [month, setMonth] = useState(current.getMonth() + 1);
   const [date, setDate] = useState(isoDate());
@@ -115,30 +197,47 @@ export function FinancialControlPage() {
   const [dayData, setDayData] = useState<DayControl | null>(null);
   const [weekData, setWeekData] = useState<WeekControl | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FinancialItem | null>(null);
-  const [defaultType, setDefaultType] = useState<EntryType>('EXPENSE');
-  const [cellEdit, setCellEdit] = useState<null | { category: string; month: number; type: EntryType; value: number }>(null);
+  const [defaultType, setDefaultType] = useState<EntryType>("EXPENSE");
+  const [incomeRowsExpanded, setIncomeRowsExpanded] = useState(true);
+  const [expenseRowsExpanded, setExpenseRowsExpanded] = useState(true);
+  const [cellEdit, setCellEdit] = useState<null | {
+    category: string;
+    month: number;
+    type: EntryType;
+    value: number;
+  }>(null);
   const [cellSaving, setCellSaving] = useState(false);
+  const [categoryEdit, setCategoryEdit] = useState<null | {
+    category: string;
+    type: EntryType;
+    value: string;
+  }>(null);
+  const [categorySaving, setCategorySaving] = useState(false);
 
   const allCurrentItems = useMemo(() => {
-    if (mode === 'day') return [...(dayData?.incomes ?? []), ...(dayData?.expenses ?? [])];
-    if (mode === 'week') return [...(weekData?.incomes ?? []), ...(weekData?.expenses ?? [])];
-    if (mode === 'month') return [...(monthData?.incomes ?? []), ...(monthData?.expenses ?? [])];
+    if (mode === "day")
+      return [...(dayData?.incomes ?? []), ...(dayData?.expenses ?? [])];
+    if (mode === "week")
+      return [...(weekData?.incomes ?? []), ...(weekData?.expenses ?? [])];
+    if (mode === "month")
+      return [...(monthData?.incomes ?? []), ...(monthData?.expenses ?? [])];
     return yearData?.items ?? [];
   }, [dayData, monthData, mode, weekData, yearData]);
 
   async function loadData() {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      if (mode === 'year') setYearData(await getYearControl(year));
-      if (mode === 'month') setMonthData(await getMonthControl(month, year));
-      if (mode === 'day') setDayData(await getDayControl(date));
-      if (mode === 'week') setWeekData(await getWeekControl(week.startDate, week.endDate));
+      if (mode === "year") setYearData(await getYearControl(year));
+      if (mode === "month") setMonthData(await getMonthControl(month, year));
+      if (mode === "day") setDayData(await getDayControl(date));
+      if (mode === "week")
+        setWeekData(await getWeekControl(week.startDate, week.endDate));
     } catch {
-      setError('Nao foi possivel carregar os dados financeiros.');
+      setError("Nao foi possivel carregar os dados financeiros.");
     } finally {
       setLoading(false);
     }
@@ -166,14 +265,51 @@ export function FinancialControlPage() {
     await loadData();
   }
 
+  async function saveCategoryName() {
+    if (!categoryEdit) return;
+    const newCategory = categoryEdit.value.trim();
+    if (!newCategory || newCategory === categoryEdit.category) return;
+    setCategorySaving(true);
+    try {
+      await renameCategory({
+        category: categoryEdit.category,
+        newCategory,
+        type: categoryEdit.type,
+        year,
+      });
+      setCategoryEdit(null);
+      await loadData();
+    } finally {
+      setCategorySaving(false);
+    }
+  }
+
+  async function removeCategoryLine(category: string, type: EntryType) {
+    const label = type === "INCOME" ? "receita" : "despesa";
+    const confirmed = window.confirm(
+      `Excluir a linha "${category}" e todos os valores de ${label} em ${year}?`,
+    );
+    if (!confirmed) return;
+    await deleteCategoryLine({ category, type, year });
+    await loadData();
+  }
+
   function findCellItem(category: string, monthValue: number, type: EntryType) {
     return yearData?.items.find((item) => {
-      const itemType = item.type.includes('INCOME') ? 'INCOME' : 'EXPENSE';
-      return item.category === category && item.month === monthValue && itemType === type;
+      const itemType = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
+      return (
+        item.category === category &&
+        item.month === monthValue &&
+        itemType === type
+      );
     });
   }
 
-  async function saveCellValue(payload: { amount: number; scope: ValueUpdateScope; description?: string | null }) {
+  async function saveCellValue(payload: {
+    amount: number;
+    scope: ValueUpdateScope;
+    description?: string | null;
+  }) {
     if (!cellEdit) return;
     const item = findCellItem(cellEdit.category, cellEdit.month, cellEdit.type);
     if (!item) {
@@ -187,8 +323,8 @@ export function FinancialControlPage() {
         amount: payload.amount,
         date: item.date.slice(0, 10),
         scope: payload.scope,
-        periodType: 'MONTH',
-        description: payload.description
+        periodType: "MONTH",
+        description: payload.description,
       });
       setCellEdit(null);
       await loadData();
@@ -197,49 +333,208 @@ export function FinancialControlPage() {
     }
   }
 
-  const selectedTotals = mode === 'year'
-    ? { totalIncome: yearData?.totals.totalIncome ?? 0, totalExpense: yearData?.totals.totalExpense ?? 0, balance: yearData?.totals.finalBalance ?? 0 }
-    : mode === 'month'
-      ? monthData?.totals
-      : mode === 'week'
-        ? weekData?.totals
-        : dayData?.totals;
+  const selectedTotals =
+    mode === "year"
+      ? {
+          totalIncome: yearData?.totals.totalIncome ?? 0,
+          totalExpense: yearData?.totals.totalExpense ?? 0,
+          balance: yearData?.totals.finalBalance ?? 0,
+        }
+      : mode === "month"
+        ? monthData?.totals
+        : mode === "week"
+          ? weekData?.totals
+          : dayData?.totals;
 
-  const editedMonthSummary = cellEdit ? yearData?.monthlySummary.find((summary) => summary.month === cellEdit.month) : null;
+  const editedMonthSummary = cellEdit
+    ? yearData?.monthlySummary.find(
+        (summary) => summary.month === cellEdit.month,
+      )
+    : null;
+
+  function categoryCell(category: string, type: EntryType) {
+    return (
+      <TableCell
+        sx={{
+          position: "sticky",
+          left: 0,
+          bgcolor: "white",
+          fontWeight: 700,
+          minWidth: 240,
+        }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1}
+        >
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => setCategoryEdit({ category, type, value: category })}
+            sx={{
+              justifyContent: "flex-start",
+              px: 0,
+              color: "inherit",
+              fontWeight: 800,
+              textTransform: "none",
+            }}
+          >
+            {category}
+          </Button>
+          <Tooltip title="Excluir linha e valores deste ano">
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => removeCategoryLine(category, type)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </TableCell>
+    );
+  }
 
   return (
     <Stack spacing={3}>
-      <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-        <div>
-          <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">Controle financeiro</Typography>
-          <Typography color="text.secondary" fontSize={17}>Veja entradas, saidas, vencimentos e saldo das suas financas pessoais, familiares ou empresariais por dia, semana, mes ou ano.</Typography>
-        </div>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-          <Button startIcon={<AddIcon />} variant="contained" onClick={() => openCreate('INCOME')}>Receita</Button>
-          <Button startIcon={<AddIcon />} variant="outlined" color="error" onClick={() => openCreate('EXPENSE')}>Despesa</Button>
+      <Paper
+        className="glass-card"
+        sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}
+      >
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          spacing={2}
+        >
+          <div>
+            <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
+              Controle financeiro
+            </Typography>
+            <Typography color="text.secondary" fontSize={17}>
+              Veja entradas, saidas, vencimentos e saldo das suas financas por
+              dia, semana, mes ou ano.
+            </Typography>
+          </div>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+            <Button
+              startIcon={<AddIcon />}
+              variant="contained"
+              onClick={() => openCreate("INCOME")}
+              sx={{
+                minHeight: 48,
+                px: 2.5,
+                borderRadius: 2.5,
+                bgcolor: financeColors.income,
+                boxShadow: "0 14px 28px rgba(37,99,235,0.22)",
+                fontWeight: 950,
+                letterSpacing: 0,
+                "&:hover": {
+                  bgcolor: "#1D4ED8",
+                  boxShadow: "0 16px 34px rgba(37,99,235,0.28)",
+                },
+              }}
+            >
+              Receita
+            </Button>
+            <Button
+              startIcon={<AddIcon />}
+              variant="outlined"
+              onClick={() => openCreate("EXPENSE")}
+              sx={{
+                minHeight: 48,
+                px: 2.5,
+                borderRadius: 2.5,
+                borderColor: "rgba(234,88,12,0.42)",
+                color: financeColors.expense,
+                bgcolor: "rgba(255,247,237,0.72)",
+                fontWeight: 950,
+                letterSpacing: 0,
+                "&:hover": {
+                  borderColor: financeColors.expense,
+                  bgcolor: financeColors.expenseSoft,
+                  boxShadow: "0 14px 28px rgba(234,88,12,0.16)",
+                },
+              }}
+            >
+              Despesa
+            </Button>
+          </Stack>
         </Stack>
-      </Stack>
       </Paper>
 
       <Paper className="soft-card" sx={{ p: 2, borderRadius: 4 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between">
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={2}
+          justifyContent="space-between"
+        >
           <Tabs value={mode} onChange={(_, value) => setMode(value)}>
             <Tab value="day" label="Por dia" />
             <Tab value="week" label="Por semana" />
             <Tab value="month" label="Por mes" />
             <Tab value="year" label="Por ano" />
           </Tabs>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            {mode === 'day' ? <TextField size="small" label="Dia que deseja ver" type="date" InputLabelProps={{ shrink: true }} value={date} onChange={(event) => setDate(event.target.value)} /> : null}
-            {mode === 'week' ? (
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            {mode === "day" ? (
+              <TextField
+                size="small"
+                label="Dia que deseja ver"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+            ) : null}
+            {mode === "week" ? (
               <>
-                <TextField size="small" label="Comeco da semana" type="date" InputLabelProps={{ shrink: true }} value={week.startDate} onChange={(event) => setWeek({ ...week, startDate: event.target.value })} />
-                <TextField size="small" label="Fim da semana" type="date" InputLabelProps={{ shrink: true }} value={week.endDate} onChange={(event) => setWeek({ ...week, endDate: event.target.value })} />
+                <TextField
+                  size="small"
+                  label="Comeco da semana"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={week.startDate}
+                  onChange={(event) =>
+                    setWeek({ ...week, startDate: event.target.value })
+                  }
+                />
+                <TextField
+                  size="small"
+                  label="Fim da semana"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={week.endDate}
+                  onChange={(event) =>
+                    setWeek({ ...week, endDate: event.target.value })
+                  }
+                />
               </>
             ) : null}
-            {mode === 'month' ? <TextField size="small" select label="Mes que deseja ver" value={month} onChange={(event) => setMonth(Number(event.target.value))}>{months.map((label, index) => <MenuItem key={label} value={index + 1}>{label}</MenuItem>)}</TextField> : null}
-            {mode !== 'day' ? <TextField size="small" label="Ano que deseja ver" type="number" value={year} onChange={(event) => setYear(Number(event.target.value))} /> : null}
+            {mode === "month" ? (
+              <TextField
+                size="small"
+                select
+                label="Mes que deseja ver"
+                value={month}
+                onChange={(event) => setMonth(Number(event.target.value))}
+              >
+                {months.map((label, index) => (
+                  <MenuItem key={label} value={index + 1}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : null}
+            {mode !== "day" ? (
+              <TextField
+                size="small"
+                label="Ano que deseja ver"
+                type="number"
+                value={year}
+                onChange={(event) => setYear(Number(event.target.value))}
+              />
+            ) : null}
           </Stack>
         </Stack>
       </Paper>
@@ -250,20 +545,49 @@ export function FinancialControlPage() {
         balance={selectedTotals?.balance ?? 0}
       />
 
-      {mode !== 'year' && selectedTotals ? (
+      {mode !== "year" && selectedTotals ? (
         <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
-          <Typography variant="h6" fontWeight={900} mb={1}>Resumo visual</Typography>
+          <Typography variant="h6" fontWeight={900} mb={1}>
+            Resumo visual
+          </Typography>
           <Box height={220}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: 'Receitas', valor: selectedTotals.totalIncome, fill: financeColors.income },
-                { name: 'Despesas', valor: selectedTotals.totalExpense, fill: financeColors.expense },
-                { name: 'Saldo', valor: selectedTotals.balance, fill: balanceColor(selectedTotals.balance) }
-              ]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.08)" />
+              <BarChart
+                data={[
+                  {
+                    name: "Receitas",
+                    valor: selectedTotals.totalIncome,
+                    fill: financeColors.income,
+                  },
+                  {
+                    name: "Despesas",
+                    valor: selectedTotals.totalExpense,
+                    fill: financeColors.expense,
+                  },
+                  {
+                    name: "Saldo",
+                    valor: selectedTotals.balance,
+                    fill: balanceColor(selectedTotals.balance),
+                  },
+                ]}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(15,23,42,0.08)"
+                />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `R$ ${Number(value) / 1000}k`} />
-                <ChartTooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: 16, border: '1px solid #E2E8F0' }} />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+                />
+                <ChartTooltip
+                  formatter={(value) => formatMoney(Number(value))}
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: "1px solid #E2E8F0",
+                  }}
+                />
                 <Bar dataKey="valor" radius={[14, 14, 4, 4]} />
               </BarChart>
             </ResponsiveContainer>
@@ -271,98 +595,511 @@ export function FinancialControlPage() {
         </Paper>
       ) : null}
 
-      {loading ? <EmptyState message="Carregando dados financeiros..." /> : null}
+      {loading ? (
+        <EmptyState message="Carregando dados financeiros..." />
+      ) : null}
       {error ? <EmptyState message={error} /> : null}
 
-      {!loading && !error && mode === 'year' && yearData ? (
-        <Paper className="soft-card premium-scrollbar" sx={{ borderRadius: 4, overflow: 'auto', maxHeight: '68vh' }}>
-          <Table stickyHeader size="small" className="financial-table-modern" sx={{ minWidth: 1280 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ position: 'sticky', left: 0, zIndex: 3, bgcolor: 'background.paper', minWidth: 220, fontWeight: 900 }}>Categoria</TableCell>
+      {!loading && !error && mode === "year" && yearData ? (
+        <Paper
+          className="soft-card premium-scrollbar"
+          sx={{
+            borderRadius: 4,
+            overflow: "auto",
+            maxHeight: "68vh",
+            pt: 1.5,
+          }}
+        >
+          <Table
+            stickyHeader
+            size="small"
+            className="financial-table-modern"
+            sx={{
+              minWidth: 1280,
+              borderCollapse: "separate",
+              borderSpacing: 0,
+            }}
+          >
+            <TableHead sx={{ overflow: "visible" }}>
+              <TableRow sx={{ overflow: "visible" }}>
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 3,
+                    bgcolor: "background.paper",
+                    minWidth: 220,
+                    fontWeight: 900,
+                  }}
+                >
+                  Categoria
+                </TableCell>
                 {yearData.months.map((monthItem) => {
-                  const isCurrent = year === realCurrentYear && monthItem.value === realCurrentMonth;
-                  const isPast = year < realCurrentYear || (year === realCurrentYear && monthItem.value < realCurrentMonth);
-                  const isFuture = year > realCurrentYear || (year === realCurrentYear && monthItem.value > realCurrentMonth);
+                  const isCurrent =
+                    year === realCurrentYear &&
+                    monthItem.value === realCurrentMonth;
+                  const isPast =
+                    year < realCurrentYear ||
+                    (year === realCurrentYear &&
+                      monthItem.value < realCurrentMonth);
+                  const isFuture =
+                    year > realCurrentYear ||
+                    (year === realCurrentYear &&
+                      monthItem.value > realCurrentMonth);
                   return (
-                    <TableCell key={monthItem.value} align="right" sx={{
-                      fontWeight: 950,
-                      bgcolor: isCurrent ? 'rgba(37,99,235,0.1)' : isPast ? 'rgba(100,116,139,0.06)' : isFuture ? 'rgba(248,250,252,0.72)' : undefined,
-                      borderLeft: isCurrent ? `2px solid ${financeColors.income}` : undefined,
-                      borderRight: isCurrent ? `2px solid ${financeColors.income}` : undefined
-                    }}>
-                      <Stack alignItems="flex-end" spacing={0.5}>
-                        <span>{monthItem.label}</span>
-                        {isCurrent ? <Chip size="small" label="Atual" sx={{ height: 20, bgcolor: financeColors.income, color: 'white', fontWeight: 900 }} /> : null}
-                      </Stack>
+                    <TableCell
+                      key={monthItem.value}
+                      align="right"
+                      sx={{
+                        position: "relative",
+                        overflow: "visible",
+                        fontWeight: 950,
+                        pt: 2.25,
+                        pb: 2.25,
+                        bgcolor: isCurrent
+                          ? "rgba(37,99,235,0.1)"
+                          : isPast
+                            ? "rgba(100,116,139,0.06)"
+                            : isFuture
+                              ? "rgba(248,250,252,0.72)"
+                              : undefined,
+                        borderLeft: isCurrent
+                          ? `2px solid ${financeColors.income}`
+                          : undefined,
+                        borderRight: isCurrent
+                          ? `2px solid ${financeColors.income}`
+                          : undefined,
+                      }}
+                    >
+                      {isCurrent ? (
+                        <Box
+                          component="span"
+                          sx={{
+                            position: "absolute",
+                            top: -14,
+                            right: 0,
+                            zIndex: 100,
+                            minWidth: 50,
+                            height: 22,
+                            px: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 999,
+                            bgcolor: financeColors.income,
+                            color: "white",
+                            fontSize: 11,
+                            fontWeight: 950,
+                            lineHeight: 1,
+                            boxShadow: "0 8px 18px rgba(37,99,235,0.28)",
+                            border: "2px solid white",
+                          }}
+                        >
+                          Atual
+                        </Box>
+                      ) : null}
+                      <Box
+                        component="span"
+                        display={"flex"}
+                        justifyContent={"center"}
+                      >
+                        {monthItem.label}
+                      </Box>
                     </TableCell>
                   );
                 })}
-                <TableCell align="right" sx={{ fontWeight: 900 }}>Total</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 900 }}>
+                  Total
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow><TableCell colSpan={14} sx={{ bgcolor: financeColors.incomeSoft, color: financeColors.income, fontWeight: 950, fontSize: 15 }}>Receitas</TableCell></TableRow>
-              {yearData.incomeRows.map((row) => (
-                <TableRow key={row.category} hover>
-                  <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', fontWeight: 700 }}>{row.category}</TableCell>
-                  {yearData.months.map((monthItem) => <TableCell key={monthItem.value} align="right" onClick={() => setCellEdit({ category: row.category, month: monthItem.value, type: 'INCOME', value: row.months[monthItem.value] ?? 0 })} sx={{ color: financeColors.income, cursor: 'pointer', '&:hover': { bgcolor: financeColors.incomeSoft } }}>{formatMoney(row.months[monthItem.value] ?? 0)}</TableCell>)}
-                  <TableCell align="right" sx={{ color: financeColors.income, fontWeight: 900 }}>{formatMoney(row.total)}</TableCell>
+              <TableRow
+                hover
+                sx={{
+                  cursor: "pointer",
+                  "& > *": { borderBottom: "none" },
+                }}
+                onClick={() => setIncomeRowsExpanded((expanded) => !expanded)}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 2,
+                    bgcolor: financeColors.incomeSoft,
+                    color: financeColors.income,
+                    fontWeight: 950,
+                    fontSize: 15,
+                    py: 1.5,
+                    minWidth: 220,
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <IconButton
+                      size="small"
+                      sx={{
+                        color: financeColors.income,
+                        bgcolor: "rgba(37,99,235,0.1)",
+                      }}
+                    >
+                      {incomeRowsExpanded ? (
+                        <KeyboardArrowDownIcon fontSize="small" />
+                      ) : (
+                        <KeyboardArrowRightIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                    <Typography fontWeight={950}>Receitas</Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell
+                  colSpan={yearData.months.length + 1}
+                  sx={{
+                    bgcolor: financeColors.incomeSoft,
+                    py: 1.5,
+                  }}
+                />
+              </TableRow>
+              {incomeRowsExpanded && !yearData.incomeRows.length ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={yearData.months.length + 2}
+                    sx={{ color: "text.secondary", fontStyle: "italic" }}
+                  >
+                    Nenhuma receita cadastrada ainda.
+                  </TableCell>
                 </TableRow>
-              ))}
-              <TableRow><TableCell colSpan={14} sx={{ bgcolor: financeColors.expenseSoft, color: financeColors.expense, fontWeight: 950, fontSize: 15 }}>Despesas</TableCell></TableRow>
-              {yearData.expenseRows.map((row) => (
-                <TableRow key={row.category} hover>
-                  <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', fontWeight: 700 }}>{row.category}</TableCell>
-                  {yearData.months.map((monthItem) => <TableCell key={monthItem.value} align="right" onClick={() => setCellEdit({ category: row.category, month: monthItem.value, type: 'EXPENSE', value: row.months[monthItem.value] ?? 0 })} sx={{ color: financeColors.expense, cursor: 'pointer', '&:hover': { bgcolor: financeColors.expenseSoft } }}>{formatMoney(row.months[monthItem.value] ?? 0)}</TableCell>)}
-                  <TableCell align="right" sx={{ color: financeColors.expense, fontWeight: 900 }}>{formatMoney(row.total)}</TableCell>
+              ) : null}
+              {incomeRowsExpanded
+                ? yearData.incomeRows.map((row) => (
+                    <TableRow key={row.category} hover>
+                      {categoryCell(row.category, "INCOME")}
+                      {yearData.months.map((monthItem) => (
+                        <TableCell
+                          key={monthItem.value}
+                          align="right"
+                          onClick={() =>
+                            setCellEdit({
+                              category: row.category,
+                              month: monthItem.value,
+                              type: "INCOME",
+                              value: row.months[monthItem.value] ?? 0,
+                            })
+                          }
+                          sx={{
+                            color: financeColors.income,
+                            cursor: "pointer",
+                            "&:hover": { bgcolor: financeColors.incomeSoft },
+                          }}
+                        >
+                          {formatMoney(row.months[monthItem.value] ?? 0)}
+                        </TableCell>
+                      ))}
+                      <TableCell
+                        align="right"
+                        sx={{ color: financeColors.income, fontWeight: 900 }}
+                      >
+                        {formatMoney(row.total)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : null}
+              <TableRow
+                sx={{
+                  "& > *": {
+                    bgcolor: "rgba(239,246,255,0.72)",
+                    borderTop: "1px solid rgba(37,99,235,0.16)",
+                    borderBottom: "1px solid rgba(37,99,235,0.16)",
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    bgcolor: "rgba(239,246,255,0.95) !important",
+                    color: financeColors.income,
+                    fontWeight: 950,
+                  }}
+                >
+                  Total receitas
+                </TableCell>
+                {yearData.monthlySummary.map((summary) => (
+                  <TableCell
+                    key={summary.month}
+                    align="right"
+                    sx={{ color: financeColors.income, fontWeight: 950 }}
+                  >
+                    {formatMoney(summary.totalIncome)}
+                  </TableCell>
+                ))}
+                <TableCell
+                  align="right"
+                  sx={{ color: financeColors.income, fontWeight: 950 }}
+                >
+                  {formatMoney(yearData.totals.totalIncome)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow
+                hover
+                sx={{
+                  cursor: "pointer",
+                  "& > *": {
+                    borderBottom: "none",
+                    borderTop: "10px solid #fff",
+                  },
+                }}
+                onClick={() => setExpenseRowsExpanded((expanded) => !expanded)}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 2,
+                    bgcolor: financeColors.expenseSoft,
+                    color: financeColors.expense,
+                    fontWeight: 950,
+                    fontSize: 15,
+                    py: 1.5,
+                    minWidth: 220,
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <IconButton
+                      size="small"
+                      sx={{
+                        color: financeColors.expense,
+                        bgcolor: "rgba(234,88,12,0.1)",
+                      }}
+                    >
+                      {expenseRowsExpanded ? (
+                        <KeyboardArrowDownIcon fontSize="small" />
+                      ) : (
+                        <KeyboardArrowRightIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                    <Typography fontWeight={950}>Despesas</Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell
+                  colSpan={yearData.months.length + 1}
+                  sx={{
+                    bgcolor: financeColors.expenseSoft,
+                    py: 1.5,
+                  }}
+                />
+              </TableRow>
+              {expenseRowsExpanded && !yearData.expenseRows.length ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={yearData.months.length + 2}
+                    sx={{ color: "text.secondary", fontStyle: "italic" }}
+                  >
+                    Nenhuma despesa cadastrada ainda.
+                  </TableCell>
                 </TableRow>
-              ))}
-              <TableRow><TableCell colSpan={14} sx={{ bgcolor: financeColors.neutralSoft, color: financeColors.neutral, fontWeight: 950, fontSize: 15 }}>Resultado</TableCell></TableRow>
-              {[
-                ['Receitas do mes', 'totalIncome'],
-                ['Despesas do mes', 'totalExpense'],
-                ['Resultado do mes', 'balance']
-              ].map(([label, key]) => (
-                <TableRow key={label}>
-                  <TableCell sx={{ position: 'sticky', left: 0, bgcolor: 'white', fontWeight: 900 }}>{label}</TableCell>
-                  {yearData.monthlySummary.map((summary) => {
-                    const value = summary[key as keyof typeof summary] as number;
-                    return <TableCell key={summary.month} align="right" sx={{ color: key === 'totalExpense' ? financeColors.expense : key === 'totalIncome' ? financeColors.income : amountColor(value), fontWeight: 900 }}>{formatMoney(value)}</TableCell>;
-                  })}
-                  <TableCell align="right" sx={{ fontWeight: 900 }}>{key === 'totalIncome' ? formatMoney(yearData.totals.totalIncome) : key === 'totalExpense' ? formatMoney(yearData.totals.totalExpense) : formatMoney(yearData.totals.finalBalance)}</TableCell>
-                </TableRow>
-              ))}
+              ) : null}
+              {expenseRowsExpanded
+                ? yearData.expenseRows.map((row) => (
+                    <TableRow key={row.category} hover>
+                      {categoryCell(row.category, "EXPENSE")}
+                      {yearData.months.map((monthItem) => (
+                        <TableCell
+                          key={monthItem.value}
+                          align="right"
+                          onClick={() =>
+                            setCellEdit({
+                              category: row.category,
+                              month: monthItem.value,
+                              type: "EXPENSE",
+                              value: row.months[monthItem.value] ?? 0,
+                            })
+                          }
+                          sx={{
+                            color: financeColors.expense,
+                            cursor: "pointer",
+                            "&:hover": { bgcolor: financeColors.expenseSoft },
+                          }}
+                        >
+                          {formatMoney(row.months[monthItem.value] ?? 0)}
+                        </TableCell>
+                      ))}
+                      <TableCell
+                        align="right"
+                        sx={{ color: financeColors.expense, fontWeight: 900 }}
+                      >
+                        {formatMoney(row.total)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : null}
+              <TableRow
+                sx={{
+                  "& > *": {
+                    bgcolor: "rgba(255,247,237,0.78)",
+                    borderTop: "1px solid rgba(234,88,12,0.18)",
+                    borderBottom: "1px solid rgba(234,88,12,0.18)",
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    bgcolor: "rgba(255,247,237,0.96) !important",
+                    color: financeColors.expense,
+                    fontWeight: 950,
+                  }}
+                >
+                  Total despesas
+                </TableCell>
+                {yearData.monthlySummary.map((summary) => (
+                  <TableCell
+                    key={summary.month}
+                    align="right"
+                    sx={{ color: financeColors.expense, fontWeight: 950 }}
+                  >
+                    {formatMoney(summary.totalExpense)}
+                  </TableCell>
+                ))}
+                <TableCell
+                  align="right"
+                  sx={{ color: financeColors.expense, fontWeight: 950 }}
+                >
+                  {formatMoney(yearData.totals.totalExpense)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow
+                sx={{
+                  "& > *": {
+                    bgcolor: "rgba(248,250,252,0.96)",
+                    borderTop: "12px solid #fff",
+                    borderBottom: "1px solid rgba(15,23,42,0.1)",
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    bgcolor: "rgba(248,250,252,1) !important",
+                    color: amountColor(yearData.totals.finalBalance),
+                    fontWeight: 950,
+                  }}
+                >
+                  Resultado
+                </TableCell>
+                {yearData.monthlySummary.map((summary) => (
+                  <TableCell
+                    key={summary.month}
+                    align="right"
+                    sx={{
+                      color: amountColor(summary.balance),
+                      fontWeight: 950,
+                    }}
+                  >
+                    {formatMoney(summary.balance)}
+                  </TableCell>
+                ))}
+                <TableCell
+                  align="right"
+                  sx={{
+                    bgcolor:
+                      yearData.totals.finalBalance >= 0
+                        ? `${financeColors.positiveSoft} !important`
+                        : `${financeColors.negativeSoft} !important`,
+                    color: amountColor(yearData.totals.finalBalance),
+                    fontWeight: 950,
+                    fontSize: 15,
+                    boxShadow: "inset 0 0 0 2px rgba(15,23,42,0.08)",
+                  }}
+                >
+                  {formatMoney(yearData.totals.finalBalance)}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </Paper>
       ) : null}
 
-      {!loading && !error && mode === 'week' && weekData ? (
+      {!loading && !error && mode === "week" && weekData ? (
         <Grid container spacing={2}>
           {weekData.days.map((day) => (
             <Grid item xs={12} md={6} lg={4} key={day.date}>
-              <Paper sx={{ p: 2, border: '1px solid #E5E7EB', boxShadow: 'none' }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography fontWeight={900}>{formatDate(day.date)}</Typography>
-                  <Chip size="small" label={formatMoney(day.totals.balance)} sx={{ color: amountColor(day.totals.balance), fontWeight: 800 }} />
+              <Paper
+                sx={{ p: 2, border: "1px solid #E5E7EB", boxShadow: "none" }}
+              >
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={1}
+                >
+                  <Typography fontWeight={900}>
+                    {formatDate(day.date)}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={formatMoney(day.totals.balance)}
+                    sx={{
+                      color: amountColor(day.totals.balance),
+                      fontWeight: 800,
+                    }}
+                  />
                 </Stack>
-                <Box height={8} borderRadius={1} bgcolor={financeColors.expenseSoft} overflow="hidden" mb={1}>
-                  <Box height="100%" width={`${Math.min(100, day.totals.totalIncome / Math.max(day.totals.totalIncome + day.totals.totalExpense, 1) * 100)}%`} bgcolor={financeColors.income} />
+                <Box
+                  height={8}
+                  borderRadius={1}
+                  bgcolor={financeColors.expenseSoft}
+                  overflow="hidden"
+                  mb={1}
+                >
+                  <Box
+                    height="100%"
+                    width={`${Math.min(100, (day.totals.totalIncome / Math.max(day.totals.totalIncome + day.totals.totalExpense, 1)) * 100)}%`}
+                    bgcolor={financeColors.income}
+                  />
                 </Box>
-                <Typography variant="body2" color="text.secondary">Receitas {formatMoney(day.totals.totalIncome)} • Despesas {formatMoney(day.totals.totalExpense)}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Receitas {formatMoney(day.totals.totalIncome)} • Despesas{" "}
+                  {formatMoney(day.totals.totalExpense)}
+                </Typography>
               </Paper>
             </Grid>
           ))}
         </Grid>
       ) : null}
 
-      {!loading && !error && mode !== 'year' ? (
+      {!loading && !error && mode !== "year" ? (
         <Stack spacing={2}>
-          <Typography variant="h6" fontWeight={900}>Receitas</Typography>
-          <EntryRows items={allCurrentItems.filter((item) => item.type.includes('INCOME'))} onEdit={(item) => { setEditingItem(item); setFormOpen(true); }} onDelete={removeItem} />
-          <Typography variant="h6" fontWeight={900}>Despesas</Typography>
-          <EntryRows items={allCurrentItems.filter((item) => item.type.includes('EXPENSE'))} onEdit={(item) => { setEditingItem(item); setFormOpen(true); }} onDelete={removeItem} />
+          <Typography variant="h6" fontWeight={900}>
+            Receitas
+          </Typography>
+          <EntryRows
+            items={allCurrentItems.filter((item) =>
+              item.type.includes("INCOME"),
+            )}
+            onEdit={(item) => {
+              setEditingItem(item);
+              setFormOpen(true);
+            }}
+            onDelete={removeItem}
+          />
+          <Typography variant="h6" fontWeight={900}>
+            Despesas
+          </Typography>
+          <EntryRows
+            items={allCurrentItems.filter((item) =>
+              item.type.includes("EXPENSE"),
+            )}
+            onEdit={(item) => {
+              setEditingItem(item);
+              setFormOpen(true);
+            }}
+            onDelete={removeItem}
+          />
         </Stack>
       ) : null}
 
@@ -370,7 +1107,7 @@ export function FinancialControlPage() {
         open={formOpen}
         item={editingItem}
         defaultType={defaultType}
-        defaultDate={mode === 'day' ? date : isoDate()}
+        defaultDate={mode === "day" ? date : isoDate()}
         onClose={() => setFormOpen(false)}
         onSubmit={saveEntry}
       />
@@ -389,6 +1126,85 @@ export function FinancialControlPage() {
           onSubmit={saveCellValue}
         />
       ) : null}
+      <Dialog
+        open={Boolean(categoryEdit)}
+        onClose={() => setCategoryEdit(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography
+            variant="overline"
+            color="text.secondary"
+            fontWeight={900}
+          >
+            {categoryEdit?.type === "INCOME" ? "Receita" : "Despesa"}
+          </Typography>
+          <Typography variant="h5" fontWeight={950} letterSpacing="-0.03em">
+            Renomear categoria
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} pt={1}>
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor:
+                  categoryEdit?.type === "INCOME"
+                    ? "rgba(37,99,235,0.22)"
+                    : "rgba(234,88,12,0.24)",
+                bgcolor:
+                  categoryEdit?.type === "INCOME"
+                    ? financeColors.incomeSoft
+                    : financeColors.expenseSoft,
+                boxShadow: "none",
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={800}
+              >
+                Nome atual
+              </Typography>
+              <Typography fontWeight={900}>{categoryEdit?.category}</Typography>
+            </Paper>
+            <TextField
+              autoFocus
+              label="Novo nome"
+              value={categoryEdit?.value ?? ""}
+              onChange={(event) =>
+                setCategoryEdit((current) =>
+                  current ? { ...current, value: event.target.value } : current,
+                )
+              }
+              helperText={`A alteracao vale para todos os lancamentos desta categoria em ${year}.`}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  saveCategoryName();
+                }
+              }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setCategoryEdit(null)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            disabled={
+              categorySaving ||
+              !categoryEdit?.value.trim() ||
+              categoryEdit.value.trim() === categoryEdit.category
+            }
+            onClick={saveCategoryName}
+          >
+            {categorySaving ? "Salvando..." : "Salvar nome"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

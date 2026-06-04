@@ -1,4 +1,3 @@
-import AddIcon from '@mui/icons-material/Add';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
@@ -13,12 +12,12 @@ import Typography from '@mui/material/Typography';
 import { motion } from 'framer-motion';
 import { Plus, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { api } from '../api/client';
 import { FinancialItemForm } from '../components/FinancialItemForm';
 import { StatCard } from '../components/StatCard';
 import type { DashboardTotals, FinancialItem } from '../types/financial';
-import { amountToneColor, balanceColor, financeColors, formatDate, formatMoney, typeLabels } from '../utils/format';
+import { financeColors, formatDate, formatMoney, typeLabels } from '../utils/format';
 
 export function DashboardPage() {
   const [totals, setTotals] = useState<DashboardTotals | null>(null);
@@ -34,6 +33,16 @@ export function DashboardPage() {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  const financialFlowData = [
+    { name: 'Receitas', value: totals?.totalIncomes ?? 0, color: financeColors.income },
+    { name: 'Despesas', value: totals?.totalExpenses ?? 0, color: financeColors.expense },
+    {
+      name: (totals?.finalBalance ?? 0) >= 0 ? 'Saldo disponivel' : 'Deficit',
+      value: Math.abs(totals?.finalBalance ?? 0),
+      color: (totals?.finalBalance ?? 0) >= 0 ? financeColors.positive : financeColors.negative
+    }
+  ].filter((item) => item.value > 0);
 
   return (
     <Stack spacing={3.5}>
@@ -73,23 +82,25 @@ export function DashboardPage() {
         </Stack>
         <Box height={260}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={[
-              { name: 'Receitas', valor: totals?.totalIncomes ?? 0 },
-              { name: 'Despesas', valor: totals?.totalExpenses ?? 0 },
-              { name: 'Saldo', valor: totals?.finalBalance ?? 0 }
-            ]}>
-              <defs>
-                <linearGradient id="dashboardChart" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={financeColors.income} stopOpacity={0.38} />
-                  <stop offset="95%" stopColor={financeColors.income} stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.08)" />
-              <XAxis dataKey="name" stroke="#64748B" tickLine={false} axisLine={false} />
-              <YAxis stroke="#64748B" tickLine={false} axisLine={false} tickFormatter={(value) => `R$ ${Number(value) / 1000}k`} />
+            <PieChart>
               <Tooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: 16, border: '1px solid #E2E8F0' }} />
-              <Area type="monotone" dataKey="valor" stroke={financeColors.income} strokeWidth={3} fill="url(#dashboardChart)" />
-            </AreaChart>
+              <Pie
+                data={financialFlowData.length ? financialFlowData : [{ name: 'Sem dados', value: 1, color: financeColors.neutralSoft }]}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={58}
+                outerRadius={98}
+                paddingAngle={4}
+                label={({ name }) => name}
+                labelLine={false}
+              >
+                {(financialFlowData.length ? financialFlowData : [{ color: financeColors.neutralSoft }]).map((entry, index) => (
+                  <Cell key={`flow-slice-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
           </ResponsiveContainer>
         </Box>
       </Paper>
