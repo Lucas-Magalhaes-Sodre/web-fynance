@@ -148,3 +148,21 @@ export type WeekControl = {
   expenses: FinancialItem[];
   totals: PeriodTotals;
 };
+
+export type FinancialCalendarDay = {
+  date: string;
+  incomes: number;
+  expenses: number;
+  savings: number;
+  pendingBills: number;
+  overdueBills: number;
+  balance: number;
+  items: FinancialItem[];
+  savingItems: Saving[];
+};
+
+export type FinancialCalendar = {
+  month: number;
+  year: number;
+  days: FinancialCalendarDay[];
+};

@@ -1,6 +1,7 @@
 import { api } from './client';
 import type {
   DayControl,
+  FinancialCalendar,
   FinancialItem,
   MonthControl,
   PaymentStatus,
@@ -57,6 +58,11 @@ export async function getWeekControl(startDate: string, endDate: string) {
 
 export async function getDayControl(date: string) {
   const { data } = await api.get<DayControl>('/financial-control/day', { params: { date } });
+  return data;
+}
+
+export async function getFinancialCalendar(month: number, year: number) {
+  const { data } = await api.get<FinancialCalendar>('/financial-calendar', { params: { month, year } });
   return data;
 }
 
