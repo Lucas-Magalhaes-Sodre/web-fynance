@@ -4,6 +4,7 @@ import type {
   FinancialCalendar,
   FinancialGoal,
   FinancialGoalStatus,
+  FinancialInsight,
   FinancialItem,
   MonthControl,
   PaymentStatus,
@@ -189,4 +190,9 @@ export async function updateFinancialGoal(id: string, payload: Partial<Financial
 
 export async function deleteFinancialGoal(id: string) {
   await api.delete(`/financial-goals/${id}`);
+}
+
+export async function getFinancialInsights(month: number, year: number) {
+  const { data } = await api.get<{ insights: FinancialInsight[] }>('/financial-insights', { params: { month, year } });
+  return data.insights;
 }

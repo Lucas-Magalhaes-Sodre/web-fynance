@@ -12,12 +12,13 @@ import Typography from '@mui/material/Typography';
 import { motion } from 'framer-motion';
 import { Plus, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { api } from '../api/client';
-import { getPaymentSummary, getSavingsSummary, listFinancialGoals } from '../api/financialControl';
+import { getFinancialInsights, getPaymentSummary, getSavingsSummary, listFinancialGoals } from '../api/financialControl';
 import { FinancialItemForm } from '../components/FinancialItemForm';
 import { StatCard } from '../components/StatCard';
-import type { DashboardTotals, FinancialGoal, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
+import type { DashboardTotals, FinancialGoal, FinancialInsight, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
 import { financeColors, formatDate, formatMoney, typeLabels } from '../utils/format';
 
 export function DashboardPage() {
@@ -26,6 +27,7 @@ export function DashboardPage() {
   const [savingsSummary, setSavingsSummary] = useState<SavingsSummary | null>(null);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
+  const [insights, setInsights] = useState<FinancialInsight[]>([]);
   const [formOpen, setFormOpen] = useState(false);
 
   async function loadDashboard() {
@@ -33,16 +35,18 @@ export function DashboardPage() {
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
     const { data } = await api.get('/financial-items/dashboard/summary');
-    const [nextSavingsSummary, nextPaymentSummary, nextGoals] = await Promise.all([
+    const [nextSavingsSummary, nextPaymentSummary, nextGoals, nextInsights] = await Promise.all([
       getSavingsSummary(month, year),
       getPaymentSummary({ month, year }),
-      listFinancialGoals({ status: 'ACTIVE' })
+      listFinancialGoals({ status: 'ACTIVE' }),
+      getFinancialInsights(month, year)
     ]);
     setTotals(data.totals);
     setRecentItems(data.recentItems);
     setSavingsSummary(nextSavingsSummary);
     setPaymentSummary(nextPaymentSummary);
     setGoals(nextGoals);
+    setInsights(nextInsights);
   }
 
   useEffect(() => {
@@ -119,6 +123,42 @@ export function DashboardPage() {
             </Box>
           </Stack>
         </Stack>
+      </Paper>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} mb={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>Insights financeiros</Typography>
+            <Typography color="text.secondary">Alertas automaticos gerados pelos seus lancamentos.</Typography>
+          </Box>
+        </Stack>
+        <Grid container spacing={2}>
+          {insights.slice(0, 6).map((insight) => {
+            const color =
+              insight.type === 'POSITIVE'
+                ? financeColors.positive
+                : insight.type === 'NEGATIVE'
+                  ? financeColors.negative
+                  : insight.type === 'WARNING'
+                    ? financeColors.expense
+                    : financeColors.income;
+            return (
+              <Grid item xs={12} md={6} lg={4} key={`${insight.type}-${insight.title}`}>
+                <Paper sx={{ p: 2, borderRadius: 3, border: `1px solid ${color}30`, boxShadow: 'none', height: '100%' }}>
+                  <Stack spacing={1}>
+                    <Typography fontWeight={950} color={color}>{insight.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">{insight.description}</Typography>
+                    {insight.actionLabel && insight.actionTarget ? (
+                      <Button component={RouterLink} to={insight.actionTarget} size="small" sx={{ alignSelf: 'flex-start', px: 0, fontWeight: 900 }}>
+                        {insight.actionLabel}
+                      </Button>
+                    ) : null}
+                  </Stack>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
       </Paper>
 
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>

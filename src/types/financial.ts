@@ -3,6 +3,7 @@ export type EntryType = 'INCOME' | 'EXPENSE';
 export type RecurrenceType = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
 export type FinancialGoalStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELED';
+export type FinancialInsightType = 'POSITIVE' | 'WARNING' | 'INFO' | 'NEGATIVE';
 
 export type User = {
   id: string;
@@ -186,4 +187,13 @@ export type FinancialGoal = {
   status: FinancialGoalStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type FinancialInsight = {
+  type: FinancialInsightType;
+  title: string;
+  description: string;
+  value?: number;
+  actionLabel?: string;
+  actionTarget?: string;
 };
