@@ -2,6 +2,7 @@ import { api } from './client';
 import type {
   DayControl,
   FinancialCalendar,
+  FinancialComparison,
   FinancialGoal,
   FinancialGoalStatus,
   FinancialInsight,
@@ -195,4 +196,9 @@ export async function deleteFinancialGoal(id: string) {
 export async function getFinancialInsights(month: number, year: number) {
   const { data } = await api.get<{ insights: FinancialInsight[] }>('/financial-insights', { params: { month, year } });
   return data.insights;
+}
+
+export async function getFinancialComparison(month: number, year: number) {
+  const { data } = await api.get<FinancialComparison>('/financial-comparison', { params: { month, year } });
+  return data;
 }

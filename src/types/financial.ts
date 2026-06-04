@@ -197,3 +197,32 @@ export type FinancialInsight = {
   actionLabel?: string;
   actionTarget?: string;
 };
+
+export type FinancialVariation = {
+  value: number;
+  percentage: number;
+};
+
+export type FinancialComparisonMonth = {
+  income: number;
+  expense: number;
+  savings: number;
+  balance: number;
+};
+
+export type FinancialMonthlyEvolution = FinancialComparisonMonth & {
+  month: number;
+  label: string;
+};
+
+export type FinancialComparison = {
+  currentMonth: FinancialComparisonMonth;
+  previousMonth: FinancialComparisonMonth;
+  incomeVariation: FinancialVariation;
+  expenseVariation: FinancialVariation;
+  balanceVariation: FinancialVariation;
+  savingsVariation: FinancialVariation;
+  monthlyEvolution: FinancialMonthlyEvolution[];
+  bestMonths: FinancialMonthlyEvolution[];
+  worstMonths: FinancialMonthlyEvolution[];
+};

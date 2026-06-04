@@ -15,10 +15,10 @@ import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { api } from '../api/client';
-import { getFinancialInsights, getPaymentSummary, getSavingsSummary, listFinancialGoals } from '../api/financialControl';
+import { getFinancialComparison, getFinancialInsights, getPaymentSummary, getSavingsSummary, listFinancialGoals } from '../api/financialControl';
 import { FinancialItemForm } from '../components/FinancialItemForm';
 import { StatCard } from '../components/StatCard';
-import type { DashboardTotals, FinancialGoal, FinancialInsight, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
+import type { DashboardTotals, FinancialComparison, FinancialGoal, FinancialInsight, FinancialItem, PaymentSummary, SavingsSummary } from '../types/financial';
 import { financeColors, formatDate, formatMoney, typeLabels } from '../utils/format';
 
 export function DashboardPage() {
@@ -28,6 +28,7 @@ export function DashboardPage() {
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [insights, setInsights] = useState<FinancialInsight[]>([]);
+  const [comparison, setComparison] = useState<FinancialComparison | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   async function loadDashboard() {
@@ -35,11 +36,12 @@ export function DashboardPage() {
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
     const { data } = await api.get('/financial-items/dashboard/summary');
-    const [nextSavingsSummary, nextPaymentSummary, nextGoals, nextInsights] = await Promise.all([
+    const [nextSavingsSummary, nextPaymentSummary, nextGoals, nextInsights, nextComparison] = await Promise.all([
       getSavingsSummary(month, year),
       getPaymentSummary({ month, year }),
       listFinancialGoals({ status: 'ACTIVE' }),
-      getFinancialInsights(month, year)
+      getFinancialInsights(month, year),
+      getFinancialComparison(month, year)
     ]);
     setTotals(data.totals);
     setRecentItems(data.recentItems);
@@ -47,6 +49,7 @@ export function DashboardPage() {
     setPaymentSummary(nextPaymentSummary);
     setGoals(nextGoals);
     setInsights(nextInsights);
+    setComparison(nextComparison);
   }
 
   useEffect(() => {
@@ -123,6 +126,35 @@ export function DashboardPage() {
             </Box>
           </Stack>
         </Stack>
+      </Paper>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} mb={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>Comparativo mensal</Typography>
+            <Typography color="text.secondary">Variações do mês atual em relação ao mês anterior.</Typography>
+          </Box>
+        </Stack>
+        <Grid container spacing={2}>
+          {[
+            { label: 'Receitas', variation: comparison?.incomeVariation, tone: financeColors.income },
+            { label: 'Despesas', variation: comparison?.expenseVariation, tone: financeColors.expense },
+            { label: 'Saldo', variation: comparison?.balanceVariation, tone: (comparison?.balanceVariation.value ?? 0) >= 0 ? financeColors.positive : financeColors.negative },
+            { label: 'Economias', variation: comparison?.savingsVariation, tone: financeColors.saving }
+          ].map((item) => (
+            <Grid item xs={12} md={3} key={item.label}>
+              <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid rgba(15,23,42,0.08)', boxShadow: 'none' }}>
+                <Typography variant="body2" color="text.secondary" fontWeight={800}>{item.label}</Typography>
+                <Typography fontWeight={950} color={item.tone}>
+                  {formatMoney(item.variation?.value ?? 0)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={800}>
+                  {(item.variation?.percentage ?? 0).toFixed(1)}%
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
       </Paper>
 
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
