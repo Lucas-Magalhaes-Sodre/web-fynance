@@ -26,13 +26,14 @@ import {
   createSaving,
   deleteSaving,
   getSavingsSummary,
+  listFinancialGoals,
   listSavings,
   updateSaving,
   type SavingPayload
 } from '../api/financialControl';
 import { EmptyState } from '../components/EmptyState';
 import { StatCard } from '../components/StatCard';
-import type { Saving, SavingsSummary } from '../types/financial';
+import type { FinancialGoal, Saving, SavingsSummary } from '../types/financial';
 import { financeColors, formatDate, formatMoney, isoDate, months } from '../utils/format';
 
 const today = new Date();
@@ -42,13 +43,15 @@ type SavingFormState = {
   description: string;
   amount: string;
   date: string;
+  goalId: string;
 };
 
 const initialForm: SavingFormState = {
   title: '',
   description: '',
   amount: '',
-  date: isoDate()
+  date: isoDate(),
+  goalId: ''
 };
 
 function toPayload(form: SavingFormState): SavingPayload {
@@ -59,7 +62,8 @@ function toPayload(form: SavingFormState): SavingPayload {
     amount: Number(form.amount),
     date: form.date,
     month: date.getMonth() + 1,
-    year: date.getFullYear()
+    year: date.getFullYear(),
+    goalId: form.goalId || null
   };
 }
 
@@ -67,6 +71,7 @@ export function SavingsPage() {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
   const [savings, setSavings] = useState<Saving[]>([]);
+  const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [summary, setSummary] = useState<SavingsSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -104,6 +109,10 @@ export function SavingsPage() {
     loadSavings();
   }, [month, year]);
 
+  useEffect(() => {
+    listFinancialGoals().then(setGoals).catch(() => setGoals([]));
+  }, []);
+
   function openCreate() {
     setEditingSaving(null);
     const selectedDay = Math.min(today.getDate(), new Date(year, month, 0).getDate());
@@ -117,7 +126,8 @@ export function SavingsPage() {
       title: saving.title,
       description: saving.description ?? '',
       amount: String(saving.amount),
-      date: saving.date.slice(0, 10)
+      date: saving.date.slice(0, 10),
+      goalId: saving.goalId ?? ''
     });
     setFormOpen(true);
   }
@@ -223,6 +233,7 @@ export function SavingsPage() {
               <TableRow>
                 <TableCell>Economia</TableCell>
                 <TableCell>Data</TableCell>
+                <TableCell>Meta</TableCell>
                 <TableCell>Descricao</TableCell>
                 <TableCell align="right">Valor</TableCell>
                 <TableCell align="right">Acoes</TableCell>
@@ -233,6 +244,7 @@ export function SavingsPage() {
                 <TableRow key={saving.id} hover>
                   <TableCell>{saving.title}</TableCell>
                   <TableCell>{formatDate(saving.date)}</TableCell>
+                  <TableCell>{goals.find((goal) => goal.id === saving.goalId)?.title ?? '-'}</TableCell>
                   <TableCell>{saving.description || '-'}</TableCell>
                   <TableCell align="right" sx={{ color: financeColors.saving, fontWeight: 900 }}>
                     {formatMoney(saving.amount)}
@@ -253,7 +265,7 @@ export function SavingsPage() {
               ))}
               {!savings.length ? (
                 <TableRow>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={6}>
                     <EmptyState message="Nenhuma economia registrada neste periodo." />
                   </TableCell>
                 </TableRow>
@@ -288,6 +300,20 @@ export function SavingsPage() {
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
+            <TextField
+              select
+              label="Meta vinculada"
+              value={form.goalId}
+              onChange={(event) => setForm((current) => ({ ...current, goalId: event.target.value }))}
+              fullWidth
+            >
+              <MenuItem value="">Sem meta</MenuItem>
+              {goals.map((goal) => (
+                <MenuItem key={goal.id} value={goal.id}>
+                  {goal.title}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               label="Descricao"
               value={form.description}
