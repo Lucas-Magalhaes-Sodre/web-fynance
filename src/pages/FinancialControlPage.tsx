@@ -1,9 +1,11 @@
 import AddIcon from "@mui/icons-material/Add";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import ReplayIcon from "@mui/icons-material/Replay";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -48,6 +50,7 @@ import {
   getYearControl,
   renameCategory,
   updateEntry,
+  updateEntryPaymentStatus,
   updateEntryValue,
 } from "../api/financialControl";
 import { EmptyState } from "../components/EmptyState";
@@ -109,10 +112,14 @@ function EntryRows({
   items,
   onEdit,
   onDelete,
+  onMarkPaid,
+  onMarkPending,
 }: {
   items: FinancialItem[];
   onEdit: (item: FinancialItem) => void;
   onDelete: (item: FinancialItem) => void;
+  onMarkPaid: (item: FinancialItem) => void;
+  onMarkPending: (item: FinancialItem) => void;
 }) {
   if (!items.length)
     return <EmptyState message="Nada cadastrado para este periodo." />;
@@ -191,6 +198,20 @@ function EntryRows({
                     <EditIcon />
                   </IconButton>
                 </Tooltip>
+                {item.type.includes("EXPENSE") && item.status !== "PAGO" ? (
+                  <Tooltip title="Marcar como pago">
+                    <IconButton color="success" onClick={() => onMarkPaid(item)}>
+                      <CheckCircleIcon />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+                {item.type.includes("EXPENSE") && item.status === "PAGO" ? (
+                  <Tooltip title="Voltar para pendente">
+                    <IconButton color="warning" onClick={() => onMarkPending(item)}>
+                      <ReplayIcon />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
                 <Tooltip title="Excluir">
                   <IconButton color="error" onClick={() => onDelete(item)}>
                     <DeleteIcon />
@@ -299,6 +320,19 @@ export function FinancialControlPage() {
   async function removeItem(item: FinancialItem) {
     if (!window.confirm(`Excluir "${item.name ?? item.title}"?`)) return;
     await deleteEntry(item.id);
+    await loadData();
+  }
+
+  async function markItemPaid(item: FinancialItem) {
+    await updateEntryPaymentStatus(item.id, {
+      status: "PAGO",
+      paymentDate: isoDate(),
+    });
+    await loadData();
+  }
+
+  async function markItemPending(item: FinancialItem) {
+    await updateEntryPaymentStatus(item.id, { status: "PENDENTE" });
     await loadData();
   }
 
@@ -1214,6 +1248,8 @@ export function FinancialControlPage() {
               setFormOpen(true);
             }}
             onDelete={removeItem}
+            onMarkPaid={markItemPaid}
+            onMarkPending={markItemPending}
           />
           <Typography variant="h6" fontWeight={900}>
             Despesas
@@ -1227,6 +1263,8 @@ export function FinancialControlPage() {
               setFormOpen(true);
             }}
             onDelete={removeItem}
+            onMarkPaid={markItemPaid}
+            onMarkPending={markItemPending}
           />
         </Stack>
       ) : null}
