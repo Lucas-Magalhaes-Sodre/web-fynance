@@ -2,7 +2,9 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -77,9 +79,26 @@ type ViewMode = "day" | "week" | "month" | "year";
 const current = new Date();
 const realCurrentMonth = new Date().getMonth() + 1;
 const realCurrentYear = new Date().getFullYear();
+const sheetColors = {
+  headerBlue: "#2B629A",
+  monthHeader: "#0F172A",
+  incomeSection: "#2B629A",
+  incomeCell: "#FFFFFF",
+  incomeTotal: "#3F8DCA",
+  expenseSection: "#F26B2C",
+  expenseCell: "#FFFFFF",
+  expenseTotal: "#EF5A35",
+  resultSection: "#58B51D",
+  grid: "rgba(15, 23, 42, 0.16)",
+};
 
 function amountColor(value: number) {
   return balanceColor(value);
+}
+
+function formatResultMoney(value: number) {
+  if (value < 0) return `- ${formatMoney(Math.abs(value))}`;
+  return formatMoney(value);
 }
 
 function itemDateLabel(item: FinancialItem) {
@@ -189,6 +208,7 @@ function EntryRows({
 export function FinancialControlPage() {
   const [mode, setMode] = useState<ViewMode>("year");
   const [year, setYear] = useState(current.getFullYear());
+  const [yearInput, setYearInput] = useState(String(current.getFullYear()));
   const [month, setMonth] = useState(current.getMonth() + 1);
   const [date, setDate] = useState(isoDate());
   const [week, setWeek] = useState(weekRange());
@@ -227,6 +247,19 @@ export function FinancialControlPage() {
     return yearData?.items ?? [];
   }, [dayData, monthData, mode, weekData, yearData]);
 
+  const yearOptions = useMemo(() => {
+    const options = new Set<number>();
+    for (
+      let option = realCurrentYear - 5;
+      option <= realCurrentYear + 5;
+      option += 1
+    ) {
+      options.add(option);
+    }
+    options.add(year);
+    return Array.from(options).sort((a, b) => a - b);
+  }, [year]);
+
   async function loadData() {
     setLoading(true);
     setError("");
@@ -246,6 +279,10 @@ export function FinancialControlPage() {
   useEffect(() => {
     loadData();
   }, [mode, year, month, date, week.startDate, week.endDate]);
+
+  useEffect(() => {
+    setYearInput(String(year));
+  }, [year]);
 
   function openCreate(type: EntryType) {
     setDefaultType(type);
@@ -358,9 +395,10 @@ export function FinancialControlPage() {
         sx={{
           position: "sticky",
           left: 0,
-          bgcolor: "white",
-          fontWeight: 700,
+          bgcolor: "#F8FAFC",
+          fontWeight: 850,
           minWidth: 240,
+          borderRight: `1px solid ${sheetColors.grid}`,
         }}
       >
         <Stack
@@ -527,13 +565,70 @@ export function FinancialControlPage() {
               </TextField>
             ) : null}
             {mode !== "day" ? (
-              <TextField
-                size="small"
-                label="Ano que deseja ver"
-                type="number"
-                value={year}
-                onChange={(event) => setYear(Number(event.target.value))}
-              />
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Tooltip title="Ano anterior">
+                  <IconButton
+                    size="small"
+                    onClick={() => setYear((currentYear) => currentYear - 1)}
+                    sx={{
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      bgcolor: "rgba(255,255,255,0.72)",
+                    }}
+                  >
+                    <KeyboardArrowLeftIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Autocomplete
+                  freeSolo
+                  forcePopupIcon
+                  options={yearOptions.map(String)}
+                  value={String(year)}
+                  inputValue={yearInput}
+                  onChange={(_, value) => {
+                    const nextYear = Number(value);
+                    if (!Number.isNaN(nextYear)) {
+                      setYear(nextYear);
+                      setYearInput(String(nextYear));
+                    }
+                  }}
+                  onInputChange={(_, value) => {
+                    setYearInput(value);
+                    const nextYear = Number(value);
+                    if (
+                      /^\d{4}$/.test(value) &&
+                      nextYear >= 2000 &&
+                      nextYear <= 2100
+                    ) {
+                      setYear(nextYear);
+                    }
+                  }}
+                  sx={{ width: 190 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      label="Ano que deseja ver"
+                      inputProps={{
+                        ...params.inputProps,
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                      }}
+                    />
+                  )}
+                />
+                <Tooltip title="Proximo ano">
+                  <IconButton
+                    size="small"
+                    onClick={() => setYear((currentYear) => currentYear + 1)}
+                    sx={{
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      bgcolor: "rgba(255,255,255,0.72)",
+                    }}
+                  >
+                    <KeyboardArrowRightIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
             ) : null}
           </Stack>
         </Stack>
@@ -608,6 +703,10 @@ export function FinancialControlPage() {
             overflow: "auto",
             maxHeight: "68vh",
             pt: 1.5,
+            border: `1px solid ${sheetColors.grid}`,
+            background:
+              "linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)), #f8fafc",
+            borderTop: "none",
           }}
         >
           <Table
@@ -627,9 +726,11 @@ export function FinancialControlPage() {
                     position: "sticky",
                     left: 0,
                     zIndex: 3,
-                    bgcolor: "background.paper",
+                    bgcolor: `${sheetColors.headerBlue} !important`,
+                    color: `#f9fbfc !important`,
                     minWidth: 220,
-                    fontWeight: 900,
+                    fontWeight: 950,
+                    borderColor: "rgba(255,255,255,0.2)",
                   }}
                 >
                   Categoria
@@ -656,19 +757,15 @@ export function FinancialControlPage() {
                         fontWeight: 950,
                         pt: 2.25,
                         pb: 2.25,
-                        bgcolor: isCurrent
-                          ? "rgba(37,99,235,0.1)"
-                          : isPast
-                            ? "rgba(100,116,139,0.06)"
-                            : isFuture
-                              ? "rgba(248,250,252,0.72)"
-                              : undefined,
+                        bgcolor: `${sheetColors.monthHeader} !important`,
+                        color: "#f6f8fc",
                         borderLeft: isCurrent
                           ? `2px solid ${financeColors.income}`
-                          : undefined,
+                          : "1px solid rgba(255,255,255,0.12)",
                         borderRight: isCurrent
                           ? `2px solid ${financeColors.income}`
-                          : undefined,
+                          : "1px solid rgba(255,255,255,0.12)",
+                        opacity: isFuture ? 0.94 : 1,
                       }}
                     >
                       {isCurrent ? (
@@ -702,13 +799,21 @@ export function FinancialControlPage() {
                         component="span"
                         display={"flex"}
                         justifyContent={"center"}
+                        sx={{ color: "#E5E7EB" }}
                       >
                         {monthItem.label}
                       </Box>
                     </TableCell>
                   );
                 })}
-                <TableCell align="right" sx={{ fontWeight: 900 }}>
+                <TableCell
+                  align="right"
+                  sx={{
+                    bgcolor: `${sheetColors.monthHeader} !important`,
+                    color: `#f9fbfc !important`,
+                    fontWeight: 950,
+                  }}
+                >
                   Total
                 </TableCell>
               </TableRow>
@@ -727,12 +832,12 @@ export function FinancialControlPage() {
                     position: "sticky",
                     left: 0,
                     zIndex: 2,
-                    bgcolor: financeColors.incomeSoft,
-                    color: financeColors.income,
+                    color: "white",
                     fontWeight: 950,
                     fontSize: 15,
                     py: 1.5,
                     minWidth: 220,
+                    bgcolor: `${sheetColors.incomeSection} !important`,
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
@@ -740,7 +845,7 @@ export function FinancialControlPage() {
                       size="small"
                       sx={{
                         color: financeColors.income,
-                        bgcolor: "rgba(37,99,235,0.1)",
+                        bgcolor: "white",
                       }}
                     >
                       {incomeRowsExpanded ? (
@@ -755,7 +860,7 @@ export function FinancialControlPage() {
                 <TableCell
                   colSpan={yearData.months.length + 1}
                   sx={{
-                    bgcolor: financeColors.incomeSoft,
+                    bgcolor: `${sheetColors.incomeSection} !important`,
                     py: 1.5,
                   }}
                 />
@@ -788,8 +893,11 @@ export function FinancialControlPage() {
                           }
                           sx={{
                             color: financeColors.income,
+                            bgcolor: sheetColors.incomeCell,
+                            fontWeight: 650,
+                            borderRight: "1px dotted rgba(15,23,42,0.24)",
                             cursor: "pointer",
-                            "&:hover": { bgcolor: financeColors.incomeSoft },
+                            "&:hover": { bgcolor: "rgba(37,99,235,0.06)" },
                           }}
                         >
                           {formatMoney(row.months[monthItem.value] ?? 0)}
@@ -797,7 +905,11 @@ export function FinancialControlPage() {
                       ))}
                       <TableCell
                         align="right"
-                        sx={{ color: financeColors.income, fontWeight: 900 }}
+                        sx={{
+                          color: financeColors.income,
+                          bgcolor: sheetColors.incomeCell,
+                          fontWeight: 950,
+                        }}
                       >
                         {formatMoney(row.total)}
                       </TableCell>
@@ -807,9 +919,10 @@ export function FinancialControlPage() {
               <TableRow
                 sx={{
                   "& > *": {
-                    bgcolor: "rgba(239,246,255,0.72)",
-                    borderTop: "1px solid rgba(37,99,235,0.16)",
-                    borderBottom: "1px solid rgba(37,99,235,0.16)",
+                    bgcolor: `${sheetColors.incomeTotal} !important`,
+                    color: "white",
+                    borderTop: "2px solid rgba(15,23,42,0.18)",
+                    borderBottom: "2px solid rgba(15,23,42,0.18)",
                   },
                 }}
               >
@@ -817,8 +930,8 @@ export function FinancialControlPage() {
                   sx={{
                     position: "sticky",
                     left: 0,
-                    bgcolor: "rgba(239,246,255,0.95) !important",
-                    color: financeColors.income,
+                    bgcolor: `${sheetColors.incomeTotal} !important`,
+                    color: "white",
                     fontWeight: 950,
                   }}
                 >
@@ -828,14 +941,14 @@ export function FinancialControlPage() {
                   <TableCell
                     key={summary.month}
                     align="right"
-                    sx={{ color: financeColors.income, fontWeight: 950 }}
+                    sx={{ color: "white", fontWeight: 950 }}
                   >
                     {formatMoney(summary.totalIncome)}
                   </TableCell>
                 ))}
                 <TableCell
                   align="right"
-                  sx={{ color: financeColors.income, fontWeight: 950 }}
+                  sx={{ color: "white", fontWeight: 950 }}
                 >
                   {formatMoney(yearData.totals.totalIncome)}
                 </TableCell>
@@ -857,8 +970,8 @@ export function FinancialControlPage() {
                     position: "sticky",
                     left: 0,
                     zIndex: 2,
-                    bgcolor: financeColors.expenseSoft,
-                    color: financeColors.expense,
+                    bgcolor: `${sheetColors.expenseSection} !important`,
+                    color: "white",
                     fontWeight: 950,
                     fontSize: 15,
                     py: 1.5,
@@ -870,7 +983,7 @@ export function FinancialControlPage() {
                       size="small"
                       sx={{
                         color: financeColors.expense,
-                        bgcolor: "rgba(234,88,12,0.1)",
+                        bgcolor: "white",
                       }}
                     >
                       {expenseRowsExpanded ? (
@@ -885,7 +998,7 @@ export function FinancialControlPage() {
                 <TableCell
                   colSpan={yearData.months.length + 1}
                   sx={{
-                    bgcolor: financeColors.expenseSoft,
+                    bgcolor: `${sheetColors.expenseSection} !important`,
                     py: 1.5,
                   }}
                 />
@@ -918,8 +1031,11 @@ export function FinancialControlPage() {
                           }
                           sx={{
                             color: financeColors.expense,
+                            bgcolor: sheetColors.expenseCell,
+                            fontWeight: 650,
+                            borderRight: "1px dotted rgba(15,23,42,0.24)",
                             cursor: "pointer",
-                            "&:hover": { bgcolor: financeColors.expenseSoft },
+                            "&:hover": { bgcolor: "rgba(234,88,12,0.06)" },
                           }}
                         >
                           {formatMoney(row.months[monthItem.value] ?? 0)}
@@ -927,7 +1043,11 @@ export function FinancialControlPage() {
                       ))}
                       <TableCell
                         align="right"
-                        sx={{ color: financeColors.expense, fontWeight: 900 }}
+                        sx={{
+                          color: financeColors.expense,
+                          bgcolor: sheetColors.expenseCell,
+                          fontWeight: 950,
+                        }}
                       >
                         {formatMoney(row.total)}
                       </TableCell>
@@ -937,9 +1057,10 @@ export function FinancialControlPage() {
               <TableRow
                 sx={{
                   "& > *": {
-                    bgcolor: "rgba(255,247,237,0.78)",
-                    borderTop: "1px solid rgba(234,88,12,0.18)",
-                    borderBottom: "1px solid rgba(234,88,12,0.18)",
+                    bgcolor: `${sheetColors.expenseTotal} !important`,
+                    color: "white",
+                    borderTop: "2px solid rgba(15,23,42,0.18)",
+                    borderBottom: "2px solid rgba(15,23,42,0.18)",
                   },
                 }}
               >
@@ -947,8 +1068,8 @@ export function FinancialControlPage() {
                   sx={{
                     position: "sticky",
                     left: 0,
-                    bgcolor: "rgba(255,247,237,0.96) !important",
-                    color: financeColors.expense,
+                    bgcolor: `${sheetColors.expenseTotal} !important`,
+                    color: "white",
                     fontWeight: 950,
                   }}
                 >
@@ -958,14 +1079,14 @@ export function FinancialControlPage() {
                   <TableCell
                     key={summary.month}
                     align="right"
-                    sx={{ color: financeColors.expense, fontWeight: 950 }}
+                    sx={{ color: "white", fontWeight: 950 }}
                   >
                     {formatMoney(summary.totalExpense)}
                   </TableCell>
                 ))}
                 <TableCell
                   align="right"
-                  sx={{ color: financeColors.expense, fontWeight: 950 }}
+                  sx={{ color: "white", fontWeight: 950 }}
                 >
                   {formatMoney(yearData.totals.totalExpense)}
                 </TableCell>
@@ -974,9 +1095,9 @@ export function FinancialControlPage() {
               <TableRow
                 sx={{
                   "& > *": {
-                    bgcolor: "rgba(248,250,252,0.96)",
+                    bgcolor: "rgba(255,255,255,0.98)",
                     borderTop: "12px solid #fff",
-                    borderBottom: "1px solid rgba(15,23,42,0.1)",
+                    borderBottom: `2px solid ${sheetColors.grid}`,
                   },
                 }}
               >
@@ -984,9 +1105,10 @@ export function FinancialControlPage() {
                   sx={{
                     position: "sticky",
                     left: 0,
-                    bgcolor: "rgba(248,250,252,1) !important",
-                    color: amountColor(yearData.totals.finalBalance),
+                    bgcolor: `${sheetColors.resultSection} !important`,
+                    color: "white",
                     fontWeight: 950,
+                    fontSize: 15,
                   }}
                 >
                   Resultado
@@ -996,11 +1118,15 @@ export function FinancialControlPage() {
                     key={summary.month}
                     align="right"
                     sx={{
+                      bgcolor: summary.balance >= 0 ? "#F0FDF4" : "#FEF2F2",
                       color: amountColor(summary.balance),
                       fontWeight: 950,
+                      borderRight: "1px dotted rgba(15,23,42,0.24)",
+                      whiteSpace: "nowrap",
+                      minWidth: 124,
                     }}
                   >
-                    {formatMoney(summary.balance)}
+                    {formatResultMoney(summary.balance)}
                   </TableCell>
                 ))}
                 <TableCell
@@ -1013,10 +1139,12 @@ export function FinancialControlPage() {
                     color: amountColor(yearData.totals.finalBalance),
                     fontWeight: 950,
                     fontSize: 15,
-                    boxShadow: "inset 0 0 0 2px rgba(15,23,42,0.08)",
+                    whiteSpace: "nowrap",
+                    minWidth: 132,
+                    boxShadow: `inset 0 0 0 2px ${amountColor(yearData.totals.finalBalance)}`,
                   }}
                 >
-                  {formatMoney(yearData.totals.finalBalance)}
+                  {formatResultMoney(yearData.totals.finalBalance)}
                 </TableCell>
               </TableRow>
             </TableBody>
