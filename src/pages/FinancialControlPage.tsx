@@ -45,6 +45,7 @@ import {
   deleteEntry,
   FinancialEntryPayload,
   getDayControl,
+  getFinancialCalendar,
   getMonthControl,
   getWeekControl,
   getYearControl,
@@ -60,6 +61,7 @@ import { ValueEditModal } from "../components/ValueEditModal";
 import type {
   DayControl,
   EntryType,
+  FinancialCalendar,
   FinancialItem,
   MonthControl,
   ValueUpdateScope,
@@ -94,6 +96,7 @@ const sheetColors = {
   resultSection: "#58B51D",
   grid: "rgba(15, 23, 42, 0.16)",
 };
+const weekDayLabels = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
 
 function amountColor(value: number) {
   return balanceColor(value);
@@ -235,6 +238,9 @@ export function FinancialControlPage() {
   const [week, setWeek] = useState(weekRange());
   const [yearData, setYearData] = useState<YearControl | null>(null);
   const [monthData, setMonthData] = useState<MonthControl | null>(null);
+  const [calendarData, setCalendarData] = useState<FinancialCalendar | null>(
+    null,
+  );
   const [dayData, setDayData] = useState<DayControl | null>(null);
   const [weekData, setWeekData] = useState<WeekControl | null>(null);
   const [loading, setLoading] = useState(false);
@@ -286,7 +292,14 @@ export function FinancialControlPage() {
     setError("");
     try {
       if (mode === "year") setYearData(await getYearControl(year));
-      if (mode === "month") setMonthData(await getMonthControl(month, year));
+      if (mode === "month") {
+        const [nextMonthData, nextCalendarData] = await Promise.all([
+          getMonthControl(month, year),
+          getFinancialCalendar(month, year),
+        ]);
+        setMonthData(nextMonthData);
+        setCalendarData(nextCalendarData);
+      }
       if (mode === "day") setDayData(await getDayControl(date));
       if (mode === "week")
         setWeekData(await getWeekControl(week.startDate, week.endDate));
@@ -422,6 +435,16 @@ export function FinancialControlPage() {
         (summary) => summary.month === cellEdit.month,
       )
     : null;
+
+  const calendarCells = useMemo(() => {
+    if (!calendarData) return [];
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const leadingDays = firstDay === 0 ? 6 : firstDay - 1;
+    return [
+      ...Array.from({ length: leadingDays }, () => null),
+      ...calendarData.days,
+    ];
+  }, [calendarData, month, year]);
 
   function categoryCell(category: string, type: EntryType) {
     return (
@@ -721,6 +744,109 @@ export function FinancialControlPage() {
               </BarChart>
             </ResponsiveContainer>
           </Box>
+        </Paper>
+      ) : null}
+
+      {!loading && !error && mode === "month" && calendarData ? (
+        <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            justifyContent="space-between"
+            spacing={1}
+            mb={2}
+          >
+            <Box>
+              <Typography variant="h6" fontWeight={900}>
+                Calendario financeiro
+              </Typography>
+              <Typography color="text.secondary">
+                Receitas, despesas, economias e vencimentos do mes.
+              </Typography>
+            </Box>
+            <Chip
+              label={`${months[month - 1]} de ${year}`}
+              sx={{ alignSelf: { xs: "flex-start", md: "center" }, fontWeight: 900 }}
+            />
+          </Stack>
+          <Grid container columns={7} spacing={1}>
+            {weekDayLabels.map((label) => (
+              <Grid item xs={1} key={label}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={900}
+                  textTransform="uppercase"
+                >
+                  {label}
+                </Typography>
+              </Grid>
+            ))}
+            {calendarCells.map((day, index) => (
+              <Grid item xs={1} key={day?.date ?? `empty-${index}`}>
+                {day ? (
+                  <Paper
+                    className="soft-card"
+                    onClick={() => {
+                      setDate(day.date);
+                      setMode("day");
+                    }}
+                    sx={{
+                      p: 1.25,
+                      minHeight: 150,
+                      borderRadius: 2,
+                      boxShadow: "none",
+                      cursor: "pointer",
+                      borderColor:
+                        day.overdueBills > 0
+                          ? "rgba(220,38,38,0.34)"
+                          : "rgba(15,23,42,0.08)",
+                      "&:hover": { borderColor: financeColors.income },
+                    }}
+                  >
+                    <Stack direction="row" justifyContent="space-between" mb={1}>
+                      <Typography fontWeight={950}>
+                        {Number(day.date.slice(8, 10))}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        fontWeight={900}
+                        color={amountColor(day.balance)}
+                      >
+                        {formatMoney(day.balance)}
+                      </Typography>
+                    </Stack>
+                    <Stack spacing={0.5}>
+                      <Typography variant="caption" color={financeColors.income}>
+                        Receitas {formatMoney(day.incomes)}
+                      </Typography>
+                      <Typography variant="caption" color={financeColors.expense}>
+                        Despesas {formatMoney(day.expenses)}
+                      </Typography>
+                      <Typography variant="caption" color={financeColors.saving}>
+                        Economias {formatMoney(day.savings)}
+                      </Typography>
+                      {day.pendingBills > 0 ? (
+                        <Chip
+                          size="small"
+                          label={`${day.pendingBills} pendente(s)`}
+                          color="warning"
+                        />
+                      ) : null}
+                      {day.overdueBills > 0 ? (
+                        <Chip
+                          size="small"
+                          label={`${day.overdueBills} atrasada(s)`}
+                          color="error"
+                        />
+                      ) : null}
+                    </Stack>
+                  </Paper>
+                ) : (
+                  <Box minHeight={150} />
+                )}
+              </Grid>
+            ))}
+          </Grid>
         </Paper>
       ) : null}
 
