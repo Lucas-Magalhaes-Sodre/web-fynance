@@ -59,6 +59,7 @@ export function DashboardPage() {
   const financialFlowData = [
     { name: 'Receitas', value: totals?.totalIncomes ?? 0, color: financeColors.income },
     { name: 'Despesas', value: totals?.totalExpenses ?? 0, color: financeColors.expense },
+    { name: 'Economias/investimentos', value: totals?.totalSavings ?? 0, color: financeColors.saving },
     {
       name: (totals?.finalBalance ?? 0) >= 0 ? 'Saldo disponivel' : 'Deficit',
       value: Math.abs(totals?.finalBalance ?? 0),
@@ -88,14 +89,11 @@ export function DashboardPage() {
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}><StatCard label="Receitas totais" value={totals?.totalIncomes ?? 0} tone="income" /></Grid>
         <Grid item xs={12} md={4}><StatCard label="Despesas totais" value={totals?.totalExpenses ?? 0} tone="expense" /></Grid>
-        <Grid item xs={12} md={4}><StatCard label="Saldo final" value={totals?.finalBalance ?? 0} tone="balance" /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Receitas fixas" value={totals?.fixedIncomes ?? 0} tone="income" /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Receitas extras" value={totals?.extraIncomes ?? 0} tone="income" /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Despesas fixas" value={totals?.fixedExpenses ?? 0} tone="expense" /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Despesas extras" value={totals?.extraExpenses ?? 0} tone="expense" /></Grid>
-        <Grid item xs={12} md={4}><StatCard label="Economias registradas no mes" value={savingsSummary?.monthlyRegisteredSavings ?? 0} tone="saving" /></Grid>
-        <Grid item xs={12} md={4}><StatCard label="Economia sugerida no mes" value={savingsSummary?.suggestedSavings ?? 0} tone="saving" /></Grid>
-        <Grid item xs={12} md={4}><StatCard label="Economia acumulada" value={savingsSummary?.accumulatedSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Economias/investimentos" value={totals?.totalSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Saldo disponivel" value={totals?.finalBalance ?? 0} tone="balance" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Economias/investimentos no mes" value={savingsSummary?.monthlyRegisteredSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Sugestao para guardar no mes" value={savingsSummary?.suggestedSavings ?? 0} tone="saving" /></Grid>
+        <Grid item xs={12} md={4}><StatCard label="Economias/investimentos acumulados" value={savingsSummary?.accumulatedSavings ?? 0} tone="saving" /></Grid>
         <Grid item xs={12} md={4}><StatCard label="Contas pagas" value={paymentSummary?.paidTotal ?? 0} tone="balance" /></Grid>
         <Grid item xs={12} md={4}><StatCard label="Total pendente" value={paymentSummary?.pendingTotal ?? 0} tone="neutral" /></Grid>
         <Grid item xs={12} md={4}><StatCard label="Total atrasado" value={paymentSummary?.overdueTotal ?? 0} tone="expense" /></Grid>
@@ -140,7 +138,7 @@ export function DashboardPage() {
             { label: 'Receitas', variation: comparison?.incomeVariation, tone: financeColors.income },
             { label: 'Despesas', variation: comparison?.expenseVariation, tone: financeColors.expense },
             { label: 'Saldo', variation: comparison?.balanceVariation, tone: (comparison?.balanceVariation.value ?? 0) >= 0 ? financeColors.positive : financeColors.negative },
-            { label: 'Economias', variation: comparison?.savingsVariation, tone: financeColors.saving }
+            { label: 'Economias/investimentos', variation: comparison?.savingsVariation, tone: financeColors.saving }
           ].map((item) => (
             <Grid item xs={12} md={3} key={item.label}>
               <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid rgba(15,23,42,0.08)', boxShadow: 'none' }}>
@@ -197,7 +195,7 @@ export function DashboardPage() {
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} mb={2}>
           <Box>
             <Typography variant="h6" fontWeight={900}>Metas em andamento</Typography>
-            <Typography color="text.secondary">Principais objetivos conectados as suas economias.</Typography>
+            <Typography color="text.secondary">Principais objetivos conectados as suas economias/investimentos.</Typography>
           </Box>
           <Typography fontWeight={950} color={financeColors.saving}>
             {goals.length} ativa(s)
@@ -237,7 +235,7 @@ export function DashboardPage() {
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1} mb={2}>
           <Box>
             <Typography variant="h6" fontWeight={900}>Fluxo financeiro</Typography>
-            <Typography color="text.secondary">Receitas, despesas e saldo em uma leitura rapida.</Typography>
+            <Typography color="text.secondary">Receitas, despesas, economias/investimentos e saldo em uma leitura rapida.</Typography>
           </Box>
         </Stack>
         <Box height={260}>
@@ -297,7 +295,7 @@ export function DashboardPage() {
 
       <FinancialItemForm
         open={formOpen}
-        defaultType="EXTRA_EXPENSE"
+        defaultType="EXPENSE"
         onClose={() => setFormOpen(false)}
         onSubmit={async (data) => {
           await api.post('/financial-items', { ...data, dueDate: data.dueDate || null });

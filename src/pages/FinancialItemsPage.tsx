@@ -14,6 +14,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { FinancialItemForm } from '../components/FinancialItemForm';
 import type { FinancialItem, FinancialItemType } from '../types/financial';
 import { formatDate, formatMoney, typeLabels } from '../utils/format';
@@ -28,6 +29,7 @@ export function FinancialItemsPage({ title, description, type }: Props) {
   const [items, setItems] = useState<FinancialItem[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FinancialItem | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const isIncomePage = type.includes('INCOME');
   const dateHeader = isIncomePage ? 'Data do recebimento' : 'Data da saida';
 
@@ -41,7 +43,13 @@ export function FinancialItemsPage({ title, description, type }: Props) {
   }, [type]);
 
   async function removeItem(item: FinancialItem) {
-    if (!window.confirm(`Excluir "${item.title}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Excluir lancamento',
+      description: `Deseja excluir "${item.title}"? Esta acao nao pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      tone: 'danger'
+    });
+    if (!confirmed) return;
     await api.delete(`/financial-items/${item.id}`);
     await loadItems();
   }
@@ -114,6 +122,7 @@ export function FinancialItemsPage({ title, description, type }: Props) {
           await loadItems();
         }}
       />
+      {confirmDialog}
     </Stack>
   );
 }

@@ -14,11 +14,13 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import Tab from "@mui/material/Tab";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -41,6 +43,7 @@ import {
 } from "recharts";
 import {
   createEntry,
+  createSaving,
   deleteCategoryLine,
   deleteEntry,
   FinancialEntryPayload,
@@ -49,11 +52,15 @@ import {
   getMonthControl,
   getWeekControl,
   getYearControl,
-  renameCategory,
+  listFinancialCategories,
+  listFinancialGoals,
+  SavingPayload,
+  transferSaving,
   updateEntry,
   updateEntryPaymentStatus,
   updateEntryValue,
 } from "../api/financialControl";
+import { useConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState } from "../components/EmptyState";
 import { FinancialEntryForm } from "../components/FinancialEntryForm";
 import { PeriodSummaryCards } from "../components/PeriodSummaryCards";
@@ -61,9 +68,13 @@ import { ValueEditModal } from "../components/ValueEditModal";
 import type {
   DayControl,
   EntryType,
+  FinancialCategory,
   FinancialCalendar,
+  FinancialGoal,
   FinancialItem,
   MonthControl,
+  Saving,
+  SavingTransferDirection,
   ValueUpdateScope,
   WeekControl,
   YearControl,
@@ -80,6 +91,35 @@ import {
 } from "../utils/format";
 
 type ViewMode = "day" | "week" | "month" | "year";
+
+type DetailSpreadsheetRow = {
+  category: string;
+  name: string;
+  type: EntryType;
+  months: Record<number, number>;
+  total: number;
+  notes: Record<number, string[]>;
+};
+
+type SavingAction = "REGISTER" | SavingTransferDirection;
+
+type SavingFormState = {
+  action: SavingAction;
+  title: string;
+  description: string;
+  amount: string;
+  date: string;
+  goalId: string;
+};
+
+const initialSavingForm: SavingFormState = {
+  action: "REGISTER",
+  title: "",
+  description: "",
+  amount: "",
+  date: isoDate(),
+  goalId: "",
+};
 
 const current = new Date();
 const realCurrentMonth = new Date().getMonth() + 1;
@@ -109,6 +149,62 @@ function formatResultMoney(value: number) {
 
 function itemDateLabel(item: FinancialItem) {
   return item.type.includes("INCOME") ? "Data do recebimento" : "Data da saida";
+}
+
+function categoryKey(type: EntryType, category: string) {
+  return `${type}:${category}`;
+}
+
+function normalizedCategoryKey(type: EntryType, category: string) {
+  return `${type}:${category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim()}`;
+}
+
+function daysInMonth(yearValue: number, monthValue: number) {
+  return new Date(yearValue, monthValue, 0).getDate();
+}
+
+function dateForMonthlyOccurrence(yearValue: number, monthValue: number, dayValue: number) {
+  const safeDay = Math.min(dayValue, daysInMonth(yearValue, monthValue));
+  return `${yearValue}-${String(monthValue).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+}
+
+function monthCursorValue(yearValue: number, monthValue: number) {
+  return yearValue * 12 + monthValue;
+}
+
+function hexToRgb(color: string) {
+  const match = color.match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return null;
+  const value = match[1];
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16),
+  };
+}
+
+function relativeLuminance(color: string) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return 0;
+  const channels = [rgb.r, rgb.g, rgb.b].map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrastRatio(firstColor: string, secondColor: string) {
+  const first = relativeLuminance(firstColor);
+  const second = relativeLuminance(secondColor);
+  const lighter = Math.max(first, second);
+  const darker = Math.min(first, second);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readableCategoryTextColor(color: string) {
+  return contrastRatio(color, "#FFFFFF") >= 4.5 ? color : "#111827";
 }
 
 function EntryRows({
@@ -229,6 +325,42 @@ function EntryRows({
   );
 }
 
+function SavingRows({
+  items,
+}: {
+  items: Saving[];
+}) {
+  if (!items.length)
+    return <EmptyState message="Nenhuma economia/investimento neste periodo." />;
+
+  return (
+    <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>Economia/investimento</TableCell>
+            <TableCell>Data</TableCell>
+            <TableCell>Descricao</TableCell>
+            <TableCell align="right">Valor</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {items.map((item) => (
+            <TableRow key={item.id} hover>
+              <TableCell>{item.title}</TableCell>
+              <TableCell>{formatDate(item.date)}</TableCell>
+              <TableCell>{item.description || "-"}</TableCell>
+              <TableCell align="right" sx={{ color: financeColors.saving, fontWeight: 850 }}>
+                {formatMoney(item.amount)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Paper>
+  );
+}
+
 export function FinancialControlPage() {
   const [mode, setMode] = useState<ViewMode>("year");
   const [year, setYear] = useState(current.getFullYear());
@@ -246,23 +378,33 @@ export function FinancialControlPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [savingFormOpen, setSavingFormOpen] = useState(false);
+  const [savingForm, setSavingForm] = useState<SavingFormState>(initialSavingForm);
+  const [savingTransferSaving, setSavingTransferSaving] = useState(false);
   const [editingItem, setEditingItem] = useState<FinancialItem | null>(null);
   const [defaultType, setDefaultType] = useState<EntryType>("EXPENSE");
   const [incomeRowsExpanded, setIncomeRowsExpanded] = useState(true);
   const [expenseRowsExpanded, setExpenseRowsExpanded] = useState(true);
+  const [allCategoryRowsExpanded, setAllCategoryRowsExpanded] = useState(false);
+  const [categoryRowsExpanded, setCategoryRowsExpanded] = useState<Record<string, boolean>>({});
+  const [categories, setCategories] = useState<FinancialCategory[]>([]);
+  const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [cellEdit, setCellEdit] = useState<null | {
     category: string;
+    name: string;
     month: number;
     type: EntryType;
     value: number;
   }>(null);
   const [cellSaving, setCellSaving] = useState(false);
-  const [categoryEdit, setCategoryEdit] = useState<null | {
+  const [lineEdit, setLineEdit] = useState<null | {
     category: string;
+    name: string;
     type: EntryType;
     value: string;
   }>(null);
-  const [categorySaving, setCategorySaving] = useState(false);
+  const [lineSaving, setLineSaving] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const allCurrentItems = useMemo(() => {
     if (mode === "day")
@@ -273,6 +415,71 @@ export function FinancialControlPage() {
       return [...(monthData?.incomes ?? []), ...(monthData?.expenses ?? [])];
     return yearData?.items ?? [];
   }, [dayData, monthData, mode, weekData, yearData]);
+
+  const allCurrentSavings = useMemo(() => {
+    if (mode === "day") return dayData?.savings ?? [];
+    if (mode === "week") return weekData?.savings ?? [];
+    if (mode === "month") return monthData?.savings ?? [];
+    return yearData?.savings ?? [];
+  }, [dayData, monthData, mode, weekData, yearData]);
+
+  const categoryColorMap = useMemo(() => {
+    const colorMap = new Map<string, string>();
+    for (const category of categories) {
+      colorMap.set(categoryKey(category.type, category.name), category.color);
+      colorMap.set(normalizedCategoryKey(category.type, category.name), category.color);
+    }
+    return colorMap;
+  }, [categories]);
+
+  function categoryColor(type: EntryType, category: string) {
+    return (
+      categoryColorMap.get(categoryKey(type, category)) ??
+      categoryColorMap.get(normalizedCategoryKey(type, category)) ??
+      (type === "INCOME" ? financeColors.income : financeColors.expense)
+    );
+  }
+
+  const detailRows = useMemo(() => {
+    const rowMap = new Map<string, DetailSpreadsheetRow>();
+    const monthValues = yearData?.months.map((monthItem) => monthItem.value) ?? Array.from({ length: 12 }, (_, index) => index + 1);
+    for (const item of yearData?.items ?? []) {
+      const type = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
+      const name = item.name ?? item.title ?? item.category;
+      const key = `${type}:${item.category}:${name}`;
+      if (!rowMap.has(key)) {
+        rowMap.set(key, {
+          category: item.category,
+          name,
+          type,
+          months: Object.fromEntries(monthValues.map((monthValue) => [monthValue, 0])) as Record<number, number>,
+          total: 0,
+          notes: Object.fromEntries(monthValues.map((monthValue) => [monthValue, []])) as Record<number, string[]>
+        });
+      }
+      const row = rowMap.get(key);
+      if (!row) continue;
+      row.months[item.month] += item.amount;
+      row.total += item.amount;
+      if (item.description?.trim()) row.notes[item.month].push(item.description.trim());
+    }
+    return Array.from(rowMap.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [yearData]);
+
+  function rowsForCategory(type: EntryType, category: string) {
+    return detailRows.filter((row) => row.type === type && row.category === category);
+  }
+
+  function lineItems(category: string, name: string, type: EntryType) {
+    return (yearData?.items ?? []).filter((item) => {
+      const itemType = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
+      return item.category === category && (item.name ?? item.title ?? item.category) === name && itemType === type;
+    });
+  }
+
+  function notesForCategory(type: EntryType, category: string, monthValue: number) {
+    return rowsForCategory(type, category).flatMap((row) => row.notes[monthValue] ?? []);
+  }
 
   const yearOptions = useMemo(() => {
     const options = new Set<number>();
@@ -310,9 +517,22 @@ export function FinancialControlPage() {
     }
   }
 
+  async function loadCategories() {
+    try {
+      setCategories(await listFinancialCategories());
+    } catch {
+      setCategories([]);
+    }
+  }
+
   useEffect(() => {
     loadData();
   }, [mode, year, month, date, week.startDate, week.endDate]);
+
+  useEffect(() => {
+    loadCategories();
+    listFinancialGoals().then(setGoals).catch(() => setGoals([]));
+  }, []);
 
   useEffect(() => {
     setYearInput(String(year));
@@ -324,14 +544,106 @@ export function FinancialControlPage() {
     setFormOpen(true);
   }
 
+  function openSavingCreate(action: SavingAction = "REGISTER") {
+    const baseDate = mode === "day" ? date : isoDate(new Date(year, month - 1, Math.min(current.getDate(), new Date(year, month, 0).getDate())));
+    setSavingForm({
+      ...initialSavingForm,
+      action,
+      date: baseDate,
+      title:
+        action === "WITHDRAW_TO_BALANCE"
+          ? "Resgate de economias/investimentos"
+          : "Economia/investimento",
+    });
+    setSavingFormOpen(true);
+  }
+
+  function savingPayload(): SavingPayload {
+    const savingDate = new Date(`${savingForm.date}T00:00:00`);
+    return {
+      title: savingForm.title.trim(),
+      description: savingForm.description.trim() || null,
+      amount: Number(savingForm.amount),
+      date: savingForm.date,
+      month: savingDate.getMonth() + 1,
+      year: savingDate.getFullYear(),
+      goalId: savingForm.goalId || null,
+    };
+  }
+
+  async function saveSavingFlow() {
+    const payload = savingPayload();
+    if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount)) return;
+
+    setSavingTransferSaving(true);
+    try {
+      if (savingForm.action === "REGISTER") {
+        await createSaving(payload);
+      } else {
+        await transferSaving({
+          ...payload,
+          direction: savingForm.action,
+        });
+      }
+      setSavingFormOpen(false);
+      await loadData();
+    } finally {
+      setSavingTransferSaving(false);
+    }
+  }
+
   async function saveEntry(payload: FinancialEntryPayload) {
     if (editingItem) await updateEntry(editingItem.id, payload);
-    else await createEntry(payload);
+    else if (payload.recurrenceType === "MONTHLY" && payload.recurrenceGeneration) {
+      const generation = payload.recurrenceGeneration;
+      const startMonth = generation.mode === "ALL_YEAR" ? 1 : generation.startMonth;
+      const startYear = generation.startYear;
+      const endMonth = generation.endMonth;
+      const endYear = generation.endYear;
+      const startCursor = monthCursorValue(startYear, startMonth);
+      const endCursor = monthCursorValue(endYear, endMonth);
+      const dueDay = payload.dueDay ?? new Date(`${payload.date}T00:00:00`).getDate();
+
+      if (endCursor < startCursor) {
+        throw new Error("Periodo final da recorrencia anterior ao periodo inicial.");
+      }
+
+      const requests: Promise<FinancialItem>[] = [];
+      for (let cursor = startCursor; cursor <= endCursor; cursor += 1) {
+        const occurrenceYear = Math.floor((cursor - 1) / 12);
+        const occurrenceMonth = ((cursor - 1) % 12) + 1;
+        const occurrenceDate = dateForMonthlyOccurrence(occurrenceYear, occurrenceMonth, dueDay);
+        const isExpense = payload.type === "EXPENSE";
+        const { recurrenceGeneration: _recurrenceGeneration, ...entryPayload } = payload;
+
+        requests.push(
+          createEntry({
+            ...entryPayload,
+            date: occurrenceDate,
+            month: occurrenceMonth,
+            year: occurrenceYear,
+            dueDate: isExpense ? occurrenceDate : null,
+            paymentDate: isExpense ? null : occurrenceDate,
+            status: isExpense ? "PENDENTE" : "PAGO",
+            isFixed: true,
+            recurrenceType: "MONTHLY",
+          }),
+        );
+      }
+
+      await Promise.all(requests);
+    } else await createEntry(payload);
     await loadData();
   }
 
   async function removeItem(item: FinancialItem) {
-    if (!window.confirm(`Excluir "${item.name ?? item.title}"?`)) return;
+    const confirmed = await confirm({
+      title: "Excluir lancamento",
+      description: `Deseja excluir "${item.name ?? item.title}"? Esta acao nao pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     await deleteEntry(item.id);
     await loadData();
   }
@@ -349,40 +661,73 @@ export function FinancialControlPage() {
     await loadData();
   }
 
-  async function saveCategoryName() {
-    if (!categoryEdit) return;
-    const newCategory = categoryEdit.value.trim();
-    if (!newCategory || newCategory === categoryEdit.category) return;
-    setCategorySaving(true);
+  function itemPayload(item: FinancialItem, name: string): FinancialEntryPayload {
+    const itemType = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
+    return {
+      name,
+      description: item.description ?? null,
+      amount: item.amount,
+      type: itemType,
+      category: item.category,
+      date: item.date.slice(0, 10),
+      month: item.month,
+      year: item.year,
+      dueDate: item.dueDate ? item.dueDate.slice(0, 10) : null,
+      paymentDate: item.paymentDate ? item.paymentDate.slice(0, 10) : null,
+      dueDay: item.dueDay ?? null,
+      isFixed: item.isFixed,
+      recurrenceType: item.recurrenceType,
+      status: item.status,
+    };
+  }
+
+  async function saveLineName() {
+    if (!lineEdit) return;
+    const newName = lineEdit.value.trim();
+    if (!newName || newName === lineEdit.name) return;
+    setLineSaving(true);
     try {
-      await renameCategory({
-        category: categoryEdit.category,
-        newCategory,
-        type: categoryEdit.type,
-        year,
-      });
-      setCategoryEdit(null);
+      const items = lineItems(lineEdit.category, lineEdit.name, lineEdit.type);
+      await Promise.all(items.map((item) => updateEntry(item.id, itemPayload(item, newName))));
+      setLineEdit(null);
       await loadData();
     } finally {
-      setCategorySaving(false);
+      setLineSaving(false);
     }
   }
 
   async function removeCategoryLine(category: string, type: EntryType) {
     const label = type === "INCOME" ? "receita" : "despesa";
-    const confirmed = window.confirm(
-      `Excluir a linha "${category}" e todos os valores de ${label} em ${year}?`,
-    );
+    const confirmed = await confirm({
+      title: "Excluir categoria da tabela",
+      description: `Deseja excluir "${category}" e todos os valores de ${label} em ${year}?`,
+      confirmLabel: "Excluir",
+      tone: "danger",
+    });
     if (!confirmed) return;
     await deleteCategoryLine({ category, type, year });
     await loadData();
   }
 
-  function findCellItem(category: string, monthValue: number, type: EntryType) {
+  async function removeItemLine(category: string, name: string, type: EntryType) {
+    const confirmed = await confirm({
+      title: "Excluir item da categoria",
+      description: `Deseja excluir a linha "${name}" dentro de "${category}" em ${year}?`,
+      confirmLabel: "Excluir",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    const items = lineItems(category, name, type);
+    await Promise.all(items.map((item) => deleteEntry(item.id)));
+    await loadData();
+  }
+
+  function findCellItem(category: string, name: string, monthValue: number, type: EntryType) {
     return yearData?.items.find((item) => {
       const itemType = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
       return (
         item.category === category &&
+        (item.name ?? item.title ?? item.category) === name &&
         item.month === monthValue &&
         itemType === type
       );
@@ -395,7 +740,7 @@ export function FinancialControlPage() {
     description?: string | null;
   }) {
     if (!cellEdit) return;
-    const item = findCellItem(cellEdit.category, cellEdit.month, cellEdit.type);
+    const item = findCellItem(cellEdit.category, cellEdit.name, cellEdit.month, cellEdit.type);
     if (!item) {
       setDefaultType(cellEdit.type);
       setFormOpen(true);
@@ -422,6 +767,7 @@ export function FinancialControlPage() {
       ? {
           totalIncome: yearData?.totals.totalIncome ?? 0,
           totalExpense: yearData?.totals.totalExpense ?? 0,
+          totalSavings: yearData?.totals.totalSavings ?? 0,
           balance: yearData?.totals.finalBalance ?? 0,
         }
       : mode === "month"
@@ -446,7 +792,105 @@ export function FinancialControlPage() {
     ];
   }, [calendarData, month, year]);
 
+  function isDetailExpanded(type: EntryType, category: string) {
+    return categoryRowsExpanded[categoryKey(type, category)] ?? allCategoryRowsExpanded;
+  }
+
+  function toggleCategoryDetails(type: EntryType, category: string) {
+    const key = categoryKey(type, category);
+    setCategoryRowsExpanded((current) => ({
+      ...current,
+      [key]: !(current[key] ?? allCategoryRowsExpanded)
+    }));
+  }
+
+  function noteMarker(notes: string[]) {
+    const cleanNotes = notes.filter(Boolean);
+    if (!cleanNotes.length) return null;
+    return (
+      <Tooltip title={cleanNotes.join("\n")}>
+        <Box
+          component="span"
+          sx={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: 0,
+            height: 0,
+            borderTop: "10px solid #FACC15",
+            borderLeft: "10px solid transparent",
+          }}
+        />
+      </Tooltip>
+    );
+  }
+
+  function truncatedName(name: string, color?: string, fontWeight = 850) {
+    return (
+      <Tooltip title={name}>
+        <Typography
+          component="span"
+          noWrap
+          sx={{
+            display: "block",
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            color,
+            fontWeight,
+          }}
+        >
+          {name}
+        </Typography>
+      </Tooltip>
+    );
+  }
+
+  function valueCell({
+    value,
+    notes,
+    color,
+    tone,
+    isCategory = false,
+    onClick,
+    key,
+  }: {
+    value: number;
+    notes: string[];
+    color: string;
+    tone: EntryType;
+    isCategory?: boolean;
+    onClick?: () => void;
+    key?: string | number;
+  }) {
+    return (
+      <TableCell
+        key={key}
+        align="right"
+        onClick={onClick}
+        sx={{
+          position: "relative",
+          color: isCategory ? "#111827" : readableCategoryTextColor(color),
+          bgcolor: tone === "INCOME" ? sheetColors.incomeCell : sheetColors.expenseCell,
+          fontWeight: isCategory ? 850 : 500,
+          borderRight: `${isCategory ? 3 : 1}px solid ${color}`,
+          borderTop: `${isCategory ? 3 : 1}px solid ${color}`,
+          borderBottom: `${isCategory ? 3 : 1}px solid ${color}`,
+          cursor: onClick ? "pointer" : "default",
+          "&:hover": onClick
+            ? { bgcolor: tone === "INCOME" ? "rgba(37,99,235,0.06)" : "rgba(234,88,12,0.06)" }
+            : undefined,
+        }}
+      >
+        {noteMarker(notes)}
+        {formatMoney(value)}
+      </TableCell>
+    );
+  }
+
   function categoryCell(category: string, type: EntryType) {
+    const color = categoryColor(type, category);
+    const expanded = isDetailExpanded(type, category);
     return (
       <TableCell
         sx={{
@@ -455,7 +899,9 @@ export function FinancialControlPage() {
           bgcolor: "#F8FAFC",
           fontWeight: 850,
           minWidth: 240,
-          borderRight: `1px solid ${sheetColors.grid}`,
+          borderRight: `3px solid ${color}`,
+          borderTop: `3px solid ${color}`,
+          borderBottom: `3px solid ${color}`,
         }}
       >
         <Stack
@@ -464,20 +910,22 @@ export function FinancialControlPage() {
           justifyContent="space-between"
           spacing={1}
         >
-          <Button
-            variant="text"
-            size="small"
-            onClick={() => setCategoryEdit({ category, type, value: category })}
-            sx={{
-              justifyContent: "flex-start",
-              px: 0,
-              color: "inherit",
-              fontWeight: 800,
-              textTransform: "none",
-            }}
-          >
-            {category}
-          </Button>
+          <Tooltip title={expanded ? "Recolher itens" : "Expandir itens"}>
+            <IconButton
+              size="small"
+              onClick={() => toggleCategoryDetails(type, category)}
+              sx={{ color }}
+            >
+              {expanded ? (
+                <KeyboardArrowDownIcon fontSize="small" />
+              ) : (
+                <KeyboardArrowRightIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Box flex={1} minWidth={0}>
+            {truncatedName(category, "#111827")}
+          </Box>
           <Tooltip title="Excluir linha e valores deste ano">
             <IconButton
               size="small"
@@ -554,6 +1002,28 @@ export function FinancialControlPage() {
               }}
             >
               Despesa
+            </Button>
+            <Button
+              startIcon={<AddIcon />}
+              variant="outlined"
+              onClick={() => openSavingCreate("REGISTER")}
+              sx={{
+                minHeight: 48,
+                px: 2.5,
+                borderRadius: 2.5,
+                borderColor: "rgba(212,160,23,0.5)",
+                color: financeColors.saving,
+                bgcolor: financeColors.savingSoft,
+                fontWeight: 950,
+                letterSpacing: 0,
+                "&:hover": {
+                  borderColor: financeColors.saving,
+                  bgcolor: "rgba(255,248,219,0.92)",
+                  boxShadow: "0 14px 28px rgba(212,160,23,0.18)",
+                },
+              }}
+            >
+              Economia/investimento
             </Button>
           </Stack>
         </Stack>
@@ -694,6 +1164,7 @@ export function FinancialControlPage() {
       <PeriodSummaryCards
         totalIncome={selectedTotals?.totalIncome ?? 0}
         totalExpense={selectedTotals?.totalExpense ?? 0}
+        totalSavings={selectedTotals?.totalSavings ?? 0}
         balance={selectedTotals?.balance ?? 0}
       />
 
@@ -717,7 +1188,12 @@ export function FinancialControlPage() {
                     fill: financeColors.expense,
                   },
                   {
-                    name: "Saldo",
+                    name: "Economias/investimentos",
+                    valor: selectedTotals.totalSavings,
+                    fill: financeColors.saving,
+                  },
+                  {
+                    name: "Saldo disponivel",
                     valor: selectedTotals.balance,
                     fill: balanceColor(selectedTotals.balance),
                   },
@@ -856,19 +1332,34 @@ export function FinancialControlPage() {
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error && mode === "year" && yearData ? (
-        <Paper
-          className="soft-card premium-scrollbar"
-          sx={{
-            borderRadius: 4,
-            overflow: "auto",
-            maxHeight: "68vh",
-            pt: 1.5,
-            border: `1px solid ${sheetColors.grid}`,
-            background:
-              "linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)), #f8fafc",
-            borderTop: "none",
-          }}
-        >
+        <Stack spacing={1.5}>
+          <Box display="flex" justifyContent="flex-end">
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={allCategoryRowsExpanded}
+                  onChange={(event) => {
+                    setAllCategoryRowsExpanded(event.target.checked);
+                    setCategoryRowsExpanded({});
+                  }}
+                />
+              }
+              label={allCategoryRowsExpanded ? "Categorias expandidas" : "Categorias recolhidas"}
+            />
+          </Box>
+          <Paper
+            className="soft-card premium-scrollbar"
+            sx={{
+              borderRadius: 4,
+              overflow: "auto",
+              maxHeight: "68vh",
+              pt: 1.5,
+              border: `1px solid ${sheetColors.grid}`,
+              background:
+                "linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)), #f8fafc",
+              borderTop: "none",
+            }}
+          >
           <Table
             stickyHeader
             size="small"
@@ -1036,45 +1527,86 @@ export function FinancialControlPage() {
                 </TableRow>
               ) : null}
               {incomeRowsExpanded
-                ? yearData.incomeRows.map((row) => (
-                    <TableRow key={row.category} hover>
-                      {categoryCell(row.category, "INCOME")}
-                      {yearData.months.map((monthItem) => (
-                        <TableCell
-                          key={monthItem.value}
-                          align="right"
-                          onClick={() =>
-                            setCellEdit({
-                              category: row.category,
-                              month: monthItem.value,
-                              type: "INCOME",
-                              value: row.months[monthItem.value] ?? 0,
+                ? yearData.incomeRows.flatMap((row) => {
+                    const color = categoryColor("INCOME", row.category);
+                    const children = rowsForCategory("INCOME", row.category);
+                    const categoryRow = (
+                      <TableRow key={row.category} hover>
+                        {categoryCell(row.category, "INCOME")}
+                        {yearData.months.map((monthItem) =>
+                          valueCell({
+                            key: monthItem.value,
+                            value: row.months[monthItem.value] ?? 0,
+                            notes: notesForCategory("INCOME", row.category, monthItem.value),
+                            color,
+                            tone: "INCOME",
+                            isCategory: true,
+                          })
+                        )}
+                        {valueCell({ value: row.total, notes: [], color, tone: "INCOME", isCategory: true })}
+                      </TableRow>
+                    );
+                    if (!isDetailExpanded("INCOME", row.category)) return [categoryRow];
+                    return [
+                      categoryRow,
+                      ...children.map((child) => {
+                        const textColor = readableCategoryTextColor(color);
+                        return (
+                        <TableRow key={`${child.category}:${child.name}`} hover>
+                          <TableCell
+                            sx={{
+                              position: "sticky",
+                              left: 0,
+                              bgcolor: "#FFFFFF",
+                              pl: 5,
+                              fontWeight: 700,
+                              borderRight: `1px solid ${color}`,
+                              borderLeft: `1px solid ${color}`,
+                              borderTop: `1px solid ${color}`,
+                              borderBottom: `1px solid ${color}`,
+                            }}
+                          >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                              <Button
+                                size="small"
+                                variant="text"
+                                onClick={() => setLineEdit({ category: child.category, name: child.name, type: "INCOME", value: child.name })}
+                                sx={{ color: textColor, fontWeight: 500, justifyContent: "flex-start", px: 0, textTransform: "none", minWidth: 0, flex: 1, overflow: "hidden" }}
+                              >
+                                {truncatedName(child.name, textColor, 500)}
+                              </Button>
+                              <Tooltip title="Excluir linha">
+                                <IconButton size="small" color="error" onClick={() => removeItemLine(child.category, child.name, "INCOME")}>
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                          {yearData.months.map((monthItem) =>
+                            valueCell({
+                              key: monthItem.value,
+                              value: child.months[monthItem.value] ?? 0,
+                              notes: child.notes[monthItem.value] ?? [],
+                              color,
+                              tone: "INCOME",
+                              onClick: () =>
+                                setCellEdit({
+                                  category: child.category,
+                                  name: child.name,
+                                  month: monthItem.value,
+                                  type: "INCOME",
+                                  value: child.months[monthItem.value] ?? 0,
+                                }),
                             })
-                          }
-                          sx={{
-                            color: financeColors.income,
-                            bgcolor: sheetColors.incomeCell,
-                            fontWeight: 650,
-                            borderRight: "1px dotted rgba(15,23,42,0.24)",
-                            cursor: "pointer",
-                            "&:hover": { bgcolor: "rgba(37,99,235,0.06)" },
-                          }}
-                        >
-                          {formatMoney(row.months[monthItem.value] ?? 0)}
-                        </TableCell>
-                      ))}
-                      <TableCell
-                        align="right"
-                        sx={{
-                          color: financeColors.income,
-                          bgcolor: sheetColors.incomeCell,
-                          fontWeight: 950,
-                        }}
-                      >
-                        {formatMoney(row.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          )}
+                          <TableCell align="right" sx={{ color: textColor, bgcolor: "#FFFFFF", fontWeight: 500, borderRight: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>
+                            {formatMoney(child.total)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                      }),
+                    ];
+                  })
                 : null}
               <TableRow
                 sx={{
@@ -1174,45 +1706,86 @@ export function FinancialControlPage() {
                 </TableRow>
               ) : null}
               {expenseRowsExpanded
-                ? yearData.expenseRows.map((row) => (
-                    <TableRow key={row.category} hover>
-                      {categoryCell(row.category, "EXPENSE")}
-                      {yearData.months.map((monthItem) => (
-                        <TableCell
-                          key={monthItem.value}
-                          align="right"
-                          onClick={() =>
-                            setCellEdit({
-                              category: row.category,
-                              month: monthItem.value,
-                              type: "EXPENSE",
-                              value: row.months[monthItem.value] ?? 0,
+                ? yearData.expenseRows.flatMap((row) => {
+                    const color = categoryColor("EXPENSE", row.category);
+                    const children = rowsForCategory("EXPENSE", row.category);
+                    const categoryRow = (
+                      <TableRow key={row.category} hover>
+                        {categoryCell(row.category, "EXPENSE")}
+                        {yearData.months.map((monthItem) =>
+                          valueCell({
+                            key: monthItem.value,
+                            value: row.months[monthItem.value] ?? 0,
+                            notes: notesForCategory("EXPENSE", row.category, monthItem.value),
+                            color,
+                            tone: "EXPENSE",
+                            isCategory: true,
+                          })
+                        )}
+                        {valueCell({ value: row.total, notes: [], color, tone: "EXPENSE", isCategory: true })}
+                      </TableRow>
+                    );
+                    if (!isDetailExpanded("EXPENSE", row.category)) return [categoryRow];
+                    return [
+                      categoryRow,
+                      ...children.map((child) => {
+                        const textColor = readableCategoryTextColor(color);
+                        return (
+                        <TableRow key={`${child.category}:${child.name}`} hover>
+                          <TableCell
+                            sx={{
+                              position: "sticky",
+                              left: 0,
+                              bgcolor: "#FFFFFF",
+                              pl: 5,
+                              fontWeight: 700,
+                              borderRight: `1px solid ${color}`,
+                              borderLeft: `1px solid ${color}`,
+                              borderTop: `1px solid ${color}`,
+                              borderBottom: `1px solid ${color}`,
+                            }}
+                          >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                              <Button
+                                size="small"
+                                variant="text"
+                                onClick={() => setLineEdit({ category: child.category, name: child.name, type: "EXPENSE", value: child.name })}
+                                sx={{ color: textColor, fontWeight: 500, justifyContent: "flex-start", px: 0, textTransform: "none", minWidth: 0, flex: 1, overflow: "hidden" }}
+                              >
+                                {truncatedName(child.name, textColor, 500)}
+                              </Button>
+                              <Tooltip title="Excluir linha">
+                                <IconButton size="small" color="error" onClick={() => removeItemLine(child.category, child.name, "EXPENSE")}>
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                          {yearData.months.map((monthItem) =>
+                            valueCell({
+                              key: monthItem.value,
+                              value: child.months[monthItem.value] ?? 0,
+                              notes: child.notes[monthItem.value] ?? [],
+                              color,
+                              tone: "EXPENSE",
+                              onClick: () =>
+                                setCellEdit({
+                                  category: child.category,
+                                  name: child.name,
+                                  month: monthItem.value,
+                                  type: "EXPENSE",
+                                  value: child.months[monthItem.value] ?? 0,
+                                }),
                             })
-                          }
-                          sx={{
-                            color: financeColors.expense,
-                            bgcolor: sheetColors.expenseCell,
-                            fontWeight: 650,
-                            borderRight: "1px dotted rgba(15,23,42,0.24)",
-                            cursor: "pointer",
-                            "&:hover": { bgcolor: "rgba(234,88,12,0.06)" },
-                          }}
-                        >
-                          {formatMoney(row.months[monthItem.value] ?? 0)}
-                        </TableCell>
-                      ))}
-                      <TableCell
-                        align="right"
-                        sx={{
-                          color: financeColors.expense,
-                          bgcolor: sheetColors.expenseCell,
-                          fontWeight: 950,
-                        }}
-                      >
-                        {formatMoney(row.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          )}
+                          <TableCell align="right" sx={{ color: textColor, bgcolor: "#FFFFFF", fontWeight: 500, borderRight: `1px solid ${color}`, borderBottom: `1px solid ${color}` }}>
+                            {formatMoney(child.total)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                      }),
+                    ];
+                  })
                 : null}
               <TableRow
                 sx={{
@@ -1249,6 +1822,131 @@ export function FinancialControlPage() {
                   sx={{ color: "white", fontWeight: 950 }}
                 >
                   {formatMoney(yearData.totals.totalExpense)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow
+                sx={{
+                  "& > *": {
+                    borderBottom: "none",
+                    borderTop: "10px solid #fff",
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 2,
+                    bgcolor: `${financeColors.saving} !important`,
+                    color: "white",
+                    fontWeight: 950,
+                    fontSize: 15,
+                    py: 1.5,
+                    minWidth: 220,
+                  }}
+                >
+                  Economias/investimentos
+                </TableCell>
+                <TableCell
+                  colSpan={yearData.months.length + 1}
+                  sx={{
+                    bgcolor: `${financeColors.saving} !important`,
+                    py: 1.5,
+                  }}
+                />
+              </TableRow>
+              {!yearData.savingRows.length ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={yearData.months.length + 2}
+                    sx={{ color: "text.secondary", fontStyle: "italic" }}
+                  >
+                    Nenhuma economia/investimento cadastrada ainda.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {yearData.savingRows.map((row) => (
+                <TableRow key={row.category} hover>
+                  <TableCell
+                    sx={{
+                      position: "sticky",
+                      left: 0,
+                      bgcolor: "#FFFFFF",
+                      color: financeColors.saving,
+                      fontWeight: 850,
+                      minWidth: 240,
+                      borderRight: `2px solid ${financeColors.saving}`,
+                      borderTop: `2px solid ${financeColors.saving}`,
+                      borderBottom: `2px solid ${financeColors.saving}`,
+                    }}
+                  >
+                    {truncatedName(row.category, financeColors.saving)}
+                  </TableCell>
+                  {yearData.months.map((monthItem) => (
+                    <TableCell
+                      key={monthItem.value}
+                      align="right"
+                      sx={{
+                        color: financeColors.saving,
+                        bgcolor: "#FFFFFF",
+                        fontWeight: 750,
+                        borderRight: `1px solid ${financeColors.saving}`,
+                        borderBottom: `1px solid ${financeColors.saving}`,
+                      }}
+                    >
+                      {formatMoney(row.months[monthItem.value] ?? 0)}
+                    </TableCell>
+                  ))}
+                  <TableCell
+                    align="right"
+                    sx={{
+                      color: financeColors.saving,
+                      bgcolor: "#FFFFFF",
+                      fontWeight: 900,
+                      borderRight: `1px solid ${financeColors.saving}`,
+                      borderBottom: `1px solid ${financeColors.saving}`,
+                    }}
+                  >
+                    {formatMoney(row.total)}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow
+                sx={{
+                  "& > *": {
+                    bgcolor: `${financeColors.saving} !important`,
+                    color: "white",
+                    borderTop: "2px solid rgba(15,23,42,0.18)",
+                    borderBottom: "2px solid rgba(15,23,42,0.18)",
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    position: "sticky",
+                    left: 0,
+                    bgcolor: `${financeColors.saving} !important`,
+                    color: "white",
+                    fontWeight: 950,
+                  }}
+                >
+                  Total economias/investimentos
+                </TableCell>
+                {yearData.monthlySummary.map((summary) => (
+                  <TableCell
+                    key={summary.month}
+                    align="right"
+                    sx={{ color: "white", fontWeight: 950 }}
+                  >
+                    {formatMoney(summary.totalSavings)}
+                  </TableCell>
+                ))}
+                <TableCell
+                  align="right"
+                  sx={{ color: "white", fontWeight: 950 }}
+                >
+                  {formatMoney(yearData.totals.totalSavings)}
                 </TableCell>
               </TableRow>
 
@@ -1310,6 +2008,7 @@ export function FinancialControlPage() {
             </TableBody>
           </Table>
         </Paper>
+        </Stack>
       ) : null}
 
       {!loading && !error && mode === "week" && weekData ? (
@@ -1352,7 +2051,8 @@ export function FinancialControlPage() {
                 </Box>
                 <Typography variant="body2" color="text.secondary">
                   Receitas {formatMoney(day.totals.totalIncome)} • Despesas{" "}
-                  {formatMoney(day.totals.totalExpense)}
+                  {formatMoney(day.totals.totalExpense)} • Economias/invest.{" "}
+                  {formatMoney(day.totals.totalSavings)}
                 </Typography>
               </Paper>
             </Grid>
@@ -1392,6 +2092,10 @@ export function FinancialControlPage() {
             onMarkPaid={markItemPaid}
             onMarkPending={markItemPending}
           />
+          <Typography variant="h6" fontWeight={900} color={financeColors.saving}>
+            Economias/investimentos
+          </Typography>
+          <SavingRows items={allCurrentSavings} />
         </Stack>
       ) : null}
 
@@ -1400,13 +2104,104 @@ export function FinancialControlPage() {
         item={editingItem}
         defaultType={defaultType}
         defaultDate={mode === "day" ? date : isoDate()}
+        categories={categories}
         onClose={() => setFormOpen(false)}
         onSubmit={saveEntry}
       />
+      <Dialog open={savingFormOpen} onClose={() => setSavingFormOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="overline" color={financeColors.saving} fontWeight={900}>
+            Economias/investimentos
+          </Typography>
+          <Typography variant="h5" fontWeight={950} letterSpacing="-0.03em">
+            Movimentar economias/investimentos
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} pt={1}>
+            <TextField
+              select
+              label="Acao"
+              value={savingForm.action}
+              onChange={(event) =>
+                setSavingForm((current) => ({
+                  ...current,
+                  action: event.target.value as SavingAction,
+                  title:
+                    event.target.value === "WITHDRAW_TO_BALANCE"
+                      ? "Resgate de economias/investimentos"
+                      : current.title || "Economia/investimento",
+                }))
+              }
+            >
+              <MenuItem value="REGISTER">Registrar economia/investimento</MenuItem>
+              <MenuItem value="SAVE_FROM_BALANCE">Guardar saldo em economias/investimentos</MenuItem>
+              <MenuItem value="WITHDRAW_TO_BALANCE">Resgatar para o saldo como receita</MenuItem>
+            </TextField>
+            <TextField
+              autoFocus
+              label="Nome"
+              required
+              value={savingForm.title}
+              onChange={(event) => setSavingForm((current) => ({ ...current, title: event.target.value }))}
+            />
+            <TextField
+              label="Valor"
+              type="number"
+              required
+              inputProps={{ min: 0, step: "0.01" }}
+              value={savingForm.amount}
+              onChange={(event) => setSavingForm((current) => ({ ...current, amount: event.target.value }))}
+            />
+            <TextField
+              label="Data"
+              type="date"
+              required
+              InputLabelProps={{ shrink: true }}
+              value={savingForm.date}
+              onChange={(event) => setSavingForm((current) => ({ ...current, date: event.target.value }))}
+            />
+            <TextField
+              select
+              label="Meta vinculada"
+              value={savingForm.goalId}
+              onChange={(event) => setSavingForm((current) => ({ ...current, goalId: event.target.value }))}
+            >
+              <MenuItem value="">Sem meta</MenuItem>
+              {goals.map((goal) => (
+                <MenuItem key={goal.id} value={goal.id}>
+                  {goal.title}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Observacao opcional"
+              multiline
+              minRows={2}
+              value={savingForm.description}
+              onChange={(event) => setSavingForm((current) => ({ ...current, description: event.target.value }))}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setSavingFormOpen(false)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            disabled={savingTransferSaving || !savingForm.title.trim() || Number(savingForm.amount) <= 0}
+            onClick={saveSavingFlow}
+            sx={{
+              bgcolor: financeColors.saving,
+              "&:hover": { bgcolor: "#B8890F" },
+            }}
+          >
+            {savingTransferSaving ? "Salvando..." : "Salvar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       {cellEdit ? (
         <ValueEditModal
           open={Boolean(cellEdit)}
-          category={cellEdit.category}
+          category={cellEdit.name}
           month={cellEdit.month}
           year={year}
           currentValue={cellEdit.value}
@@ -1419,8 +2214,8 @@ export function FinancialControlPage() {
         />
       ) : null}
       <Dialog
-        open={Boolean(categoryEdit)}
-        onClose={() => setCategoryEdit(null)}
+        open={Boolean(lineEdit)}
+        onClose={() => setLineEdit(null)}
         fullWidth
         maxWidth="xs"
       >
@@ -1430,10 +2225,10 @@ export function FinancialControlPage() {
             color="text.secondary"
             fontWeight={900}
           >
-            {categoryEdit?.type === "INCOME" ? "Receita" : "Despesa"}
+            {lineEdit?.type === "INCOME" ? "Receita" : "Despesa"}
           </Typography>
           <Typography variant="h5" fontWeight={950} letterSpacing="-0.03em">
-            Renomear categoria
+            Renomear item
           </Typography>
         </DialogTitle>
         <DialogContent>
@@ -1444,11 +2239,11 @@ export function FinancialControlPage() {
                 borderRadius: 3,
                 border: "1px solid",
                 borderColor:
-                  categoryEdit?.type === "INCOME"
+                  lineEdit?.type === "INCOME"
                     ? "rgba(37,99,235,0.22)"
                     : "rgba(234,88,12,0.24)",
                 bgcolor:
-                  categoryEdit?.type === "INCOME"
+                  lineEdit?.type === "INCOME"
                     ? financeColors.incomeSoft
                     : financeColors.expenseSoft,
                 boxShadow: "none",
@@ -1459,44 +2254,45 @@ export function FinancialControlPage() {
                 color="text.secondary"
                 fontWeight={800}
               >
-                Nome atual
+                Categoria
               </Typography>
-              <Typography fontWeight={900}>{categoryEdit?.category}</Typography>
+              <Typography fontWeight={900}>{lineEdit?.category}</Typography>
             </Paper>
             <TextField
               autoFocus
               label="Novo nome"
-              value={categoryEdit?.value ?? ""}
+              value={lineEdit?.value ?? ""}
               onChange={(event) =>
-                setCategoryEdit((current) =>
+                setLineEdit((current) =>
                   current ? { ...current, value: event.target.value } : current,
                 )
               }
-              helperText={`A alteracao vale para todos os lancamentos desta categoria em ${year}.`}
+              helperText={`A alteracao vale para todos os lancamentos deste item em ${year}.`}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  saveCategoryName();
+                  saveLineName();
                 }
               }}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setCategoryEdit(null)}>Cancelar</Button>
+          <Button onClick={() => setLineEdit(null)}>Cancelar</Button>
           <Button
             variant="contained"
             disabled={
-              categorySaving ||
-              !categoryEdit?.value.trim() ||
-              categoryEdit.value.trim() === categoryEdit.category
+              lineSaving ||
+              !lineEdit?.value.trim() ||
+              lineEdit.value.trim() === lineEdit.name
             }
-            onClick={saveCategoryName}
+            onClick={saveLineName}
           >
-            {categorySaving ? "Salvando..." : "Salvar nome"}
+            {lineSaving ? "Salvando..." : "Salvar nome"}
           </Button>
         </DialogActions>
       </Dialog>
+      {confirmDialog}
     </Stack>
   );
 }

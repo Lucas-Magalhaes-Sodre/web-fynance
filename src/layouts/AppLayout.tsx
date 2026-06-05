@@ -1,11 +1,11 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import CategoryIcon from '@mui/icons-material/Category';
 import FlagIcon from '@mui/icons-material/Flag';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
-import PaymentsIcon from '@mui/icons-material/Payments';
 import SavingsIcon from '@mui/icons-material/Savings';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -29,12 +29,9 @@ const collapsedDrawerWidth = 76;
 const links = [
   { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
-  { to: '/app/savings', label: 'Economias', icon: <SavingsIcon /> },
-  { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> },
-  { to: '/app/fixed-expenses', label: 'Despesas fixas', icon: <PaymentsIcon /> },
-  { to: '/app/extra-expenses', label: 'Despesas extras', icon: <PaymentsIcon /> },
-  { to: '/app/fixed-incomes', label: 'Receitas fixas', icon: <SavingsIcon /> },
-  { to: '/app/extra-incomes', label: 'Receitas extras', icon: <SavingsIcon /> }
+  { to: '/app/categories', label: 'Categorias', icon: <CategoryIcon /> },
+  { to: '/app/savings', label: 'Economias/invest.', icon: <SavingsIcon /> },
+  { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> }
 ];
 
 export function AppLayout() {

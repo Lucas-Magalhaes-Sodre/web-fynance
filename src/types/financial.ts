@@ -1,9 +1,20 @@
-export type FinancialItemType = 'INCOME' | 'EXPENSE' | 'FIXED_EXPENSE' | 'EXTRA_EXPENSE' | 'FIXED_INCOME' | 'EXTRA_INCOME';
+export type FinancialItemType = 'INCOME' | 'EXPENSE';
 export type EntryType = 'INCOME' | 'EXPENSE';
+export type SavingTransferDirection = 'SAVE_FROM_BALANCE' | 'WITHDRAW_TO_BALANCE';
 export type RecurrenceType = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
 export type FinancialGoalStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 export type FinancialInsightType = 'POSITIVE' | 'WARNING' | 'INFO' | 'NEGATIVE';
+
+export type FinancialCategory = {
+  id: string;
+  userId: string;
+  name: string;
+  type: EntryType;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type User = {
   id: string;
@@ -73,18 +84,16 @@ export type ValueUpdateScope = 'ONLY_THIS_PERIOD' | 'FROM_THIS_PERIOD_FORWARD' |
 export type PeriodType = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
 export type DashboardTotals = {
-  fixedExpenses: number;
-  extraExpenses: number;
-  fixedIncomes: number;
-  extraIncomes: number;
   totalIncomes: number;
   totalExpenses: number;
+  totalSavings: number;
   finalBalance: number;
 };
 
 export type PeriodTotals = {
   totalIncome: number;
   totalExpense: number;
+  totalSavings: number;
   balance: number;
   paidExpenses: number;
   pendingExpenses: number;
@@ -101,7 +110,7 @@ export type MonthlySummary = PeriodTotals & {
 
 export type SpreadsheetRow = {
   category: string;
-  type: EntryType;
+  type: EntryType | 'SAVING';
   months: Record<number, number>;
   total: number;
 };
@@ -111,15 +120,18 @@ export type YearControl = {
   months: Array<{ value: number; label: string }>;
   incomeRows: SpreadsheetRow[];
   expenseRows: SpreadsheetRow[];
+  savingRows: SpreadsheetRow[];
   monthlySummary: MonthlySummary[];
   totals: {
     totalIncome: number;
     totalExpense: number;
+    totalSavings: number;
     finalBalance: number;
     bestMonth: MonthlySummary;
     worstMonth: MonthlySummary;
   };
   items: FinancialItem[];
+  savings: Saving[];
   categories: { incomes: string[]; expenses: string[] };
 };
 
@@ -128,6 +140,7 @@ export type MonthControl = {
   year: number;
   incomes: FinancialItem[];
   expenses: FinancialItem[];
+  savings: Saving[];
   totals: PeriodTotals;
 };
 
@@ -139,6 +152,7 @@ export type WeekDayControl = {
   date: string;
   incomes: FinancialItem[];
   expenses: FinancialItem[];
+  savings: Saving[];
   totals: PeriodTotals;
 };
 
@@ -148,6 +162,7 @@ export type WeekControl = {
   days: WeekDayControl[];
   incomes: FinancialItem[];
   expenses: FinancialItem[];
+  savings: Saving[];
   totals: PeriodTotals;
 };
 

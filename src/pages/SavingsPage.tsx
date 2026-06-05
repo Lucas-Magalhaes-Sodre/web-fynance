@@ -31,6 +31,7 @@ import {
   updateSaving,
   type SavingPayload
 } from '../api/financialControl';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { StatCard } from '../components/StatCard';
 import type { FinancialGoal, Saving, SavingsSummary } from '../types/financial';
@@ -72,6 +73,7 @@ export function SavingsPage() {
   const [year, setYear] = useState(today.getFullYear());
   const [savings, setSavings] = useState<Saving[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [summary, setSummary] = useState<SavingsSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -99,7 +101,7 @@ export function SavingsPage() {
       setSavings(nextSavings);
       setSummary(nextSummary);
     } catch {
-      setError('Nao foi possivel carregar suas economias.');
+      setError('Nao foi possivel carregar suas economias/investimentos.');
     } finally {
       setLoading(false);
     }
@@ -144,7 +146,13 @@ export function SavingsPage() {
   }
 
   async function removeSaving(saving: Saving) {
-    if (!window.confirm(`Excluir a economia "${saving.title}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Excluir economia/investimento',
+      description: `Deseja excluir a economia/investimento "${saving.title}"? Esta acao nao pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      tone: 'danger'
+    });
+    if (!confirmed) return;
     await deleteSaving(saving.id);
     await loadSavings();
   }
@@ -157,14 +165,14 @@ export function SavingsPage() {
             <Stack direction="row" alignItems="center" spacing={1} mb={1}>
               <SavingsIcon sx={{ color: financeColors.saving }} />
               <Typography color="primary" fontWeight={900}>
-                Economias
+                Economias/investimentos
               </Typography>
             </Stack>
             <Typography variant="h3" fontWeight={950} letterSpacing={0}>
-              Dinheiro guardado
+              Dinheiro guardado e investido
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
-              Acompanhe o que sobrou, o que foi guardado e sua economia acumulada.
+              Acompanhe o que sobrou, o que foi guardado e sua posicao acumulada.
             </Typography>
           </Box>
           <Button
@@ -173,7 +181,7 @@ export function SavingsPage() {
             onClick={openCreate}
             sx={{ alignSelf: { xs: 'stretch', md: 'center' }, minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Registrar economia
+            Registrar economia/investimento
           </Button>
         </Stack>
       </Paper>
@@ -213,17 +221,17 @@ export function SavingsPage() {
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
-          <StatCard label="Economia registrada" value={summary?.monthlyRegisteredSavings ?? 0} tone="saving" />
+          <StatCard label="Economias/investimentos registrados" value={summary?.monthlyRegisteredSavings ?? 0} tone="saving" />
         </Grid>
         <Grid item xs={12} md={4}>
-          <StatCard label="Economia sugerida" value={summary?.suggestedSavings ?? 0} tone="saving" />
+          <StatCard label="Sugestao para guardar" value={summary?.suggestedSavings ?? 0} tone="saving" />
         </Grid>
         <Grid item xs={12} md={4}>
-          <StatCard label="Economia acumulada" value={summary?.accumulatedSavings ?? 0} tone="saving" />
+          <StatCard label="Economias/investimentos acumulados" value={summary?.accumulatedSavings ?? 0} tone="saving" />
         </Grid>
       </Grid>
 
-      {loading ? <EmptyState message="Carregando economias..." /> : null}
+      {loading ? <EmptyState message="Carregando economias/investimentos..." /> : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error ? (
@@ -231,7 +239,7 @@ export function SavingsPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Economia</TableCell>
+                <TableCell>Economia/investimento</TableCell>
                 <TableCell>Data</TableCell>
                 <TableCell>Meta</TableCell>
                 <TableCell>Descricao</TableCell>
@@ -266,7 +274,7 @@ export function SavingsPage() {
               {!savings.length ? (
                 <TableRow>
                   <TableCell colSpan={6}>
-                    <EmptyState message="Nenhuma economia registrada neste periodo." />
+                    <EmptyState message="Nenhuma economia/investimento registrada neste periodo." />
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -276,7 +284,7 @@ export function SavingsPage() {
       ) : null}
 
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingSaving ? 'Editar economia' : 'Registrar economia'}</DialogTitle>
+        <DialogTitle>{editingSaving ? 'Editar economia/investimento' : 'Registrar economia/investimento'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
             <TextField
@@ -331,6 +339,7 @@ export function SavingsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      {confirmDialog}
     </Stack>
   );
 }

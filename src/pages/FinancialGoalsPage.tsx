@@ -26,6 +26,7 @@ import {
   updateFinancialGoal,
   type FinancialGoalPayload
 } from '../api/financialControl';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { StatCard } from '../components/StatCard';
 import type { FinancialGoal, FinancialGoalStatus } from '../types/financial';
@@ -79,6 +80,7 @@ export function FinancialGoalsPage() {
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [form, setForm] = useState<GoalFormState>(initialForm);
 
   const activeGoals = useMemo(() => goals.filter((goal) => goal.status === 'ACTIVE'), [goals]);
@@ -148,7 +150,13 @@ export function FinancialGoalsPage() {
   }
 
   async function removeGoal(goal: FinancialGoal) {
-    if (!window.confirm(`Excluir a meta "${goal.title}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Excluir meta',
+      description: `Deseja excluir a meta "${goal.title}"? Esta acao nao pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      tone: 'danger'
+    });
+    if (!confirmed) return;
     await deleteFinancialGoal(goal.id);
     await loadGoals();
   }
@@ -384,6 +392,7 @@ export function FinancialGoalsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      {confirmDialog}
     </Stack>
   );
 }

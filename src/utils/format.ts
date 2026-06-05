@@ -14,11 +14,7 @@ export function formatDate(value?: string | null) {
 
 export const typeLabels = {
   INCOME: 'Receita',
-  EXPENSE: 'Despesa',
-  FIXED_EXPENSE: 'Despesa fixa',
-  EXTRA_EXPENSE: 'Despesa extra',
-  FIXED_INCOME: 'Receita fixa',
-  EXTRA_INCOME: 'Receita extra'
+  EXPENSE: 'Despesa'
 } as const;
 
 export const months = [
@@ -55,8 +51,8 @@ export const financeColors = {
   incomeSoft: '#EFF6FF',
   expense: '#EA580C',
   expenseSoft: '#FFF7ED',
-  saving: '#0D9488',
-  savingSoft: '#F0FDFA',
+  saving: '#D4A017',
+  savingSoft: '#FFF8DB',
   positive: '#16A34A',
   positiveSoft: '#F0FDF4',
   negative: '#DC2626',

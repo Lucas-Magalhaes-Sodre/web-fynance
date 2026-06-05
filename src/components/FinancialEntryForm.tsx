@@ -15,6 +15,7 @@ import { FormEvent, useEffect, useState } from "react";
 import type { FinancialEntryPayload } from "../api/financialControl";
 import type {
   EntryType,
+  FinancialCategory,
   FinancialItem,
   RecurrenceType,
 } from "../types/financial";
@@ -38,8 +39,26 @@ const weekDays = [
 ];
 
 const monthDays = Array.from({ length: 31 }, (_, index) => index + 1);
+const monthOptions = [
+  { value: 1, label: "Janeiro" },
+  { value: 2, label: "Fevereiro" },
+  { value: 3, label: "Marco" },
+  { value: 4, label: "Abril" },
+  { value: 5, label: "Maio" },
+  { value: 6, label: "Junho" },
+  { value: 7, label: "Julho" },
+  { value: 8, label: "Agosto" },
+  { value: 9, label: "Setembro" },
+  { value: 10, label: "Outubro" },
+  { value: 11, label: "Novembro" },
+  { value: 12, label: "Dezembro" },
+];
+
+const currentYear = new Date().getFullYear();
+const yearOptions = Array.from({ length: 11 }, (_, index) => currentYear - 5 + index);
 
 type FormState = {
+  name: string;
   description: string;
   amount: string;
   type: EntryType;
@@ -48,6 +67,10 @@ type FormState = {
   dueDay: string;
   isFixed: boolean;
   recurrenceType: RecurrenceType;
+  recurrenceStartMonth: string;
+  recurrenceStartYear: string;
+  recurrenceEndMonth: string;
+  recurrenceEndYear: string;
 };
 
 type Props = {
@@ -55,6 +78,7 @@ type Props = {
   item?: FinancialItem | null;
   defaultType?: EntryType;
   defaultDate?: string;
+  categories?: FinancialCategory[];
   onClose: () => void;
   onSubmit: (payload: FinancialEntryPayload) => Promise<void>;
 };
@@ -82,10 +106,13 @@ export function FinancialEntryForm({
   item,
   defaultType = "EXPENSE",
   defaultDate = isoDate(),
+  categories = [],
   onClose,
   onSubmit,
 }: Props) {
+  const initialDate = new Date(`${defaultDate}T00:00:00`);
   const [form, setForm] = useState<FormState>({
+    name: "",
     description: "",
     amount: "",
     type: defaultType,
@@ -94,6 +121,10 @@ export function FinancialEntryForm({
     dueDay: "",
     isFixed: false,
     recurrenceType: "NONE",
+    recurrenceStartMonth: String(initialDate.getMonth() + 1),
+    recurrenceStartYear: String(initialDate.getFullYear()),
+    recurrenceEndMonth: "12",
+    recurrenceEndYear: String(initialDate.getFullYear()),
   });
   const [saving, setSaving] = useState(false);
 
@@ -106,10 +137,16 @@ export function FinancialEntryForm({
     ? financeColors.incomeSoft
     : financeColors.expenseSoft;
   const amountLabel = isIncome ? "Valor recebido" : "Valor pago";
-  const categoryLabel = isIncome
-    ? "Categoria da receita"
-    : "Categoria da despesa";
+  const nameLabel = isIncome ? "Nome da receita" : "Nome da despesa";
+  const categoryLabel = isIncome ? "Categoria" : "Categoria";
   const singleDateLabel = isIncome ? "Data do recebimento" : "Data da despesa";
+  const availableCategories = categories.filter((category) => category.type === form.type);
+  const selectedCategoryExists = availableCategories.some((category) => category.name === form.category);
+  const invalidCustomRecurrenceRange =
+    form.isFixed &&
+    form.recurrenceType === "MONTHLY" &&
+    Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <
+      Number(form.recurrenceStartYear) * 12 + Number(form.recurrenceStartMonth);
 
   useEffect(() => {
     if (item) {
@@ -117,6 +154,7 @@ export function FinancialEntryForm({
         ? "INCOME"
         : "EXPENSE";
       setForm({
+        name: item.name ?? item.title ?? "",
         description: item.description ?? "",
         amount: formatCurrencyInput(item.amount),
         type: normalizedType,
@@ -128,11 +166,17 @@ export function FinancialEntryForm({
           item.recurrenceType === "NONE" && item.isFixed
             ? "MONTHLY"
             : item.recurrenceType,
+        recurrenceStartMonth: String(new Date(item.date).getMonth() + 1),
+        recurrenceStartYear: String(new Date(item.date).getFullYear()),
+        recurrenceEndMonth: "12",
+        recurrenceEndYear: String(new Date(item.date).getFullYear()),
       });
       return;
     }
 
+    const nextDefaultDate = new Date(`${defaultDate}T00:00:00`);
     setForm({
+      name: "",
       description: "",
       amount: "",
       type: defaultType,
@@ -141,6 +185,10 @@ export function FinancialEntryForm({
       dueDay: "",
       isFixed: false,
       recurrenceType: "NONE",
+      recurrenceStartMonth: String(nextDefaultDate.getMonth() + 1),
+      recurrenceStartYear: String(nextDefaultDate.getFullYear()),
+      recurrenceEndMonth: "12",
+      recurrenceEndYear: String(nextDefaultDate.getFullYear()),
     });
   }, [item, defaultType, defaultDate, open]);
 
@@ -178,7 +226,7 @@ export function FinancialEntryForm({
     setSaving(true);
     try {
       await onSubmit({
-        name: form.category,
+        name: form.name.trim(),
         description: form.description || null,
         amount,
         type: form.type,
@@ -195,6 +243,16 @@ export function FinancialEntryForm({
         dueDay: form.dueDay ? Number(form.dueDay) : null,
         isFixed: isRecurring,
         recurrenceType: isRecurring ? form.recurrenceType : "NONE",
+        recurrenceGeneration:
+          isRecurring && form.recurrenceType === "MONTHLY"
+            ? {
+                mode: "CUSTOM",
+                startMonth: Number(form.recurrenceStartMonth),
+                startYear: Number(form.recurrenceStartYear),
+                endMonth: Number(form.recurrenceEndMonth),
+                endYear: Number(form.recurrenceEndYear),
+              }
+            : undefined,
       });
       onClose();
     } finally {
@@ -247,16 +305,44 @@ export function FinancialEntryForm({
         >
           <TextField
             autoFocus
+            select
             label={categoryLabel}
             required
             value={form.category}
             onChange={(event) =>
               setForm({ ...form, category: event.target.value })
             }
+            helperText="Configure as categorias no menu Categorias."
+          >
+            {availableCategories.map((category) => (
+              <MenuItem key={category.id} value={category.name}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Box
+                    width={12}
+                    height={12}
+                    borderRadius="50%"
+                    sx={{ bgcolor: category.color }}
+                  />
+                  {category.name}
+                </Box>
+              </MenuItem>
+            ))}
+            {form.category && !selectedCategoryExists ? (
+              <MenuItem value={form.category}>{form.category}</MenuItem>
+            ) : null}
+          </TextField>
+
+          <TextField
+            label={nameLabel}
+            required
+            value={form.name}
+            onChange={(event) =>
+              setForm({ ...form, name: event.target.value })
+            }
             helperText={
               isIncome
-                ? "Ex.: salario, cliente, rendimento"
-                : "Ex.: aluguel, internet, cartao"
+                ? "Ex.: salario da empresa, cliente X, rendimento"
+                : "Ex.: Riachuelo, Itau, aluguel, internet"
             }
           />
 
@@ -283,11 +369,20 @@ export function FinancialEntryForm({
             <Stack spacing={2}>
               <FormControlLabel
                 sx={{ m: 0, justifyContent: "space-between" }}
-                label={<Typography fontWeight={900}>Recorrente</Typography>}
+                label={
+                  <Box display={"flex"}>
+                    <Typography fontWeight={900}>Recorrente: </Typography>
+                    <Typography
+                      fontWeight={900}
+                      ml={1}
+                      color={form.isFixed ? "success" : "error"}
+                    >{`${form.isFixed ? "sim" : "não"}`}</Typography>
+                  </Box>
+                }
                 labelPlacement="start"
                 control={
                   <Switch
-                    color={isIncome ? "primary" : "warning"}
+                    color={isIncome ? "error" : "success"}
                     checked={form.isFixed}
                     onChange={(event) => updateRecurring(event.target.checked)}
                   />
@@ -338,25 +433,106 @@ export function FinancialEntryForm({
                   ) : null}
 
                   {form.recurrenceType === "MONTHLY" ? (
-                    <TextField
-                      select
-                      label={
-                        isIncome
-                          ? "Dia do mes do recebimento"
-                          : "Dia do mes da despesa"
-                      }
-                      required
-                      value={form.dueDay}
-                      onChange={(event) =>
-                        setForm({ ...form, dueDay: event.target.value })
-                      }
-                    >
-                      {monthDays.map((day) => (
-                        <MenuItem key={day} value={day}>
-                          Dia {day}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <>
+                      <TextField
+                        select
+                        label={
+                          isIncome
+                            ? "Dia do mes do recebimento"
+                            : "Dia do mes da despesa"
+                        }
+                        required
+                        value={form.dueDay}
+                        onChange={(event) =>
+                          setForm({ ...form, dueDay: event.target.value })
+                        }
+                      >
+                        {monthDays.map((day) => (
+                          <MenuItem key={day} value={day}>
+                            Dia {day}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+
+                      {!item ? (
+                        <>
+                          <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                            Quando comeca:
+                          </Typography>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                            <TextField
+                              select
+                              label="Mes inicial"
+                              value={form.recurrenceStartMonth}
+                              onChange={(event) =>
+                                setForm({ ...form, recurrenceStartMonth: event.target.value })
+                              }
+                              sx={{ flex: 1 }}
+                            >
+                              {monthOptions.map((monthItem) => (
+                                <MenuItem key={monthItem.value} value={monthItem.value}>
+                                  {monthItem.label}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                            <TextField
+                              select
+                              label="Ano inicial"
+                              value={form.recurrenceStartYear}
+                              onChange={(event) =>
+                                setForm({ ...form, recurrenceStartYear: event.target.value })
+                              }
+                              sx={{ flex: 1 }}
+                            >
+                              {yearOptions.map((year) => (
+                                <MenuItem key={year} value={year}>
+                                  {year}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </Stack>
+
+                          <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                            Quando termina:
+                          </Typography>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                            <TextField
+                              select
+                              label="Mes final"
+                              value={form.recurrenceEndMonth}
+                              onChange={(event) =>
+                                setForm({ ...form, recurrenceEndMonth: event.target.value })
+                              }
+                              sx={{ flex: 1 }}
+                              error={invalidCustomRecurrenceRange}
+                            >
+                              {monthOptions.map((monthItem) => (
+                                <MenuItem key={monthItem.value} value={monthItem.value}>
+                                  {monthItem.label}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                            <TextField
+                              select
+                              label="Ano final"
+                              value={form.recurrenceEndYear}
+                              onChange={(event) =>
+                                setForm({ ...form, recurrenceEndYear: event.target.value })
+                              }
+                              sx={{ flex: 1 }}
+                              error={invalidCustomRecurrenceRange}
+                              helperText={invalidCustomRecurrenceRange ? "O fim precisa ser depois do inicio." : " "}
+                            >
+                              {yearOptions.map((year) => (
+                                <MenuItem key={year} value={year}>
+                                  {year}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </Stack>
+                        </>
+                      ) : null}
+                    </>
                   ) : null}
 
                   {form.recurrenceType === "YEARLY" ? (
@@ -408,7 +584,13 @@ export function FinancialEntryForm({
           type="submit"
           form="financial-entry-form"
           variant="contained"
-          disabled={saving || currencyToNumber(form.amount) <= 0}
+          disabled={
+            saving ||
+            currencyToNumber(form.amount) <= 0 ||
+            !form.name.trim() ||
+            !form.category.trim() ||
+            invalidCustomRecurrenceRange
+          }
         >
           Salvar
         </Button>

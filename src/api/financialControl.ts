@@ -1,6 +1,8 @@
 import { api } from './client';
 import type {
   DayControl,
+  EntryType,
+  FinancialCategory,
   FinancialCalendar,
   FinancialComparison,
   FinancialGoal,
@@ -12,6 +14,7 @@ import type {
   PaymentSummary,
   PeriodType,
   Saving,
+  SavingTransferDirection,
   SavingsSummary,
   ValueUpdateScope,
   WeekControl,
@@ -33,9 +36,33 @@ export type FinancialEntryPayload = {
   isFixed?: boolean;
   recurrenceType?: 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
   status?: PaymentStatus;
+  recurrenceGeneration?: {
+    mode: 'ALL_YEAR' | 'FROM_SELECTED_MONTH' | 'CUSTOM';
+    startMonth: number;
+    startYear: number;
+    endMonth: number;
+    endYear: number;
+  };
+};
+
+export type FinancialCategoryPayload = {
+  name: string;
+  type: EntryType;
+  color: string;
 };
 
 export type SavingPayload = {
+  title: string;
+  description?: string | null;
+  amount: number;
+  date: string;
+  month?: number;
+  year?: number;
+  goalId?: string | null;
+};
+
+export type SavingTransferPayload = {
+  direction: SavingTransferDirection;
   title: string;
   description?: string | null;
   amount: number;
@@ -133,6 +160,25 @@ export async function deleteCategoryLine(payload: {
   return data;
 }
 
+export async function listFinancialCategories(params?: { type?: EntryType }) {
+  const { data } = await api.get<{ categories: FinancialCategory[] }>('/financial-categories', { params });
+  return data.categories;
+}
+
+export async function createFinancialCategory(payload: FinancialCategoryPayload) {
+  const { data } = await api.post<{ category: FinancialCategory }>('/financial-categories', payload);
+  return data.category;
+}
+
+export async function updateFinancialCategory(id: string, payload: Partial<FinancialCategoryPayload>) {
+  const { data } = await api.put<{ category: FinancialCategory }>(`/financial-categories/${id}`, payload);
+  return data.category;
+}
+
+export async function deleteFinancialCategory(id: string) {
+  await api.delete(`/financial-categories/${id}`);
+}
+
 export async function updateEntryValue(id: string, payload: {
   amount: number;
   date: string;
@@ -167,6 +213,11 @@ export async function updateSaving(id: string, payload: Partial<SavingPayload>) 
 
 export async function deleteSaving(id: string) {
   await api.delete(`/savings/${id}`);
+}
+
+export async function transferSaving(payload: SavingTransferPayload) {
+  const { data } = await api.post<{ saving: Saving; income?: FinancialItem | null }>('/savings/transfer', payload);
+  return data;
 }
 
 export async function getSavingsSummary(month: number, year: number) {
