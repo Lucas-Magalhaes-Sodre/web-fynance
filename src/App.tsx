@@ -1,12 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
-import { FinancialItemsPage } from './pages/FinancialItemsPage';
 import { FinancialControlPage } from './pages/FinancialControlPage';
+import { FinancialCategoriesPage } from './pages/FinancialCategoriesPage';
+import { FinancialGoalsPage } from './pages/FinancialGoalsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { EconomyPage } from './pages/EconomyPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
 export default function App() {
@@ -20,10 +22,10 @@ export default function App() {
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="control" element={<FinancialControlPage />} />
-          <Route path="fixed-expenses" element={<FinancialItemsPage title="Despesas fixas" description="Contas recorrentes do mes." type="FIXED_EXPENSE" />} />
-          <Route path="extra-expenses" element={<FinancialItemsPage title="Despesas extras" description="Gastos ocasionais e variaveis." type="EXTRA_EXPENSE" />} />
-          <Route path="fixed-incomes" element={<FinancialItemsPage title="Receitas fixas" description="Entradas recorrentes." type="FIXED_INCOME" />} />
-          <Route path="extra-incomes" element={<FinancialItemsPage title="Receitas extras" description="Entradas pontuais." type="EXTRA_INCOME" />} />
+          <Route path="categories" element={<FinancialCategoriesPage />} />
+          <Route path="economy" element={<EconomyPage />} />
+          <Route path="savings" element={<Navigate to="/app/economy" replace />} />
+          <Route path="goals" element={<FinancialGoalsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

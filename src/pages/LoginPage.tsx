@@ -6,7 +6,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { PasswordField } from '@/components/molecules/PasswordField';
 
 export function LoginPage() {
   const { signIn } = useAuth();
@@ -32,7 +33,7 @@ export function LoginPage() {
         <Stack component="form" spacing={2.5} onSubmit={handleSubmit}>
           <Typography variant="h4" fontWeight={900}>Entrar</Typography>
           <TextField label="E-mail" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-          <TextField label="Senha" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} />
+          <PasswordField value={password} onChange={setPassword} />
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large">Acessar</Button>
           <Button component={Link} to="/forgot-password">Esqueci minha senha</Button>
@@ -42,4 +43,3 @@ export function LoginPage() {
     </Container>
   );
 }
-

@@ -14,11 +14,7 @@ export function formatDate(value?: string | null) {
 
 export const typeLabels = {
   INCOME: 'Receita',
-  EXPENSE: 'Despesa',
-  FIXED_EXPENSE: 'Despesa fixa',
-  EXTRA_EXPENSE: 'Despesa extra',
-  FIXED_INCOME: 'Receita fixa',
-  EXTRA_INCOME: 'Receita extra'
+  EXPENSE: 'Despesa'
 } as const;
 
 export const months = [
@@ -55,6 +51,8 @@ export const financeColors = {
   incomeSoft: '#EFF6FF',
   expense: '#EA580C',
   expenseSoft: '#FFF7ED',
+  saving: '#D4A017',
+  savingSoft: '#FFF8DB',
   positive: '#16A34A',
   positiveSoft: '#F0FDF4',
   negative: '#DC2626',
@@ -69,8 +67,10 @@ export function balanceColor(value: number) {
   return financeColors.neutral;
 }
 
-export function amountToneColor(tone: 'income' | 'expense' | 'balance', value = 0) {
+export function amountToneColor(tone: 'income' | 'expense' | 'balance' | 'saving' | 'neutral', value = 0) {
   if (tone === 'income') return financeColors.income;
   if (tone === 'expense') return financeColors.expense;
+  if (tone === 'saving') return financeColors.saving;
+  if (tone === 'neutral') return financeColors.neutral;
   return balanceColor(value);
 }

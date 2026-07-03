@@ -1,34 +1,36 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import { AuthProvider } from './contexts/AuthContext';
-import './styles/premium.css';
+import { RecoilRoot } from 'recoil';
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: { main: '#0F766E' },
-    secondary: { main: '#F59E0B' },
-    background: { default: '#F7FAF9' }
-  },
-  shape: { borderRadius: 8 },
-  typography: {
-    fontFamily: ['Inter', 'Roboto', 'Arial', 'sans-serif'].join(',')
-  }
-});
+import App from '@/App';
+import { queryClient } from '@/config/queryClient';
+import { AuthProvider } from '@/contexts/AuthContext';
+import '@/styles/premium.css';
+import { theme } from '@/styles/theme';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Elemento root nao encontrado.');
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+    <RecoilRoot>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <BrowserRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </BrowserRouter>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </RecoilRoot>
   </React.StrictMode>
 );
