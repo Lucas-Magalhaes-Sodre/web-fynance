@@ -6,7 +6,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { PasswordField } from '@/components/molecules/PasswordField';
 
 export function RegisterPage() {
   const { signUp } = useAuth();
@@ -34,7 +35,7 @@ export function RegisterPage() {
           <Typography variant="h4" fontWeight={900}>Criar conta</Typography>
           <TextField label="Nome" required value={name} onChange={(event) => setName(event.target.value)} />
           <TextField label="E-mail" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
-          <TextField label="Senha" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} helperText="Minimo de 8 caracteres" />
+          <PasswordField value={password} onChange={setPassword} helperText="Minimo de 8 caracteres" />
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large">Cadastrar</Button>
           <Typography textAlign="center">Ja tem conta? <Link to="/login">Entrar</Link></Typography>
@@ -43,4 +44,3 @@ export function RegisterPage() {
     </Container>
   );
 }
-

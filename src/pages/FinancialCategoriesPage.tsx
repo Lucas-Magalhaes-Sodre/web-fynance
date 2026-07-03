@@ -1,15 +1,9 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
-import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -19,7 +13,6 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -28,16 +21,30 @@ import {
   deleteFinancialCategory,
   listFinancialCategories,
   updateFinancialCategory,
-} from "../api/financialControl";
-import { useConfirmDialog } from "../components/ConfirmDialog";
-import { EmptyState } from "../components/EmptyState";
-import type { EntryType, FinancialCategory } from "../types/financial";
+} from "@/services/financialControl";
+import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { EmptyState } from "@/components/atoms/EmptyState";
+import {
+  CategoryFormDialog,
+  type CategoryFormState,
+} from "@/components/organisms/categories/CategoryFormDialog";
+import type { FinancialCategory, FinancialCategoryType } from "@/interfaces/financial";
 
-const emptyForm = {
+const emptyForm: CategoryFormState = {
   name: "",
-  type: "EXPENSE" as EntryType,
+  type: "EXPENSE",
   color: "#EA580C",
 };
+
+const categoryTypeLabels: Record<FinancialCategoryType, string> = {
+  INCOME: "Receita",
+  EXPENSE: "Despesa",
+  INVESTMENT: "Economia",
+};
+
+function isProtectedSavingsCategory(category: FinancialCategory) {
+  return category.type === "INCOME" && category.name.trim().toLocaleLowerCase("pt-BR") === "economias";
+}
 
 function isValidHex(value: string) {
   return /^#[0-9A-Fa-f]{6}$/.test(value);
@@ -57,7 +64,7 @@ export function FinancialCategoriesPage() {
   const [editForm, setEditForm] = useState(emptyForm);
   const [editing, setEditing] = useState<FinancialCategory | null>(null);
   const [creating, setCreating] = useState(false);
-  const [filter, setFilter] = useState<EntryType | "ALL">("ALL");
+  const [filter, setFilter] = useState<FinancialCategoryType | "ALL">("ALL");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -68,7 +75,7 @@ export function FinancialCategoriesPage() {
     [categories, filter],
   );
 
-  function hasDuplicateName(type: EntryType, name: string, ignoreId?: string) {
+  function hasDuplicateName(type: FinancialCategoryType, name: string, ignoreId?: string) {
     const normalizedName = normalizeCategoryName(name);
     return categories.some(
       (category) =>
@@ -110,12 +117,12 @@ export function FinancialCategoriesPage() {
     setForm({
       ...emptyForm,
       type,
-      color: type === "INCOME" ? "#2563EB" : "#EA580C",
+      color: type === "INCOME" ? "#2563EB" : type === "INVESTMENT" ? "#D4A017" : "#EA580C",
     });
   }
 
   function openCreate() {
-    resetForm(filter === "INCOME" || filter === "EXPENSE" ? filter : "EXPENSE");
+    resetForm(filter !== "ALL" ? filter : "EXPENSE");
     setCreating(true);
   }
 
@@ -192,6 +199,7 @@ export function FinancialCategoriesPage() {
               <ToggleButton value="ALL">Todas</ToggleButton>
               <ToggleButton value="INCOME">Receitas</ToggleButton>
               <ToggleButton value="EXPENSE">Despesas</ToggleButton>
+              <ToggleButton value="INVESTMENT">Economias</ToggleButton>
             </ToggleButtonGroup>
           </Box>
           <Table size="small">
@@ -207,7 +215,7 @@ export function FinancialCategoriesPage() {
               {visibleCategories.map((category) => (
                 <TableRow key={category.id} hover>
                   <TableCell sx={{ fontWeight: 900 }}>{category.name}</TableCell>
-                  <TableCell>{category.type === "INCOME" ? "Receita" : "Despesa"}</TableCell>
+                  <TableCell>{categoryTypeLabels[category.type]}</TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
                       <Box width={22} height={22} borderRadius={1} sx={{ bgcolor: category.color, border: "1px solid rgba(15,23,42,0.16)" }} />
@@ -217,15 +225,19 @@ export function FinancialCategoriesPage() {
                     </Box>
                   </TableCell>
                   <TableCell align="right">
-                    <Tooltip title="Editar">
-                      <IconButton onClick={() => startEdit(category)}>
+                    <Tooltip title={isProtectedSavingsCategory(category) ? "Categoria obrigatoria" : "Editar"}>
+                      <span>
+                      <IconButton disabled={isProtectedSavingsCategory(category)} onClick={() => startEdit(category)}>
                         <EditIcon />
                       </IconButton>
+                      </span>
                     </Tooltip>
-                    <Tooltip title="Excluir">
-                      <IconButton color="error" onClick={() => removeCategory(category)}>
+                    <Tooltip title={isProtectedSavingsCategory(category) ? "Categoria obrigatoria" : "Excluir"}>
+                      <span>
+                      <IconButton disabled={isProtectedSavingsCategory(category)} color="error" onClick={() => removeCategory(category)}>
                         <DeleteIcon />
                       </IconButton>
+                      </span>
                     </Tooltip>
                   </TableCell>
                 </TableRow>
@@ -242,129 +254,30 @@ export function FinancialCategoriesPage() {
         </Paper>
       ) : null}
 
-      <Dialog open={creating} onClose={() => setCreating(false)} fullWidth maxWidth="sm">
-        <DialogTitle>
-          <Typography variant="overline" color="text.secondary" fontWeight={900}>
-            Nova configuracao
-          </Typography>
-          <Typography variant="h5" fontWeight={950} letterSpacing="-0.03em">
-            Adicionar categoria
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Stack component="form" id="category-create-form" spacing={2} pt={1} onSubmit={handleSubmit}>
-            <TextField
-              select
-              label="Tipo"
-              value={form.type}
-              onChange={(event) => resetForm(event.target.value as EntryType)}
-            >
-              <MenuItem value="EXPENSE">Despesa</MenuItem>
-              <MenuItem value="INCOME">Receita</MenuItem>
-            </TextField>
-            <TextField
-              autoFocus
-              label="Nome da categoria"
-              required
-              value={form.name}
-              error={formDuplicate}
-              helperText={formDuplicate ? "Ja existe uma categoria com este nome para este tipo." : " "}
-              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-            />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Cor"
-                type="color"
-                value={isValidHex(form.color) ? form.color : "#64748B"}
-                onChange={(event) => setForm((current) => ({ ...current, color: event.target.value.toUpperCase() }))}
-                sx={{ width: 120 }}
-              />
-              <TextField
-                label="Hexadecimal"
-                value={form.color}
-                error={Boolean(form.color) && !isValidHex(form.color)}
-                helperText={!isValidHex(form.color) ? "Use #RRGGBB" : " "}
-                onChange={(event) => setForm((current) => ({ ...current, color: event.target.value.toUpperCase() }))}
-                sx={{ flex: 1 }}
-              />
-            </Stack>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setCreating(false)}>Cancelar</Button>
-          <Button
-            type="submit"
-            form="category-create-form"
-            variant="contained"
-            startIcon={<AddIcon />}
-            disabled={saving || !form.name.trim() || !isValidHex(form.color) || formDuplicate}
-          >
-            {saving ? "Salvando..." : "Adicionar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CategoryFormDialog
+        open={creating}
+        mode="create"
+        form={form}
+        duplicate={formDuplicate}
+        saving={saving}
+        isValidColor={isValidHex(form.color)}
+        onClose={() => setCreating(false)}
+        onSubmit={handleSubmit}
+        onFormChange={setForm}
+        onTypeChange={resetForm}
+      />
 
-      <Dialog open={Boolean(editing)} onClose={() => setEditing(null)} fullWidth maxWidth="sm">
-        <DialogTitle>
-          <Typography variant="overline" color="text.secondary" fontWeight={900}>
-            {editForm.type === "INCOME" ? "Receita" : "Despesa"}
-          </Typography>
-          <Typography variant="h5" fontWeight={950} letterSpacing="-0.03em">
-            Editar categoria
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Stack component="form" id="category-edit-form" spacing={2} pt={1} onSubmit={handleEditSubmit}>
-            <TextField
-              select
-              label="Tipo"
-              value={editForm.type}
-              onChange={(event) => setEditForm((current) => ({ ...current, type: event.target.value as EntryType }))}
-            >
-              <MenuItem value="EXPENSE">Despesa</MenuItem>
-              <MenuItem value="INCOME">Receita</MenuItem>
-            </TextField>
-            <TextField
-              autoFocus
-              label="Nome da categoria"
-              required
-              value={editForm.name}
-              error={editDuplicate}
-              helperText={editDuplicate ? "Ja existe uma categoria com este nome para este tipo." : " "}
-              onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))}
-            />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Cor"
-                type="color"
-                value={isValidHex(editForm.color) ? editForm.color : "#64748B"}
-                onChange={(event) => setEditForm((current) => ({ ...current, color: event.target.value.toUpperCase() }))}
-                sx={{ width: 120 }}
-              />
-              <TextField
-                label="Hexadecimal"
-                value={editForm.color}
-                error={Boolean(editForm.color) && !isValidHex(editForm.color)}
-                helperText={!isValidHex(editForm.color) ? "Use #RRGGBB" : " "}
-                onChange={(event) => setEditForm((current) => ({ ...current, color: event.target.value.toUpperCase() }))}
-                sx={{ flex: 1 }}
-              />
-            </Stack>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setEditing(null)}>Cancelar</Button>
-          <Button
-            type="submit"
-            form="category-edit-form"
-            variant="contained"
-            startIcon={<SaveIcon />}
-            disabled={saving || !editForm.name.trim() || !isValidHex(editForm.color) || editDuplicate}
-          >
-            {saving ? "Salvando..." : "Salvar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CategoryFormDialog
+        open={Boolean(editing)}
+        mode="edit"
+        form={editForm}
+        duplicate={editDuplicate}
+        saving={saving}
+        isValidColor={isValidHex(editForm.color)}
+        onClose={() => setEditing(null)}
+        onSubmit={handleEditSubmit}
+        onFormChange={setEditForm}
+      />
       {dialog}
     </Stack>
   );

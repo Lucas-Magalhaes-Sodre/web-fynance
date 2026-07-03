@@ -21,7 +21,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const drawerWidth = 260;
 const collapsedDrawerWidth = 76;
@@ -30,7 +30,7 @@ const links = [
   { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
   { to: '/app/categories', label: 'Categorias', icon: <CategoryIcon /> },
-  { to: '/app/savings', label: 'Economias/invest.', icon: <SavingsIcon /> },
+  { to: '/app/economy', label: 'Economias', icon: <SavingsIcon /> },
   { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> }
 ];
 
@@ -129,10 +129,17 @@ export function AppLayout() {
           )}
         </Box>
       </Drawer>
-      <Box component="main" minHeight="100vh" p={{ xs: 2, md: 4 }} pl={{ xs: 11, md: 12 }} sx={{
+      <Box
+        component="main"
+        minHeight="100vh"
+        px={{ xs: 2, md: 3 }}
+        py={{ xs: 2, md: 2.5 }}
+        pl={{ xs: 11, md: 12 }}
+        sx={{
         background:
           'radial-gradient(circle at 18% 0%, rgba(45,212,191,0.12), transparent 28rem), radial-gradient(circle at 90% 10%, rgba(96,165,250,0.1), transparent 28rem), #F8FAFC'
-      }}>
+      }}
+      >
         <Outlet />
       </Box>
     </Box>

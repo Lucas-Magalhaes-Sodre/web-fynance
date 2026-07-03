@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
-import { api } from '../api/client';
-import type { User } from '../types/financial';
+import { api } from '@/services/api';
+import type { User } from '@/interfaces/financial';
 
 type AuthContextValue = {
   user: User | null;

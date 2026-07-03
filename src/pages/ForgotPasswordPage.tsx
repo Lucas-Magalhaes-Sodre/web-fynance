@@ -6,7 +6,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api/client';
+import { api } from '@/services/api';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');

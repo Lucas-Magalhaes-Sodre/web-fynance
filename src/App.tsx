@@ -8,7 +8,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { SavingsPage } from './pages/SavingsPage';
+import { EconomyPage } from './pages/EconomyPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
 export default function App() {
@@ -23,7 +23,8 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="control" element={<FinancialControlPage />} />
           <Route path="categories" element={<FinancialCategoriesPage />} />
-          <Route path="savings" element={<SavingsPage />} />
+          <Route path="economy" element={<EconomyPage />} />
+          <Route path="savings" element={<Navigate to="/app/economy" replace />} />
           <Route path="goals" element={<FinancialGoalsPage />} />
         </Route>
       </Route>

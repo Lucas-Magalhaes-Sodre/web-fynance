@@ -5,10 +5,6 @@ import FlagIcon from '@mui/icons-material/Flag';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -25,23 +21,16 @@ import {
   listFinancialGoals,
   updateFinancialGoal,
   type FinancialGoalPayload
-} from '../api/financialControl';
-import { useConfirmDialog } from '../components/ConfirmDialog';
-import { EmptyState } from '../components/EmptyState';
-import { StatCard } from '../components/StatCard';
-import type { FinancialGoal, FinancialGoalStatus } from '../types/financial';
-import { financeColors, formatDate, formatMoney, isoDate } from '../utils/format';
-
-type GoalFormState = {
-  title: string;
-  description: string;
-  targetAmount: string;
-  currentAmount: string;
-  startDate: string;
-  targetDate: string;
-  category: string;
-  status: FinancialGoalStatus;
-};
+} from '@/services/financialControl';
+import { useConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { EmptyState } from '@/components/atoms/EmptyState';
+import {
+  FinancialGoalFormDialog,
+  type GoalFormState,
+} from '@/components/organisms/goals/FinancialGoalFormDialog';
+import { StatCard } from '@/components/molecules/StatCard';
+import type { FinancialGoal, FinancialGoalStatus } from '@/interfaces/financial';
+import { financeColors, formatDate, formatMoney, isoDate } from '@/utils/format';
 
 const initialForm: GoalFormState = {
   title: '',
@@ -312,86 +301,14 @@ export function FinancialGoalsPage() {
         </Grid>
       ) : null}
 
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingGoal ? 'Editar meta' : 'Nova meta financeira'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField
-              label="Titulo"
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              fullWidth
-            />
-            <TextField
-              label="Valor alvo"
-              type="number"
-              value={form.targetAmount}
-              onChange={(event) => setForm((current) => ({ ...current, targetAmount: event.target.value }))}
-              fullWidth
-            />
-            <TextField
-              label="Valor atual"
-              type="number"
-              value={form.currentAmount}
-              onChange={(event) => setForm((current) => ({ ...current, currentAmount: event.target.value }))}
-              fullWidth
-            />
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Inicio"
-                  type="date"
-                  value={form.startDate}
-                  onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Prazo"
-                  type="date"
-                  value={form.targetDate}
-                  onChange={(event) => setForm((current) => ({ ...current, targetDate: event.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
-            <TextField
-              label="Categoria"
-              value={form.category}
-              onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Status"
-              value={form.status}
-              onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as FinancialGoalStatus }))}
-              fullWidth
-            >
-              <MenuItem value="ACTIVE">Ativa</MenuItem>
-              <MenuItem value="COMPLETED">Concluida</MenuItem>
-              <MenuItem value="CANCELED">Cancelada</MenuItem>
-            </TextField>
-            <TextField
-              label="Descricao"
-              value={form.description}
-              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-              fullWidth
-              multiline
-              rows={3}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFormOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={saveGoal}>
-            Salvar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FinancialGoalFormDialog
+        open={formOpen}
+        editing={Boolean(editingGoal)}
+        form={form}
+        onClose={() => setFormOpen(false)}
+        onSave={saveGoal}
+        onFormChange={setForm}
+      />
       {confirmDialog}
     </Stack>
   );
