@@ -1,5 +1,6 @@
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
@@ -17,6 +18,7 @@ type EconomyTableProps = {
   goals: FinancialGoal[];
   onEdit: (saving: Saving) => void;
   onDelete: (saving: Saving) => void;
+  onDetails: (saving: Saving) => void;
 };
 
 export function EconomyTable({
@@ -24,6 +26,7 @@ export function EconomyTable({
   goals,
   onEdit,
   onDelete,
+  onDetails,
 }: EconomyTableProps) {
   return (
     <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
@@ -59,6 +62,11 @@ export function EconomyTable({
                 <Tooltip title="Editar">
                   <IconButton onClick={() => onEdit(saving)}>
                     <EditIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Ver detalhes">
+                  <IconButton color="primary" onClick={() => onDetails(saving)}>
+                    <InfoOutlinedIcon />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Excluir">

@@ -13,7 +13,10 @@ import type { PeriodTotals } from "@/interfaces/financial";
 import * as S from "./styles";
 
 type FinancialSummaryChartProps = {
-  totals: Pick<PeriodTotals, "totalIncome" | "totalExpense" | "totalSavings" | "balance">;
+  totals: Pick<
+    PeriodTotals,
+    "totalIncome" | "totalExpense" | "totalSavings" | "balance"
+  >;
 };
 
 export function FinancialSummaryChart({ totals }: FinancialSummaryChartProps) {

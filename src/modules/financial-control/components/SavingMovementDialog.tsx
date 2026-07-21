@@ -13,7 +13,7 @@ import type {
   Saving,
   SavingTransferDirection,
 } from "@/interfaces/financial";
-import { financeColors, formatMoney } from "@/utils/format";
+import { currencyToNumber, digitsToCurrency, financeColors, formatMoney } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
 
 export type SavingAction = "REGISTER" | SavingTransferDirection;
@@ -22,6 +22,7 @@ export type SavingMovementFormState = {
   action: SavingAction;
   title: string;
   category: string;
+  color: string;
   description: string;
   amount: string;
   date: string;
@@ -33,6 +34,8 @@ export type SavingMovementFormState = {
   recurrenceEndMonth: string;
   recurrenceEndYear: string;
   goalId: string;
+  hasYield: boolean;
+  yieldRateMonthly: string;
 };
 
 const recurrenceLabels: Record<Exclude<RecurrenceType, "NONE">, string> = {
@@ -139,7 +142,7 @@ export function SavingMovementDialog({
   const withdrawSubitems = withdrawOptions.filter((option) => option.category === form.category);
   const selectedWithdrawBalance =
     withdrawOptions.find((option) => option.category === form.category && option.title === form.title)?.amount ?? 0;
-  const requestedAmount = Number(form.amount) || 0;
+  const requestedAmount = currencyToNumber(form.amount) || 0;
   const balanceAfterWithdraw = selectedWithdrawBalance - requestedAmount;
   const invalidCustomRecurrenceRange =
     !isWithdraw &&
@@ -150,6 +153,7 @@ export function SavingMovementDialog({
   const invalidWithdraw =
     isWithdraw &&
     (!form.title.trim() || requestedAmount <= 0 || requestedAmount > selectedWithdrawBalance);
+  const selectedGoal = goals.find((goal) => goal.id === form.goalId);
 
   return (
     <AppDialog
@@ -167,7 +171,7 @@ export function SavingMovementDialog({
               saving ||
               !form.title.trim() ||
               !form.category.trim() ||
-              Number(form.amount) <= 0 ||
+              currencyToNumber(form.amount) <= 0 ||
               invalidCustomRecurrenceRange ||
               invalidWithdraw
             }
@@ -246,11 +250,9 @@ export function SavingMovementDialog({
 
         <TextField
           label={isWithdraw ? "Valor a sacar" : "Valor"}
-          type="number"
           required
-          inputProps={{ min: 0, step: "0.01" }}
           value={form.amount}
-          onChange={(event) => updateForm({ amount: event.target.value })}
+          onChange={(event) => updateForm({ amount: digitsToCurrency(event.target.value) })}
         />
 
         {isWithdraw ? (
@@ -262,6 +264,7 @@ export function SavingMovementDialog({
               InputLabelProps={{ shrink: true }}
               value={form.date}
               onChange={(event) => updateForm({ date: event.target.value })}
+              sx={{ "& input": { py: 1.65 } }}
             />
             <TextField
               label="Descricao opcional"
@@ -438,6 +441,7 @@ export function SavingMovementDialog({
                         InputLabelProps={{ shrink: true }}
                         value={form.date}
                         onChange={(event) => updateForm({ date: event.target.value })}
+                        sx={{ "& input": { py: 1.65 } }}
                       />
                     ) : null}
                   </>
@@ -449,6 +453,7 @@ export function SavingMovementDialog({
                     InputLabelProps={{ shrink: true }}
                     value={form.date}
                     onChange={(event) => updateForm({ date: event.target.value })}
+                    sx={{ "& input": { py: 1.65 } }}
                   />
                 )}
               </Stack>
@@ -457,7 +462,16 @@ export function SavingMovementDialog({
               select
               label="Meta vinculada"
               value={form.goalId}
-              onChange={(event) => updateForm({ goalId: event.target.value })}
+              onChange={(event) => {
+                const goal = goals.find((item) => item.id === event.target.value);
+                updateForm({
+                  goalId: event.target.value,
+                  hasYield: goal?.hasYield ?? form.hasYield,
+                  yieldRateMonthly: goal?.hasYield
+                    ? String(goal.yieldRateMonthly ?? 0)
+                    : form.yieldRateMonthly,
+                });
+              }}
             >
               <MenuItem value="">Sem meta</MenuItem>
               {goals.map((goal) => (
@@ -466,6 +480,48 @@ export function SavingMovementDialog({
                 </MenuItem>
               ))}
             </TextField>
+            <S.HighlightPanel
+              $panelBorderColor="rgba(15,118,110,0.16)"
+              $panelBackground="rgba(240,253,250,0.72)"
+            >
+              <Stack spacing={2}>
+                <S.SplitFormControlLabel
+                  label={
+                    <Box display="flex">
+                      <Typography fontWeight={900}>Rendimento composto: </Typography>
+                      <Typography fontWeight={900} ml={1} color={form.hasYield ? "success" : "text.secondary"}>
+                        {form.hasYield ? "sim" : "não"}
+                      </Typography>
+                    </Box>
+                  }
+                  labelPlacement="start"
+                  control={
+                    <Switch
+                      color="success"
+                      checked={form.hasYield}
+                      onChange={(event) =>
+                        updateForm({
+                          hasYield: event.target.checked,
+                          yieldRateMonthly: event.target.checked
+                            ? form.yieldRateMonthly || String(selectedGoal?.yieldRateMonthly ?? "")
+                            : "",
+                        })
+                      }
+                    />
+                  }
+                />
+                {form.hasYield ? (
+                  <TextField
+                    label="Rendimento mensal (%)"
+                    type="number"
+                    inputProps={{ min: 0, step: "0.01" }}
+                    value={form.yieldRateMonthly}
+                    onChange={(event) => updateForm({ yieldRateMonthly: event.target.value })}
+                    helperText={selectedGoal?.hasYield ? "A taxa da meta foi preenchida automaticamente, mas voce pode ajustar." : "Ex.: 1 para 1% ao mes."}
+                  />
+                ) : null}
+              </Stack>
+            </S.HighlightPanel>
             <TextField
               label="Observacao opcional"
               multiline

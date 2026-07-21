@@ -31,35 +31,35 @@ const fadeUp = {
 
 const features = [
   [
-    "Visao diaria",
-    "Entenda entradas e saidas de um dia especifico.",
+    "Controle por periodo",
+    "Veja suas financas por dia, semana, mes ou ano sem perder o contexto.",
     CalendarDays,
   ],
   [
-    "Visao semanal",
-    "Acompanhe segunda a domingo com resumo por dia.",
+    "Calendario financeiro",
+    "Acompanhe vencimentos, receitas, despesas e contas pagas direto no calendario.",
     BarChart3,
   ],
   [
-    "Visao mensal",
-    "Organize receitas, despesas e status de pagamento.",
+    "Economias e caixinhas",
+    "Registre economias, rendimentos, retiradas e historico por periodo.",
     WalletCards,
   ],
   [
-    "Visao anual",
-    "Planilha moderna com meses, categorias e resultado.",
+    "Metas com fotos",
+    "Planeje objetivos, acompanhe progresso e veja quanto precisa guardar.",
     LayoutGrid,
   ],
-  ["Receitas", "Data do recebimento e categorias simples.", Sparkles],
-  ["Despesas", "Vencimento, pagamento, pendente, pago e atrasado.", CreditCard],
+  ["Receitas e despesas", "Cadastre entradas, saidas, status, vencimentos e recorrencias.", Sparkles],
+  ["Cartoes", "Controle cartoes, limites, compras parceladas e faturas por mes.", CreditCard],
   [
     "Dashboard inteligente",
-    "Totais claros para pessoa fisica, familia, MEI ou empresa.",
+    "Resumo de receitas, despesas, saldo, metas e ultimas movimentacoes.",
     BarChart3,
   ],
   [
-    "App mobile",
-    "Resumo financeiro na palma da mao, onde estiver.",
+    "LGPD e privacidade",
+    "Consentimento, exportacao de dados, exclusao de conta e cookies configuraveis.",
     Smartphone,
   ],
 ] as const;
@@ -190,14 +190,15 @@ function MiniDashboard() {
         className="floating-card"
         sx={{
           position: "absolute",
-          left: { xs: 12, md: -32 },
-          top: 72,
+          left: { xs: 8, md: -48 },
+          top: { xs: 86, md: 94 },
+          minWidth: 124,
           borderRadius: 4,
           bgcolor: "rgba(255,255,255,0.84)",
           border: "1px solid rgba(255,255,255,0.8)",
           backdropFilter: "blur(16px)",
           boxShadow: "0 24px 60px rgba(15,23,42,0.16)",
-          p: 2,
+          p: 2.2,
         }}
       >
         <Typography variant="caption" fontWeight={900} color="text.secondary">
@@ -404,8 +405,8 @@ export function LandingPage() {
                     backdropFilter: "blur(14px)",
                   }}
                 >
-                  <Sparkles size={16} /> Financas pessoais e empresariais com
-                  visual de fintech
+                  <Sparkles size={16} /> Controle financeiro completo para
+                  organizar dinheiro, metas e vencimentos
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
                   <Typography
@@ -418,7 +419,7 @@ export function LandingPage() {
                       color: "#0F172A",
                     }}
                   >
-                    Controle as financas com clareza e simplicidade
+                    Organize sua vida financeira em um só lugar
                   </Typography>
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
@@ -431,9 +432,10 @@ export function LandingPage() {
                       lineHeight: 1.65,
                     }}
                   >
-                    Organize receitas, despesas, vencimentos e pagamentos da sua
-                    vida pessoal, familia, MEI ou empresa em visoes diaria,
-                    semanal, mensal e anual.
+                    Controle receitas, despesas, cartoes, economias, metas,
+                    vencimentos e saldo com uma experiencia visual, simples e
+                    pronta para a rotina pessoal, familiar, MEI ou pequena
+                    empresa.
                   </Typography>
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
@@ -478,7 +480,7 @@ export function LandingPage() {
                         backdropFilter: "blur(12px)",
                       }}
                     >
-                      Ver demonstracao
+                      Entrar na demo
                     </Button>
                   </Stack>
                 </MotionBox>
@@ -655,8 +657,8 @@ export function LandingPage() {
                   letterSpacing: "-0.05em",
                 }}
               >
-                Da planilha para uma rotina financeira mais clara em qualquer
-                contexto.
+                Da planilha para uma rotina financeira visual, completa e
+                facil de manter.
               </Typography>
               <Typography
                 sx={{
@@ -666,9 +668,10 @@ export function LandingPage() {
                   lineHeight: 1.75,
                 }}
               >
-                A visao anual continua familiar, com meses por coluna e
-                categorias por linha, mas funciona tanto para contas pessoais
-                quanto para fluxo de caixa de um negocio.
+                A visao anual mantem a clareza de uma planilha, mas o sistema
+                tambem entrega calendario, filtros por periodo, status de
+                pagamento, categorias, recorrencias e resumo automatico para
+                tomada de decisao.
               </Typography>
             </MotionBox>
           </Grid>
@@ -692,14 +695,15 @@ export function LandingPage() {
                   letterSpacing: "-0.05em",
                 }}
               >
-                Seguranca sem complicar o uso.
+                Privacidade e seguranca sem complicar o uso.
               </Typography>
               <Typography
                 sx={{ mt: 2, color: "#475569", fontSize: 18, lineHeight: 1.7 }}
               >
-                Cada pessoa ou empresa acessa apenas os proprios dados. Login
-                seguro, JWT e recuperacao de senha deixam a base pronta para
-                evoluir.
+                Cada pessoa acessa apenas os proprios dados. O sistema ja nasce
+                com login seguro, separacao por usuario, aceite LGPD,
+                preferencias de cookies, exportacao dos dados e exclusao da
+                conta pelo perfil.
               </Typography>
             </Grid>
             <Grid item xs={12} md={7}>
@@ -707,8 +711,8 @@ export function LandingPage() {
                 {[
                   "Login seguro",
                   "Dados por conta",
-                  "Autenticacao JWT",
-                  "Recuperacao de senha",
+                  "Consentimento LGPD",
+                  "Exportacao e exclusao",
                 ].map((item) => (
                   <Grid item xs={12} sm={6} key={item}>
                     <Paper
@@ -736,63 +740,218 @@ export function LandingPage() {
         </Paper>
       </Container>
 
+      <Container id="app-mobile" maxWidth="xl" sx={{ py: { xs: 8, md: 12 } }}>
+        <Grid container spacing={5} alignItems="center">
+          <Grid item xs={12} lg={5}>
+            <MotionBox
+              initial={{ opacity: 0, x: -32 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Typography
+                fontWeight={950}
+                color="#0F766E"
+                letterSpacing="0.18em"
+                textTransform="uppercase"
+              >
+                Web e mobile
+              </Typography>
+              <Typography
+                variant="h2"
+                sx={{
+                  mt: 1.5,
+                  fontSize: { xs: 36, md: 48 },
+                  fontWeight: 950,
+                  letterSpacing: "-0.05em",
+                }}
+              >
+                Acompanhe o dinheiro no computador ou no celular.
+              </Typography>
+              <Typography
+                sx={{ mt: 2.5, color: "#475569", fontSize: 18, lineHeight: 1.75 }}
+              >
+                Use a versao web para planejar com mais detalhe e o app mobile
+                para consultar rapidamente saldos, receitas, despesas e
+                movimentacoes quando estiver fora.
+              </Typography>
+            </MotionBox>
+          </Grid>
+          <Grid item xs={12} lg={7}>
+            <Grid container spacing={2}>
+              {[
+                ["Dashboard", "Resumo claro para abrir o sistema e saber onde esta."],
+                ["Controle financeiro", "Tabela anual, calendario mensal e visoes por dia, semana e mes."],
+                ["Economias", "Caixinhas, rendimento, historico e simulacao para planejar melhor."],
+                ["Metas", "Objetivos com fotos, cores, progresso e detalhes vinculados as economias."],
+              ].map(([title, text]) => (
+                <Grid item xs={12} sm={6} key={title}>
+                  <MotionPaper
+                    initial={{ opacity: 0, y: 18 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="soft-card"
+                    sx={{ p: 3, borderRadius: 5, height: "100%" }}
+                  >
+                    <CheckCircle2 color="#0F766E" size={22} />
+                    <Typography mt={2} fontWeight={950}>{title}</Typography>
+                    <Typography mt={0.7} color="text.secondary" lineHeight={1.65}>
+                      {text}
+                    </Typography>
+                  </MotionPaper>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+        </Grid>
+      </Container>
+
       <Container id="precos" maxWidth="md" sx={{ py: { xs: 8, md: 14 } }}>
         <MotionPaper
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="premium-gradient"
           sx={{
             p: { xs: 4, md: 7 },
             borderRadius: 8,
-            textAlign: "center",
-            color: "white",
+            bgcolor: "rgba(255,255,255,0.92)",
+            border: "1px solid rgba(226,232,240,0.9)",
             boxShadow: "0 34px 100px rgba(15,23,42,0.22)",
           }}
         >
-          <CheckCircle2 size={36} />
-          <Typography
-            variant="h2"
-            sx={{
-              mt: 2.5,
-              fontSize: { xs: 34, md: 46 },
-              fontWeight: 950,
-              letterSpacing: "-0.05em",
-            }}
-          >
-            Comece hoje com uma forma mais bonita de cuidar das financas.
-          </Typography>
-          <Typography
-            sx={{
-              mx: "auto",
-              mt: 2,
-              maxWidth: 650,
-              color: "rgba(255,255,255,0.82)",
-              fontSize: 18,
-              lineHeight: 1.7,
-            }}
-          >
-            Veja sua rotina financeira ou fluxo de caixa com clareza, acompanhe
-            vencimentos e decida melhor em casa, no MEI ou na empresa.
-          </Typography>
-          <Button
-            component={Link}
-            to="/register"
-            variant="contained"
-            sx={{
-              mt: 4,
-              borderRadius: 999,
-              px: 4,
-              py: 1.7,
-              bgcolor: "white",
-              color: "#0F172A",
-              fontWeight: 950,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#F8FAFC", transform: "translateY(-2px)" },
-            }}
-          >
-            Comecar agora
-          </Button>
+          <Stack spacing={4}>
+            <Box textAlign="center">
+              <CheckCircle2 color="#0F766E" size={36} />
+              <Typography
+                variant="h2"
+                sx={{
+                  mt: 2.5,
+                  fontSize: { xs: 34, md: 46 },
+                  fontWeight: 950,
+                  letterSpacing: "-0.05em",
+                  color: "#0F172A",
+                }}
+              >
+                Um plano simples para organizar suas financas de verdade.
+              </Typography>
+              <Typography
+                sx={{
+                  mx: "auto",
+                  mt: 2,
+                  maxWidth: 650,
+                  color: "#475569",
+                  fontSize: 18,
+                  lineHeight: 1.7,
+                }}
+              >
+                Tudo em uma assinatura: dashboard, controle por periodo,
+                calendario, cartoes, economias, metas, relatorios e recursos de
+                privacidade.
+              </Typography>
+            </Box>
+
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} md={6}>
+                <Paper
+                  sx={{
+                    p: 3,
+                    borderRadius: 5,
+                    height: "100%",
+                    boxShadow: "none",
+                    border: "1px solid #E2E8F0",
+                  }}
+                >
+                  <Typography fontWeight={950} color="#0F766E">Mensal</Typography>
+                  <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
+                    R$ 24,90
+                  </Typography>
+                  <Typography color="text.secondary">por mes</Typography>
+                  <Typography mt={2} color="text.secondary" lineHeight={1.7}>
+                    Ideal para experimentar, validar a rotina e organizar o mes
+                    sem compromisso anual.
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Paper
+                  sx={{
+                    p: 3,
+                    borderRadius: 5,
+                    height: "100%",
+                    boxShadow: "0 22px 60px rgba(15,118,110,0.16)",
+                    border: "2px solid #0F766E",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 18,
+                      right: 18,
+                      borderRadius: 999,
+                      bgcolor: "#ECFDF5",
+                      color: "#047857",
+                      px: 1.5,
+                      py: 0.5,
+                      fontSize: 12,
+                      fontWeight: 950,
+                    }}
+                  >
+                    Melhor escolha
+                  </Box>
+                  <Typography fontWeight={950} color="#0F766E">Anual</Typography>
+                  <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
+                    R$ 238,90
+                  </Typography>
+                  <Typography color="text.secondary">
+                    por ano, equivalente a R$ 19,91 por mes
+                  </Typography>
+                  <Typography mt={2} color="text.secondary" lineHeight={1.7}>
+                    Economia de R$ 59,90 em relacao ao plano mensal, para quem
+                    quer manter o controle financeiro o ano todo.
+                  </Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={1.5}>
+              {[
+                "Receitas, despesas e recorrencias",
+                "Calendario financeiro e status de pagamento",
+                "Cartoes, limites e compras parceladas",
+                "Economias, rendimentos e simulacoes",
+                "Metas com fotos, cores e progresso",
+                "Exportacao de dados e controles LGPD",
+              ].map((item) => (
+                <Grid item xs={12} sm={6} key={item}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CheckCircle2 color="#0F766E" size={18} />
+                    <Typography fontWeight={800} color="#334155">{item}</Typography>
+                  </Stack>
+                </Grid>
+              ))}
+            </Grid>
+
+            <Box textAlign="center">
+              <Button
+                component={Link}
+                to="/register"
+                variant="contained"
+                sx={{
+                  borderRadius: 999,
+                  px: 4,
+                  py: 1.7,
+                  bgcolor: "#0F172A",
+                  color: "white",
+                  fontWeight: 950,
+                  textTransform: "none",
+                  "&:hover": { bgcolor: "#1E293B", transform: "translateY(-2px)" },
+                }}
+              >
+                Comecar agora
+              </Button>
+            </Box>
+          </Stack>
         </MotionPaper>
       </Container>
     </Box>

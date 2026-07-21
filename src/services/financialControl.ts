@@ -63,6 +63,7 @@ export type FinancialCategoryPayload = {
 export type SavingPayload = {
   title: string;
   category?: string;
+  color?: string;
   description?: string | null;
   amount: number;
   date: string;
@@ -79,12 +80,15 @@ export type SavingPayload = {
     endYear: number;
   };
   goalId?: string | null;
+  hasYield?: boolean;
+  yieldRateMonthly?: number | null;
 };
 
 export type SavingTransferPayload = {
   direction: SavingTransferDirection;
   title: string;
   category?: string;
+  color?: string;
   description?: string | null;
   amount: number;
   date: string;
@@ -101,6 +105,11 @@ export type FinancialGoalPayload = {
   startDate: string;
   targetDate?: string | null;
   category?: string | null;
+  imageUrl?: string | null;
+  imageUrls?: string[];
+  color?: string;
+  hasYield?: boolean;
+  yieldRateMonthly?: number | null;
   status?: FinancialGoalStatus;
 };
 

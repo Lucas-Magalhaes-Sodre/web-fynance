@@ -6,6 +6,8 @@ import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Table from "@mui/material/Table";
@@ -24,6 +26,7 @@ import {
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/atoms/EmptyState";
+import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import {
   CategoryFormDialog,
   type CategoryFormState,
@@ -178,10 +181,10 @@ export function FinancialCategoriesPage() {
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Box>
             <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
-              Categorias
+              Configurações
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
-              Organize os grupos usados nos lancamentos e escolha a cor das bordas na planilha.
+              Ajuste preferencias e cadastros auxiliares do sistema.
             </Typography>
           </Box>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ alignSelf: { xs: "stretch", md: "center" } }}>
@@ -195,6 +198,28 @@ export function FinancialCategoriesPage() {
 
       {!loading && !error ? (
         <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
+          <Box px={2} pt={2}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
+              <Tabs value="categories">
+                <Tab value="categories" label="Categorias" />
+              </Tabs>
+              <PageHelpButton title="O que são categorias?" label="O que são categorias?">
+                <Typography color="text.secondary">
+                  Categorias são grupos usados para organizar receitas, despesas e economias. Elas ajudam o sistema a separar seus lançamentos por assunto, como salário, moradia, cartão de crédito, poupança ou caixinha.
+                </Typography>
+                <Typography color="text.secondary">
+                  Elas aparecem nos formulários de cadastro, nos filtros, nos resumos, nos gráficos e na planilha do controle financeiro. A cor escolhida também ajuda a identificar visualmente cada grupo.
+                </Typography>
+                <Typography fontWeight={950}>Como usar</Typography>
+                <Typography color="text.secondary">
+                  Clique em “Adicionar categoria”, escolha se ela pertence a receitas, despesas ou economias, informe um nome e selecione uma cor. Depois, essa categoria ficará disponível nos cadastros correspondentes.
+                </Typography>
+                <Typography color="text.secondary">
+                  Algumas categorias do sistema são obrigatórias e não podem ser excluídas, porque são usadas em fluxos automáticos, como economias e cartão de crédito.
+                </Typography>
+              </PageHelpButton>
+            </Stack>
+          </Box>
           <Box p={2} display="flex" justifyContent="flex-end">
             <ToggleButtonGroup
               exclusive

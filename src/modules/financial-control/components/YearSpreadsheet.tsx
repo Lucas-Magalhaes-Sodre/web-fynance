@@ -117,13 +117,15 @@ export function YearSpreadsheet({
   const tableCellPaddingX = 0.45 + tableScale * 0.18;
   const tableCellPaddingY = 0.75 + tableScale * 0.12;
   const scaleLabel =
-    tableScale === -1
-      ? "Menor"
-      : tableScale === 0
-        ? "Normal"
-        : tableScale === 1
-          ? "Maior"
-          : "Extra";
+    tableScale === -2
+      ? "Mini"
+      : tableScale === -1
+        ? "Menor"
+        : tableScale === 0
+          ? "Normal"
+          : tableScale === 1
+            ? "Maior"
+            : "Extra";
   const tableMinWidth =
     stickyCategoryWidth + totalColumnWidth + yearData.months.length * monthColumnMinWidth;
   const incomeTotalBg = "rgba(63, 141, 202, 0.7)";
@@ -860,9 +862,9 @@ export function YearSpreadsheet({
                 <span>
                   <IconButton
                     size="small"
-                    disabled={tableScale <= -1}
+                    disabled={tableScale <= -2}
                     onClick={() =>
-                      setTableScale((current) => Math.max(-1, current - 1))
+                      setTableScale((current) => Math.max(-2, current - 1))
                     }
                     sx={{
                       width: 30,

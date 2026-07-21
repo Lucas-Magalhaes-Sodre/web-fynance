@@ -23,6 +23,13 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+  city?: string | null;
+  occupation?: string | null;
+  lgpdAcceptedAt?: string | null;
+  lgpdConsentVersion?: string | null;
+  marketingConsent?: boolean;
+  dataDeletionRequestedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -55,6 +62,7 @@ export type Saving = {
   userId: string;
   title: string;
   category: string;
+  color: string;
   description?: string | null;
   amount: number;
   date: string;
@@ -64,6 +72,8 @@ export type Saving = {
   recurrenceType: RecurrenceType;
   recurrenceGroupId?: string | null;
   goalId?: string | null;
+  hasYield?: boolean;
+  yieldRateMonthly?: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -83,7 +93,12 @@ export type SavingsSummary = {
 export type SavingsOverviewItem = {
   id: string;
   name: string;
+  color: string;
   currentSavedBalance: number;
+  rawSavedBalance: number;
+  hasYield: boolean;
+  yieldRateMonthly?: number | null;
+  savingIds: string[];
 };
 
 export type SavingsOverviewCategory = {
@@ -316,13 +331,26 @@ export type FinancialGoal = {
   targetAmount: number;
   currentAmount: number;
   linkedSavings: number;
+  projectedSavings: number;
+  manualCurrentAmount: number;
   remainingAmount: number;
   progressPercent: number;
   averageMonthlySavings: number;
   estimatedCompletionMonths?: number | null;
+  requiredDailySavings?: number | null;
+  requiredWeeklySavings?: number | null;
+  requiredMonthlySavings?: number | null;
+  daysRemaining?: number | null;
+  weeksRemaining?: number | null;
+  monthsRemaining?: number | null;
   startDate: string;
   targetDate?: string | null;
   category?: string | null;
+  imageUrl?: string | null;
+  imageUrls?: string[];
+  color: string;
+  hasYield: boolean;
+  yieldRateMonthly?: number | null;
   status: FinancialGoalStatus;
   createdAt: string;
   updatedAt: string;

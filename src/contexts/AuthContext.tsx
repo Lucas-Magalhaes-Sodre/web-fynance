@@ -7,7 +7,8 @@ type AuthContextValue = {
   token: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, marketingConsent?: boolean) => Promise<void>;
+  refreshUser: () => Promise<void>;
   signOut: () => void;
 };
 
@@ -46,8 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
-  async function signUp(name: string, email: string, password: string) {
-    const { data } = await api.post('/auth/register', { name, email, password });
+  async function refreshUser() {
+    const { data } = await api.get('/users/me');
+    setUser(data.user);
+  }
+
+  async function signUp(name: string, email: string, password: string, marketingConsent = false) {
+    const { data } = await api.post('/auth/register', { name, email, password, lgpdAccepted: true, marketingConsent });
     localStorage.setItem('@minha-receita:token', data.token);
     setToken(data.token);
     setUser(data.user);
@@ -59,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  const value = useMemo(() => ({ user, token, loading, signIn, signUp, signOut }), [user, token, loading]);
+  const value = useMemo(() => ({ user, token, loading, signIn, signUp, refreshUser, signOut }), [user, token, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -67,4 +73,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
-

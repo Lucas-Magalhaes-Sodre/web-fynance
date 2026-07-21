@@ -69,12 +69,13 @@ import type {
   WeekControl,
   YearControl,
 } from "@/interfaces/financial";
-import { financeColors, isoDate, weekRange } from "@/utils/format";
+import { currencyToNumber, financeColors, isoDate, weekRange } from "@/utils/format";
 
 const initialSavingForm: SavingMovementFormState = {
   action: "REGISTER",
   title: "",
   category: "",
+  color: "#D4A017",
   description: "",
   amount: "",
   date: isoDate(),
@@ -86,6 +87,8 @@ const initialSavingForm: SavingMovementFormState = {
   recurrenceEndMonth: "12",
   recurrenceEndYear: String(new Date().getFullYear()),
   goalId: "",
+  hasYield: false,
+  yieldRateMonthly: "",
 };
 
 const current = new Date();
@@ -338,12 +341,18 @@ export function FinancialControlPage() {
         action === "WITHDRAW_TO_BALANCE"
           ? firstBalance?.category ?? ""
           : categories.find((category) => category.type === "INVESTMENT")?.name ?? "Outros",
+      color:
+        action === "WITHDRAW_TO_BALANCE"
+          ? firstBalance?.color ?? "#D4A017"
+          : categories.find((category) => category.type === "INVESTMENT")?.color ?? "#D4A017",
       date: baseDate,
       recurrenceStartMonth: String(new Date(`${baseDate}T00:00:00`).getMonth() + 1),
       recurrenceStartYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       recurrenceEndYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       dueDay: String(new Date(`${baseDate}T00:00:00`).getDate()),
       title: action === "WITHDRAW_TO_BALANCE" ? firstBalance?.title ?? "" : "",
+      hasYield: false,
+      yieldRateMonthly: "",
     });
     setSavingFormOpen(true);
   }
@@ -365,8 +374,9 @@ export function FinancialControlPage() {
     return {
       title: savingForm.title.trim(),
       category: savingForm.category.trim(),
+      color: savingForm.color,
       description: savingForm.description.trim() || null,
-      amount: Number(savingForm.amount),
+      amount: currencyToNumber(savingForm.amount),
       date: recurringDate,
       month: payloadDate.getMonth() + 1,
       year: payloadDate.getFullYear(),
@@ -383,6 +393,8 @@ export function FinancialControlPage() {
             }
           : undefined,
       goalId: savingForm.goalId || null,
+      hasYield: savingForm.hasYield,
+      yieldRateMonthly: savingForm.hasYield ? Number(savingForm.yieldRateMonthly || 0) : null,
     };
   }
 

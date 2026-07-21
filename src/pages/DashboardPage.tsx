@@ -38,6 +38,7 @@ import {
   listFinancialGoals,
 } from "@/services/financialControl";
 import { FinancialItemForm } from "@/components/organisms/FinancialItemForm";
+import { FinancialGoalCard } from "@/components/organisms/goals/FinancialGoalCard";
 import { StatCard } from "@/components/molecules/StatCard";
 import { AppDialog } from "@/components/molecules/AppDialog";
 import type {
@@ -737,71 +738,34 @@ export function DashboardPage() {
             {goals.length} ativa(s)
           </Typography>
         </Stack>
-        <Grid container spacing={2}>
-          {goals.slice(0, 3).map((goal) => (
-            <Grid item xs={12} md={4} key={goal.id}>
-              <Paper
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  border: "1px solid rgba(15,23,42,0.08)",
-                  boxShadow: "none",
-                }}
-              >
-                <Stack spacing={1.25}>
-                  <Typography fontWeight={950}>{goal.title}</Typography>
-                  <Box>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        fontWeight={800}
-                      >
-                        {formatMoney(goal.currentAmount)}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        fontWeight={800}
-                      >
-                        {goal.progressPercent.toFixed(0)}%
-                      </Typography>
-                    </Stack>
-                    <Box
-                      height={8}
-                      borderRadius={999}
-                      bgcolor={financeColors.savingSoft}
-                      overflow="hidden"
-                      mt={0.75}
-                    >
-                      <Box
-                        height="100%"
-                        width={`${Math.min(100, goal.progressPercent)}%`}
-                        bgcolor={financeColors.saving}
-                      />
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Falta {formatMoney(goal.remainingAmount)}
-                  </Typography>
-                </Stack>
-              </Paper>
-            </Grid>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ overflowX: "auto", pb: 1, scrollSnapType: "x proximity" }}
+        >
+          {goals.slice(0, 6).map((goal) => (
+            <Box
+              key={goal.id}
+              sx={{ flex: "0 0 auto", scrollSnapAlign: "start" }}
+            >
+              <FinancialGoalCard goal={goal} compact />
+            </Box>
           ))}
           {!goals.length ? (
-            <Grid item xs={12}>
-              <Typography color="text.secondary">
-                Nenhuma meta ativa cadastrada.
-              </Typography>
-            </Grid>
+            <Typography color="text.secondary">
+              Nenhuma meta ativa cadastrada.
+            </Typography>
           ) : null}
-        </Grid>
+        </Stack>
       </Paper>
 
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
       >
+        <Typography variant="h6" fontWeight={900} mb={1.25}>
+          Últimas movimentações
+        </Typography>
         <Paper
           className="soft-card"
           sx={{ borderRadius: 4, overflow: "hidden" }}

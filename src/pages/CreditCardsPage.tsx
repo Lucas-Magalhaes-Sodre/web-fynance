@@ -38,6 +38,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import {
   createCreditCard,
@@ -342,6 +343,17 @@ export function CreditCardsPage() {
               <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
                 Cartoes
               </Typography>
+              <PageHelpButton title="Como funciona Cartões?">
+                <Typography color="text.secondary">
+                  A área de Cartões ajuda a controlar limite, uso mensal, vencimento e compras parceladas de cada cartão.
+                </Typography>
+                <Typography color="text.secondary">
+                  Cadastre um cartão com limite e dia de vencimento. Depois, registre compras detalhadas informando valor, data e número de parcelas.
+                </Typography>
+                <Typography color="text.secondary">
+                  O sistema distribui as parcelas por mês e conecta o valor ao controle financeiro, facilitando a leitura das despesas do cartão.
+                </Typography>
+              </PageHelpButton>
             </Stack>
             <Typography color="text.secondary" fontSize={17}>
               Acompanhe limite, uso mensal e compras detalhadas por cartao.

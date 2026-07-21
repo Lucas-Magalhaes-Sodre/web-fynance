@@ -1,16 +1,18 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import CategoryIcon from '@mui/icons-material/Category';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import FlagIcon from '@mui/icons-material/Flag';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import PersonIcon from '@mui/icons-material/Person';
 import SavingsIcon from '@mui/icons-material/Savings';
+import SettingsIcon from '@mui/icons-material/Settings';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import Dialog from '@mui/material/Dialog';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
@@ -31,15 +33,17 @@ const links = [
   { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
   { to: '/app/cards', label: 'Cartões', icon: <CreditCardIcon /> },
-  { to: '/app/categories', label: 'Categorias', icon: <CategoryIcon /> },
   { to: '/app/economy', label: 'Economias', icon: <SavingsIcon /> },
-  { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> }
+  { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> },
+  { to: '/app/profile', label: 'Meu perfil', icon: <PersonIcon /> },
+  { to: '/app/settings', label: 'Configurações', icon: <SettingsIcon /> }
 ];
 
 export function AppLayout() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [open, setOpen] = useState(() => localStorage.getItem('@minha-receita:menu-open') !== 'false');
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const currentWidth = open ? drawerWidth : collapsedDrawerWidth;
 
   function toggleMenu() {
@@ -119,12 +123,12 @@ export function AppLayout() {
         </List>
         <Box p={2}>
           {open ? (
-            <Button fullWidth variant="outlined" startIcon={<LogoutIcon />} onClick={signOut}>
+            <Button fullWidth variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={() => setLogoutOpen(true)}>
               Sair
             </Button>
           ) : (
             <Tooltip title="Sair" placement="right">
-              <IconButton color="primary" onClick={signOut}>
+              <IconButton color="error" onClick={() => setLogoutOpen(true)}>
                 <LogoutIcon />
               </IconButton>
             </Tooltip>
@@ -144,6 +148,16 @@ export function AppLayout() {
       >
         <Outlet />
       </Box>
+      <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)}>
+        <Box p={3}>
+          <Typography variant="h6" fontWeight={900} mb={1}>Deseja sair?</Typography>
+          <Typography color="text.secondary" mb={3}>Voce sera desconectada da sua conta.</Typography>
+          <Box display="flex" justifyContent="flex-end" gap={1}>
+            <Button onClick={() => setLogoutOpen(false)}>Cancelar</Button>
+            <Button color="error" variant="contained" onClick={signOut}>Sair</Button>
+          </Box>
+        </Box>
+      </Dialog>
     </Box>
   );
 }
