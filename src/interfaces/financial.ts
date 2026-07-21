@@ -23,6 +23,13 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+  city?: string | null;
+  occupation?: string | null;
+  lgpdAcceptedAt?: string | null;
+  lgpdConsentVersion?: string | null;
+  marketingConsent?: boolean;
+  dataDeletionRequestedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -55,6 +62,7 @@ export type Saving = {
   userId: string;
   title: string;
   category: string;
+  color: string;
   description?: string | null;
   amount: number;
   date: string;
@@ -64,6 +72,8 @@ export type Saving = {
   recurrenceType: RecurrenceType;
   recurrenceGroupId?: string | null;
   goalId?: string | null;
+  hasYield?: boolean;
+  yieldRateMonthly?: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -83,7 +93,12 @@ export type SavingsSummary = {
 export type SavingsOverviewItem = {
   id: string;
   name: string;
+  color: string;
   currentSavedBalance: number;
+  rawSavedBalance: number;
+  hasYield: boolean;
+  yieldRateMonthly?: number | null;
+  savingIds: string[];
 };
 
 export type SavingsOverviewCategory = {
@@ -153,6 +168,55 @@ export type PaymentSummary = {
   paidTotal: number;
   pendingTotal: number;
   overdueTotal: number;
+};
+
+export type CreditCardPurchase = {
+  id: string;
+  userId: string;
+  cardId: string;
+  title: string;
+  description?: string | null;
+  amount: number;
+  purchaseDate: string;
+  installments: number;
+  skippedInstallments?: number[];
+  installmentNumber?: number;
+  installmentAmount?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreditCard = {
+  id: string;
+  userId: string;
+  name: string;
+  dueDay: number;
+  creditLimit?: number | null;
+  isActive: boolean;
+  color: string;
+  statementAmount: number;
+  detailedAmount: number;
+  otherAmount: number;
+  usedAmount: number;
+  usedPercent?: number | null;
+  yearStatementAmount: number;
+  monthlySummary: Array<{
+    month: number;
+    label: string;
+    statementAmount: number;
+    detailedAmount: number;
+    otherAmount: number;
+    purchases: CreditCardPurchase[];
+  }>;
+  monthPurchases: CreditCardPurchase[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreditCardsOverview = {
+  cards: CreditCard[];
+  month: number;
+  year: number;
 };
 
 export type ValueUpdateScope = 'ONLY_THIS_PERIOD' | 'FROM_THIS_PERIOD_FORWARD' | 'ALL_YEAR';
@@ -267,13 +331,26 @@ export type FinancialGoal = {
   targetAmount: number;
   currentAmount: number;
   linkedSavings: number;
+  projectedSavings: number;
+  manualCurrentAmount: number;
   remainingAmount: number;
   progressPercent: number;
   averageMonthlySavings: number;
   estimatedCompletionMonths?: number | null;
+  requiredDailySavings?: number | null;
+  requiredWeeklySavings?: number | null;
+  requiredMonthlySavings?: number | null;
+  daysRemaining?: number | null;
+  weeksRemaining?: number | null;
+  monthsRemaining?: number | null;
   startDate: string;
   targetDate?: string | null;
   category?: string | null;
+  imageUrl?: string | null;
+  imageUrls?: string[];
+  color: string;
+  hasYield: boolean;
+  yieldRateMonthly?: number | null;
   status: FinancialGoalStatus;
   createdAt: string;
   updatedAt: string;

@@ -82,11 +82,6 @@ export function EntryRows({
                     <Typography variant="caption" color="text.secondary">
                       Vencimento: {formatDate(item.dueDate)}
                     </Typography>
-                    {item.paymentDate ? (
-                      <Typography variant="caption" color="text.secondary">
-                        Pagamento: {formatDate(item.paymentDate)}
-                      </Typography>
-                    ) : null}
                   </Stack>
                 ) : (
                   "Recebido"

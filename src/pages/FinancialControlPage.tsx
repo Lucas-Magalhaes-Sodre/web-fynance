@@ -1,5 +1,6 @@
 import Stack from "@mui/material/Stack";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   createEntry,
   createSaving,
@@ -59,6 +60,7 @@ import type {
   FinancialCategory,
   FinancialCategoryType,
   FinancialCalendar,
+  FinancialCalendarDay,
   FinancialGoal,
   FinancialItem,
   Saving,
@@ -67,12 +69,13 @@ import type {
   WeekControl,
   YearControl,
 } from "@/interfaces/financial";
-import { financeColors, isoDate, weekRange } from "@/utils/format";
+import { currencyToNumber, financeColors, isoDate, weekRange } from "@/utils/format";
 
 const initialSavingForm: SavingMovementFormState = {
   action: "REGISTER",
   title: "",
   category: "",
+  color: "#D4A017",
   description: "",
   amount: "",
   date: isoDate(),
@@ -84,11 +87,14 @@ const initialSavingForm: SavingMovementFormState = {
   recurrenceEndMonth: "12",
   recurrenceEndYear: String(new Date().getFullYear()),
   goalId: "",
+  hasYield: false,
+  yieldRateMonthly: "",
 };
 
 const current = new Date();
 
 export function FinancialControlPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<ViewMode>("year");
   const [year, setYear] = useState(current.getFullYear());
   const [yearInput, setYearInput] = useState(String(current.getFullYear()));
@@ -335,12 +341,18 @@ export function FinancialControlPage() {
         action === "WITHDRAW_TO_BALANCE"
           ? firstBalance?.category ?? ""
           : categories.find((category) => category.type === "INVESTMENT")?.name ?? "Outros",
+      color:
+        action === "WITHDRAW_TO_BALANCE"
+          ? firstBalance?.color ?? "#D4A017"
+          : categories.find((category) => category.type === "INVESTMENT")?.color ?? "#D4A017",
       date: baseDate,
       recurrenceStartMonth: String(new Date(`${baseDate}T00:00:00`).getMonth() + 1),
       recurrenceStartYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       recurrenceEndYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       dueDay: String(new Date(`${baseDate}T00:00:00`).getDate()),
       title: action === "WITHDRAW_TO_BALANCE" ? firstBalance?.title ?? "" : "",
+      hasYield: false,
+      yieldRateMonthly: "",
     });
     setSavingFormOpen(true);
   }
@@ -362,8 +374,9 @@ export function FinancialControlPage() {
     return {
       title: savingForm.title.trim(),
       category: savingForm.category.trim(),
+      color: savingForm.color,
       description: savingForm.description.trim() || null,
-      amount: Number(savingForm.amount),
+      amount: currencyToNumber(savingForm.amount),
       date: recurringDate,
       month: payloadDate.getMonth() + 1,
       year: payloadDate.getFullYear(),
@@ -380,6 +393,8 @@ export function FinancialControlPage() {
             }
           : undefined,
       goalId: savingForm.goalId || null,
+      hasYield: savingForm.hasYield,
+      yieldRateMonthly: savingForm.hasYield ? Number(savingForm.yieldRateMonthly || 0) : null,
     };
   }
 
@@ -480,9 +495,26 @@ export function FinancialControlPage() {
   async function markItemPaid(item: FinancialItem) {
     await updateEntryPaymentStatus(item.id, {
       status: "PAGO",
-      paymentDate: isoDate(),
     });
     await loadData();
+  }
+
+  async function markItemsPaid(items: FinancialItem[]) {
+    const payableItems = items.filter(
+      (item) => item.type.includes("EXPENSE") && item.status !== "PAGO",
+    );
+    if (!payableItems.length) return;
+
+    await Promise.all(
+      payableItems.map((item) =>
+        updateEntryPaymentStatus(item.id, { status: "PAGO" }),
+      ),
+    );
+    await loadData();
+  }
+
+  async function markCalendarDayPaid(day: FinancialCalendarDay) {
+    await markItemsPaid(day.items);
   }
 
   async function markItemPending(item: FinancialItem) {
@@ -716,6 +748,7 @@ export function FinancialControlPage() {
             setDate(selectedDate);
             setMode("day");
           }}
+          onMarkDayPaid={markCalendarDayPaid}
         />
       ) : null}
 
@@ -742,6 +775,9 @@ export function FinancialControlPage() {
           onToggleInvestmentRows={() => setInvestmentRowsExpanded((expanded) => !expanded)}
           onToggleAllCategoryRows={(expanded) => {
             setAllCategoryRowsExpanded(expanded);
+            setIncomeRowsExpanded(expanded);
+            setExpenseRowsExpanded(expanded);
+            setInvestmentRowsExpanded(expanded);
             setCategoryRowsExpanded({});
           }}
           onToggleCategoryDetails={toggleCategoryDetails}
@@ -750,6 +786,10 @@ export function FinancialControlPage() {
           onEditLine={setLineEdit}
           onRemoveItemLine={removeItemLine}
           onEditCell={setCellEdit}
+          onOpenCreditCard={(cardName) => {
+            const query = cardName ? `?card=${encodeURIComponent(cardName)}` : "";
+            navigate(`/app/cards${query}`);
+          }}
         />
       ) : null}
 
@@ -768,6 +808,7 @@ export function FinancialControlPage() {
           onDeleteItem={removeItem}
           onMarkPaid={markItemPaid}
           onMarkPending={markItemPending}
+          onMarkManyPaid={markItemsPaid}
         />
       ) : null}
 
