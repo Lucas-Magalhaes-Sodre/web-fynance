@@ -28,6 +28,7 @@ type CategoryFormDialogProps = {
   onSubmit: (event: FormEvent) => void;
   onFormChange: (form: CategoryFormState) => void;
   onTypeChange?: (type: FinancialCategoryType) => void;
+  lockIdentity?: boolean;
 };
 
 export function CategoryFormDialog({
@@ -41,6 +42,7 @@ export function CategoryFormDialog({
   onSubmit,
   onFormChange,
   onTypeChange,
+  lockIdentity = false,
 }: CategoryFormDialogProps) {
   const formId = mode === "create" ? "category-create-form" : "category-edit-form";
   const actionLabel = mode === "create" ? "Adicionar" : "Salvar";
@@ -89,6 +91,7 @@ export function CategoryFormDialog({
           select
           label="Tipo"
           value={form.type}
+          disabled={lockIdentity}
           onChange={(event) => {
             const type = event.target.value as FinancialCategoryType;
             if (onTypeChange) onTypeChange(type);
@@ -104,9 +107,12 @@ export function CategoryFormDialog({
           label="Nome da categoria"
           required
           value={form.name}
+          disabled={lockIdentity}
           error={duplicate}
           helperText={
-            duplicate
+            lockIdentity
+              ? "Categoria obrigatoria: somente a cor pode ser alterada."
+              : duplicate
               ? "Ja existe uma categoria com este nome para este tipo."
               : " "
           }

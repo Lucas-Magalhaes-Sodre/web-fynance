@@ -1,3 +1,5 @@
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { FinancialItem, Saving } from "@/interfaces/financial";
@@ -12,6 +14,7 @@ type CurrentPeriodSectionsProps = {
   onDeleteItem: (item: FinancialItem) => void;
   onMarkPaid: (item: FinancialItem) => void;
   onMarkPending: (item: FinancialItem) => void;
+  onMarkManyPaid: (items: FinancialItem[]) => void;
 };
 
 export function CurrentPeriodSections({
@@ -21,24 +24,46 @@ export function CurrentPeriodSections({
   onDeleteItem,
   onMarkPaid,
   onMarkPending,
+  onMarkManyPaid,
 }: CurrentPeriodSectionsProps) {
+  const incomeItems = items.filter((item) => item.type.includes("INCOME"));
+  const expenseItems = items.filter((item) => item.type.includes("EXPENSE"));
+  const payableExpenses = expenseItems.filter((item) => item.status !== "PAGO");
+
   return (
     <Stack spacing={2}>
       <Typography variant="h6" fontWeight={900}>
         Receitas
       </Typography>
       <EntryRows
-        items={items.filter((item) => item.type.includes("INCOME"))}
+        items={incomeItems}
         onEdit={onEditItem}
         onDelete={onDeleteItem}
         onMarkPaid={onMarkPaid}
         onMarkPending={onMarkPending}
       />
-      <Typography variant="h6" fontWeight={900}>
-        Despesas
-      </Typography>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        spacing={1}
+      >
+        <Typography variant="h6" fontWeight={900}>
+          Despesas
+        </Typography>
+        {payableExpenses.length ? (
+          <Button
+            size="small"
+            variant="outlined"
+            color="success"
+            startIcon={<CheckCircleIcon />}
+            onClick={() => onMarkManyPaid(payableExpenses)}
+          >
+            Marcar {payableExpenses.length} como pago
+          </Button>
+        ) : null}
+      </Stack>
       <EntryRows
-        items={items.filter((item) => item.type.includes("EXPENSE"))}
+        items={expenseItems}
         onEdit={onEditItem}
         onDelete={onDeleteItem}
         onMarkPaid={onMarkPaid}

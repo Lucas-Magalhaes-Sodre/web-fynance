@@ -1,6 +1,9 @@
 import { api } from './api';
 import type {
   DayControl,
+  CreditCard,
+  CreditCardPurchase,
+  CreditCardsOverview,
   EntryType,
   FinancialCategoryType,
   FinancialCategory,
@@ -101,9 +104,69 @@ export type FinancialGoalPayload = {
   status?: FinancialGoalStatus;
 };
 
+export type CreditCardPayload = {
+  name: string;
+  dueDay: number;
+  creditLimit?: number | null;
+  color?: string;
+  isActive?: boolean;
+};
+
+export type CreditCardPurchasePayload = {
+  cardId: string;
+  title: string;
+  description?: string | null;
+  amount: number;
+  purchaseDate: string;
+  installments: number;
+};
+
 export async function getYearControl(year: number) {
   const { data } = await api.get<YearControl>('/financial-control/year', { params: { year } });
   return data;
+}
+
+export async function listCreditCards(params?: {
+  month?: number;
+  year?: number;
+  cardId?: string;
+  cardName?: string;
+}) {
+  const { data } = await api.get<CreditCardsOverview>('/credit-cards', { params });
+  return data;
+}
+
+export async function createCreditCard(payload: CreditCardPayload) {
+  const { data } = await api.post<{ card: CreditCard }>('/credit-cards', payload);
+  return data.card;
+}
+
+export async function updateCreditCard(id: string, payload: Partial<CreditCardPayload>) {
+  const { data } = await api.put<{ card: CreditCard }>(`/credit-cards/${id}`, payload);
+  return data.card;
+}
+
+export async function deleteCreditCard(id: string) {
+  await api.delete(`/credit-cards/${id}`);
+}
+
+export async function createCreditCardPurchase(payload: CreditCardPurchasePayload) {
+  const { data } = await api.post<{ purchase: CreditCardPurchase }>('/credit-cards/purchases', payload);
+  return data.purchase;
+}
+
+export async function updateCreditCardPurchase(id: string, payload: Partial<Omit<CreditCardPurchasePayload, 'cardId'>>) {
+  const { data } = await api.put<{ purchase: CreditCardPurchase }>(`/credit-cards/purchases/${id}`, payload);
+  return data.purchase;
+}
+
+export async function deleteCreditCardPurchase(id: string, payload?: {
+  deleteAllInstallments?: boolean;
+  installmentNumber?: number;
+  month?: number;
+  year?: number;
+}) {
+  await api.delete(`/credit-cards/purchases/${id}`, { data: payload });
 }
 
 export async function getMonthControl(month: number, year: number) {

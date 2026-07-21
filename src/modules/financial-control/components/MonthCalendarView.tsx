@@ -1,4 +1,6 @@
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
@@ -14,6 +16,7 @@ type MonthCalendarViewProps = {
   year: number;
   calendarCells: Array<FinancialCalendarDay | null>;
   onSelectDay: (date: string) => void;
+  onMarkDayPaid: (day: FinancialCalendarDay) => void;
 };
 
 export function MonthCalendarView({
@@ -21,6 +24,7 @@ export function MonthCalendarView({
   year,
   calendarCells,
   onSelectDay,
+  onMarkDayPaid,
 }: MonthCalendarViewProps) {
   return (
     <S.SectionCard className="soft-card">
@@ -59,6 +63,7 @@ export function MonthCalendarView({
               <S.WeekCard
                 className="soft-card"
                 onClick={() => onSelectDay(day.date)}
+                sx={{ cursor: "pointer" }}
               >
                 <Stack direction="row" justifyContent="space-between" mb={1}>
                   <Typography fontWeight={950}>
@@ -95,6 +100,29 @@ export function MonthCalendarView({
                       label={`${day.overdueBills} atrasada(s)`}
                       color="error"
                     />
+                  ) : null}
+                  {day.items.some(
+                    (item) =>
+                      item.type.includes("EXPENSE") && item.status !== "PAGO",
+                  ) ? (
+                    <Button
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onMarkDayPaid(day);
+                      }}
+                      sx={{
+                        alignSelf: "flex-start",
+                        mt: 0.5,
+                        textTransform: "none",
+                        fontWeight: 800,
+                      }}
+                    >
+                      Pagar pendentes
+                    </Button>
                   ) : null}
                 </Stack>
               </S.WeekCard>

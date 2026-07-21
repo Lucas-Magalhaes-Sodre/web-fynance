@@ -2,6 +2,7 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CategoryIcon from '@mui/icons-material/Category';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import FlagIcon from '@mui/icons-material/Flag';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -29,6 +30,7 @@ const collapsedDrawerWidth = 76;
 const links = [
   { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
+  { to: '/app/cards', label: 'Cartões', icon: <CreditCardIcon /> },
   { to: '/app/categories', label: 'Categorias', icon: <CategoryIcon /> },
   { to: '/app/economy', label: 'Economias', icon: <SavingsIcon /> },
   { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> }

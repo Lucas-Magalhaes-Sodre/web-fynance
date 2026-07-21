@@ -43,7 +43,13 @@ const categoryTypeLabels: Record<FinancialCategoryType, string> = {
 };
 
 function isProtectedSavingsCategory(category: FinancialCategory) {
-  return category.type === "INCOME" && category.name.trim().toLocaleLowerCase("pt-BR") === "economias";
+  const normalizedName = normalizeCategoryName(category.name);
+  return (
+    (category.type === "INCOME" && normalizedName === "economias") ||
+    (category.type === "EXPENSE" && (normalizedName === "cartao de credito" || normalizedName === "cartoes de credito")) ||
+    category.isSystem ||
+    category.canDelete === false
+  );
 }
 
 function isValidHex(value: string) {
@@ -225,9 +231,9 @@ export function FinancialCategoriesPage() {
                     </Box>
                   </TableCell>
                   <TableCell align="right">
-                    <Tooltip title={isProtectedSavingsCategory(category) ? "Categoria obrigatoria" : "Editar"}>
+                    <Tooltip title={isProtectedSavingsCategory(category) ? "Editar cor" : "Editar"}>
                       <span>
-                      <IconButton disabled={isProtectedSavingsCategory(category)} onClick={() => startEdit(category)}>
+                      <IconButton onClick={() => startEdit(category)}>
                         <EditIcon />
                       </IconButton>
                       </span>
@@ -277,6 +283,7 @@ export function FinancialCategoriesPage() {
         onClose={() => setEditing(null)}
         onSubmit={handleEditSubmit}
         onFormChange={setEditForm}
+        lockIdentity={Boolean(editing && isProtectedSavingsCategory(editing))}
       />
       {dialog}
     </Stack>

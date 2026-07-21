@@ -155,6 +155,55 @@ export type PaymentSummary = {
   overdueTotal: number;
 };
 
+export type CreditCardPurchase = {
+  id: string;
+  userId: string;
+  cardId: string;
+  title: string;
+  description?: string | null;
+  amount: number;
+  purchaseDate: string;
+  installments: number;
+  skippedInstallments?: number[];
+  installmentNumber?: number;
+  installmentAmount?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreditCard = {
+  id: string;
+  userId: string;
+  name: string;
+  dueDay: number;
+  creditLimit?: number | null;
+  isActive: boolean;
+  color: string;
+  statementAmount: number;
+  detailedAmount: number;
+  otherAmount: number;
+  usedAmount: number;
+  usedPercent?: number | null;
+  yearStatementAmount: number;
+  monthlySummary: Array<{
+    month: number;
+    label: string;
+    statementAmount: number;
+    detailedAmount: number;
+    otherAmount: number;
+    purchases: CreditCardPurchase[];
+  }>;
+  monthPurchases: CreditCardPurchase[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreditCardsOverview = {
+  cards: CreditCard[];
+  month: number;
+  year: number;
+};
+
 export type ValueUpdateScope = 'ONLY_THIS_PERIOD' | 'FROM_THIS_PERIOD_FORWARD' | 'ALL_YEAR';
 export type PeriodType = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 

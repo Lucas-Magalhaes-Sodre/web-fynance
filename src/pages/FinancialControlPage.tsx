@@ -1,5 +1,6 @@
 import Stack from "@mui/material/Stack";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   createEntry,
   createSaving,
@@ -59,6 +60,7 @@ import type {
   FinancialCategory,
   FinancialCategoryType,
   FinancialCalendar,
+  FinancialCalendarDay,
   FinancialGoal,
   FinancialItem,
   Saving,
@@ -89,6 +91,7 @@ const initialSavingForm: SavingMovementFormState = {
 const current = new Date();
 
 export function FinancialControlPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<ViewMode>("year");
   const [year, setYear] = useState(current.getFullYear());
   const [yearInput, setYearInput] = useState(String(current.getFullYear()));
@@ -480,9 +483,26 @@ export function FinancialControlPage() {
   async function markItemPaid(item: FinancialItem) {
     await updateEntryPaymentStatus(item.id, {
       status: "PAGO",
-      paymentDate: isoDate(),
     });
     await loadData();
+  }
+
+  async function markItemsPaid(items: FinancialItem[]) {
+    const payableItems = items.filter(
+      (item) => item.type.includes("EXPENSE") && item.status !== "PAGO",
+    );
+    if (!payableItems.length) return;
+
+    await Promise.all(
+      payableItems.map((item) =>
+        updateEntryPaymentStatus(item.id, { status: "PAGO" }),
+      ),
+    );
+    await loadData();
+  }
+
+  async function markCalendarDayPaid(day: FinancialCalendarDay) {
+    await markItemsPaid(day.items);
   }
 
   async function markItemPending(item: FinancialItem) {
@@ -716,6 +736,7 @@ export function FinancialControlPage() {
             setDate(selectedDate);
             setMode("day");
           }}
+          onMarkDayPaid={markCalendarDayPaid}
         />
       ) : null}
 
@@ -742,6 +763,9 @@ export function FinancialControlPage() {
           onToggleInvestmentRows={() => setInvestmentRowsExpanded((expanded) => !expanded)}
           onToggleAllCategoryRows={(expanded) => {
             setAllCategoryRowsExpanded(expanded);
+            setIncomeRowsExpanded(expanded);
+            setExpenseRowsExpanded(expanded);
+            setInvestmentRowsExpanded(expanded);
             setCategoryRowsExpanded({});
           }}
           onToggleCategoryDetails={toggleCategoryDetails}
@@ -750,6 +774,10 @@ export function FinancialControlPage() {
           onEditLine={setLineEdit}
           onRemoveItemLine={removeItemLine}
           onEditCell={setCellEdit}
+          onOpenCreditCard={(cardName) => {
+            const query = cardName ? `?card=${encodeURIComponent(cardName)}` : "";
+            navigate(`/app/cards${query}`);
+          }}
         />
       ) : null}
 
@@ -768,6 +796,7 @@ export function FinancialControlPage() {
           onDeleteItem={removeItem}
           onMarkPaid={markItemPaid}
           onMarkPending={markItemPending}
+          onMarkManyPaid={markItemsPaid}
         />
       ) : null}
 

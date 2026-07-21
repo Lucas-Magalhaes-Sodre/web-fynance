@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
+import { CreditCardsPage } from './pages/CreditCardsPage';
 import { FinancialControlPage } from './pages/FinancialControlPage';
 import { FinancialCategoriesPage } from './pages/FinancialCategoriesPage';
 import { FinancialGoalsPage } from './pages/FinancialGoalsPage';
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="control" element={<FinancialControlPage />} />
+          <Route path="cards" element={<CreditCardsPage />} />
           <Route path="categories" element={<FinancialCategoriesPage />} />
           <Route path="economy" element={<EconomyPage />} />
           <Route path="savings" element={<Navigate to="/app/economy" replace />} />

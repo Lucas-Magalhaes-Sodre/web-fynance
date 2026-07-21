@@ -67,6 +67,7 @@ type YearSpreadsheetProps = {
   onEditLine: (lineEdit: LineEditState) => void;
   onRemoveItemLine: (category: string, name: string, type: EntryType) => void;
   onEditCell: (cellEdit: SpreadsheetCellEdit) => void;
+  onOpenCreditCard?: (cardName?: string) => void;
 };
 
 type SearchOption = {
@@ -100,6 +101,7 @@ export function YearSpreadsheet({
   onEditLine,
   onRemoveItemLine,
   onEditCell,
+  onOpenCreditCard,
 }: YearSpreadsheetProps) {
   const [groupsSeparated, setGroupsSeparated] = useState(false);
   const [tableScale, setTableScale] = useState(0);
@@ -150,6 +152,15 @@ export function YearSpreadsheet({
     11: "Nov",
     12: "Dez",
   };
+
+  function isCreditCardCategory(category: string) {
+    const name = category
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pt-BR")
+      .trim();
+    return name === "cartao de credito" || name === "cartoes de credito";
+  }
 
   const investmentDetails = yearData.savings
     .reduce<DetailSpreadsheetRow[]>((rows, saving) => {
@@ -392,7 +403,26 @@ export function YearSpreadsheet({
             </IconButton>
           </Tooltip>
           <Box flex={1} minWidth={0}>
-            {truncatedName(category, "#111827")}
+            {type === "EXPENSE" && isCreditCardCategory(category) ? (
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => onOpenCreditCard?.()}
+                sx={{
+                  color: "#111827",
+                  fontWeight: 850,
+                  justifyContent: "flex-start",
+                  px: 0,
+                  textTransform: "none",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                }}
+              >
+                {truncatedName(category, "#111827")}
+              </Button>
+            ) : (
+              truncatedName(category, "#111827")
+            )}
           </Box>
           <Tooltip title="Excluir linha e valores deste ano">
             <IconButton
@@ -444,12 +474,14 @@ export function YearSpreadsheet({
               size="small"
               variant="text"
               onClick={() =>
-                onEditLine({
-                  category: child.category,
-                  name: child.name,
-                  type,
-                  value: child.name,
-                })
+                type === "EXPENSE" && isCreditCardCategory(child.category)
+                  ? onOpenCreditCard?.(child.name)
+                  : onEditLine({
+                      category: child.category,
+                      name: child.name,
+                      type,
+                      value: child.name,
+                    })
               }
               sx={{
                 color: textColor,
