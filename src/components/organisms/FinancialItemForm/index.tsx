@@ -3,8 +3,9 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import { FormEvent, useEffect, useState } from 'react';
 import type { FinancialItem, FinancialItemType } from '@/interfaces/financial';
-import { typeLabels } from '@/utils/format';
+import { currencyToNumber, digitsToCurrency, formatMoney, typeLabels } from '@/utils/format';
 import { AppDialog, AppDialogStyles as S } from '@/components/molecules/AppDialog';
+import { LoadingActionButton } from '@/components/molecules/LoadingActionButton';
 
 type FormState = {
   title: string;
@@ -41,7 +42,7 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
       setForm({
         title: item.title,
         description: item.description ?? '',
-        amount: String(item.amount),
+        amount: formatMoney(item.amount),
         type: item.type,
         date: item.date.slice(0, 10),
         dueDate: item.dueDate ? item.dueDate.slice(0, 10) : ''
@@ -54,11 +55,12 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     try {
       await onSubmit({
         ...form,
-        amount: Number(form.amount),
+        amount: currencyToNumber(form.amount),
         dueDate: form.dueDate || ''
       });
       onClose();
@@ -75,16 +77,16 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="financial-item-form" variant="contained" disabled={saving}>
+          <LoadingActionButton type="submit" form="financial-item-form" variant="contained" loading={saving} loadingLabel="Salvando...">
             Salvar
-          </Button>
+          </LoadingActionButton>
         </>
       }
     >
         <S.FormStack component="form" id="financial-item-form" spacing={2} onSubmit={handleSubmit}>
           <TextField label="Nome da entrada ou despesa" required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           <TextField
-            label="Observacao opcional"
+            label="Observação opcional"
             multiline
             minRows={2}
             value={form.description}
@@ -92,11 +94,9 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
           />
           <TextField
             label="Valor em reais"
-            type="number"
             required
-            inputProps={{ min: 0, step: '0.01' }}
             value={form.amount}
-            onChange={(event) => setForm({ ...form, amount: event.target.value })}
+            onChange={(event) => setForm({ ...form, amount: digitsToCurrency(event.target.value) })}
           />
           <TextField select label="Tipo de registro" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as FinancialItemType })}>
             {Object.entries(typeLabels).map(([value, label]) => (
@@ -105,7 +105,7 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
               </MenuItem>
             ))}
           </TextField>
-          <TextField label="Data da entrada, pagamento ou debito" type="date" required InputLabelProps={{ shrink: true }} value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
+          <TextField label="Data da entrada, pagamento ou débito" type="date" required InputLabelProps={{ shrink: true }} value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
           <TextField label="Data de vencimento, se tiver" type="date" InputLabelProps={{ shrink: true }} value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} />
         </S.FormStack>
     </AppDialog>

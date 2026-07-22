@@ -47,7 +47,7 @@ export function EconomyExtractDialog({ open, initialMode = "current", onClose }:
     setError("");
     getSavingsExtract({ mode, page, limit })
       .then(setExtract)
-      .catch(() => setError("Nao foi possivel carregar o extrato de economias."))
+      .catch(() => setError("Não foi possível carregar o extrato de economias."))
       .finally(() => setLoading(false));
   }, [mode, open, page]);
 
@@ -111,7 +111,7 @@ export function EconomyExtractDialog({ open, initialMode = "current", onClose }:
                   <TableCell align="right">Valor</TableCell>
                   <TableCell>Categoria</TableCell>
                   <TableCell>Subitem</TableCell>
-                  <TableCell>Descricao</TableCell>
+                  <TableCell>Descrição</TableCell>
                   <TableCell>Registro</TableCell>
                   <TableCell>Entrada/Saida</TableCell>
                 </TableRow>
@@ -146,7 +146,7 @@ export function EconomyExtractDialog({ open, initialMode = "current", onClose }:
                 {!extract?.items.length ? (
                   <TableRow>
                     <TableCell colSpan={7}>
-                      <EmptyState message={mode === "current" ? "Nenhuma movimentacao atual." : "Nenhuma movimentacao futura."} />
+                      <EmptyState message={mode === "current" ? "Nenhuma movimentação atual." : "Nenhuma movimentação futura."} />
                     </TableCell>
                   </TableRow>
                 ) : null}

@@ -47,7 +47,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
     setError("");
     getSavingsProjection(targetDate)
       .then(setProjection)
-      .catch(() => setError("Nao foi possivel simular o saldo futuro."))
+      .catch(() => setError("Não foi possível simular o saldo futuro."))
       .finally(() => setLoading(false));
   }, [isInvalidDate, open, targetDate]);
 
@@ -62,7 +62,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
     >
       <Stack spacing={2}>
         <Typography color="text.secondary">
-          Escolha uma data para ver quanto voce tera economizado se seguir o planejamento registrado no sistema.
+          Escolha uma data para ver quanto você terá economizado se seguir o planejamento registrado no sistema.
         </Typography>
         <TextField
           label="Selecionar data futura"
@@ -130,7 +130,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
                 {!projection.items.length ? (
                   <TableRow>
                     <TableCell colSpan={5}>
-                      <EmptyState message="Nenhuma movimentacao futura ate esta data." />
+                      <EmptyState message="Nenhuma movimentação futura até está data." />
                     </TableCell>
                   </TableRow>
                 ) : null}

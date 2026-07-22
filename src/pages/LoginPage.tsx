@@ -37,7 +37,7 @@ export function LoginPage() {
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large">Acessar</Button>
           <Button component={Link} to="/forgot-password">Esqueci minha senha</Button>
-          <Typography textAlign="center">Nao tem conta? <Link to="/register">Cadastre-se</Link></Typography>
+          <Typography textAlign="center">Não tem conta? <Link to="/register">Cadastre-se</Link></Typography>
         </Stack>
       </Paper>
     </Container>

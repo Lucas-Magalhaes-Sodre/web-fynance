@@ -44,7 +44,7 @@ export function EconomyOpportunityAlert({ onClick }: EconomyOpportunityAlertProp
         <Box minWidth={0}>
           <Typography fontWeight={950}>💰 Oportunidade de economia</Typography>
           <Typography color="text.secondary">
-            Voce ainda pode transformar parte do seu saldo em patrimonio este mes.
+            Você ainda pode transformar parte do seu saldo em patrimônio este mês.
           </Typography>
         </Box>
       </Stack>

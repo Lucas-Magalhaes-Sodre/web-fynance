@@ -45,7 +45,7 @@ export function FinancialSummaryChart({ totals }: FinancialSummaryChartProps) {
                 fill: financeColors.saving,
               },
               {
-                name: "Saldo disponivel",
+                name: "Saldo disponível",
                 valor: totals.balance,
                 fill: balanceColor(totals.balance),
               },

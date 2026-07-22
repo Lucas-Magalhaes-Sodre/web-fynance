@@ -18,6 +18,7 @@ import { api } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 
 export function ProfilePage() {
   const { user, refreshUser, signOut } = useAuth();
@@ -73,7 +74,7 @@ export function ProfilePage() {
         marketingConsent,
       });
       await refreshUser();
-      setNotice("Preferencias de privacidade atualizadas.");
+      setNotice("Preferências de privacidade atualizadas.");
       setError("");
     } finally {
       setPrivacySaving(false);
@@ -110,7 +111,7 @@ export function ProfilePage() {
       await api.delete("/users/me", { data: { password: deletePassword } });
       signOut();
     } catch {
-      setError("Nao foi possivel excluir a conta. Confira sua senha.");
+      setError("Não foi possível excluir a conta. Confira sua senha.");
     } finally {
       setDeleting(false);
     }
@@ -134,13 +135,13 @@ export function ProfilePage() {
               Você pode editar nome, telefone, cidade e profissão. O e-mail aparece apenas para consulta, porque ele é usado no acesso à conta.
             </Typography>
             <Typography color="text.secondary">
-              Nesta tela tambem ficam as opcoes LGPD para consultar o consentimento, exportar seus dados e solicitar a exclusao definitiva da conta.
+              Nesta tela também ficam as opções LGPD para consultar o consentimento, exportar seus dados e solicitar a exclusão definitiva da conta.
             </Typography>
           </PageHelpButton>
         </Stack>
         <Typography variant="h3" fontWeight={950} letterSpacing={0}>Dados da conta</Typography>
         <Typography color="text.secondary" fontSize={17}>
-          Consulte e atualize informacoes nao sensiveis do seu cadastro.
+          Consulte e atualize informações não sensiveis do seu cadastro.
         </Typography>
       </Paper>
 
@@ -152,9 +153,9 @@ export function ProfilePage() {
           <TextField label="Cidade" value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} fullWidth />
           <TextField label="Profissao" value={form.occupation} onChange={(event) => setForm({ ...form, occupation: event.target.value })} fullWidth />
           <Box display="flex" justifyContent="flex-end">
-            <Button variant="contained" onClick={saveProfile} disabled={saving || !form.name.trim()}>
-              {saving ? "Salvando..." : "Salvar perfil"}
-            </Button>
+            <LoadingActionButton variant="contained" onClick={saveProfile} disabled={!form.name.trim()} loading={saving} loadingLabel="Salvando...">
+              Salvar perfil
+            </LoadingActionButton>
           </Box>
         </Stack>
       </Paper>
@@ -185,24 +186,24 @@ export function ProfilePage() {
           />
 
           <Box display="flex" justifyContent="flex-end">
-            <Button variant="outlined" onClick={savePrivacyConsent} disabled={privacySaving}>
-              {privacySaving ? "Salvando..." : "Salvar preferencias"}
-            </Button>
+            <LoadingActionButton variant="outlined" onClick={savePrivacyConsent} loading={privacySaving} loadingLabel="Salvando...">
+              Salvar preferências
+            </LoadingActionButton>
           </Box>
 
           <Divider />
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportMyData} disabled={exporting}>
-              {exporting ? "Gerando..." : "Exportar meus dados"}
-            </Button>
+            <LoadingActionButton variant="outlined" startIcon={<DownloadIcon />} onClick={exportMyData} loading={exporting} loadingLabel="Gerando...">
+              Exportar meus dados
+            </LoadingActionButton>
             <Button color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteModalOpen(true)}>
               Excluir minha conta
             </Button>
           </Stack>
 
           <Typography variant="caption" color="text.secondary">
-            A exportacao gera um arquivo JSON com perfil, categorias, movimentacoes, economias, metas e cartoes vinculados ao seu usuario. A exclusao remove definitivamente sua conta e os registros vinculados.
+            A exportação gera um arquivo JSON com perfil, categorias, movimentações, economias, metas e cartões vinculados ao seu usuário. A exclusão remove definitivamente sua conta e os registros vinculados.
           </Typography>
         </Stack>
       </Paper>
@@ -215,9 +216,9 @@ export function ProfilePage() {
         actions={
           <>
             <Button onClick={() => setDeleteModalOpen(false)}>Cancelar</Button>
-            <Button color="error" variant="contained" onClick={deleteAccount} disabled={deleting}>
-              {deleting ? "Excluindo..." : "Excluir definitivamente"}
-            </Button>
+            <LoadingActionButton color="error" variant="contained" onClick={deleteAccount} loading={deleting} loadingLabel="Excluindo...">
+              Excluir definitivamente
+            </LoadingActionButton>
           </>
         }
       >

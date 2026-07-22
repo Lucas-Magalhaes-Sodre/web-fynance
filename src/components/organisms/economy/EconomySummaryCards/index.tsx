@@ -22,7 +22,7 @@ export function EconomySummaryCards({
       </Grid>
       <Grid item xs={12} md={4}>
         <StatCard
-          label="Economia prevista este mes"
+          label="Economia prevista este mês"
           value={summary?.monthlyPlannedSavings ?? Math.max(summary?.monthlyRegisteredSavings ?? 0, 0)}
           tone="saving"
         />
@@ -30,7 +30,7 @@ export function EconomySummaryCards({
       <Grid item xs={12} md={4}>
         <StatCard
           label="💰 Oportunidade de economia"
-          helperText="Veja quanto voce ainda pode guardar este mes"
+          helperText="Veja quanto você ainda pode guardar este mês"
           value={summary?.suggestedSavings ?? 0}
           tone="saving"
           onClick={onOpenSuggestionDetails}

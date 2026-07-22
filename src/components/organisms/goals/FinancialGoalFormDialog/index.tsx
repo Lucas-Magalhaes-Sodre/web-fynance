@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import { ChangeEvent } from "react";
 import type { FinancialGoalStatus } from "@/interfaces/financial";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { digitsToCurrency } from "@/utils/format";
 
 export type GoalFormState = {
@@ -33,6 +34,7 @@ type FinancialGoalFormDialogProps = {
   onClose: () => void;
   onSave: () => void;
   onFormChange: (form: GoalFormState) => void;
+  saving?: boolean;
 };
 
 export function FinancialGoalFormDialog({
@@ -42,6 +44,7 @@ export function FinancialGoalFormDialog({
   onClose,
   onSave,
   onFormChange,
+  saving = false,
 }: FinancialGoalFormDialogProps) {
   function updateForm(nextForm: Partial<GoalFormState>) {
     onFormChange({ ...form, ...nextForm });
@@ -70,9 +73,9 @@ export function FinancialGoalFormDialog({
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button variant="contained" onClick={onSave}>
+          <LoadingActionButton variant="contained" onClick={onSave} loading={saving} loadingLabel="Salvando...">
             Salvar
-          </Button>
+          </LoadingActionButton>
         </>
       }
     >
@@ -199,7 +202,7 @@ export function FinancialGoalFormDialog({
                 inputProps={{ min: 0, step: "0.01" }}
                 value={form.yieldRateMonthly}
                 onChange={(event) => updateForm({ yieldRateMonthly: event.target.value })}
-                helperText="Ex.: 1 para 1% ao mes."
+                helperText="Ex.: 1 para 1% ao mês."
               />
             ) : null}
           </Stack>
@@ -218,7 +221,7 @@ export function FinancialGoalFormDialog({
           <MenuItem value="CANCELED">Cancelada</MenuItem>
         </TextField>
         <TextField
-          label="Descricao"
+          label="Descrição"
           value={form.description}
           onChange={(event) => updateForm({ description: event.target.value })}
           fullWidth

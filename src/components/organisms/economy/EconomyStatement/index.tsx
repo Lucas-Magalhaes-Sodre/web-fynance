@@ -32,7 +32,7 @@ export function EconomyStatement({ savings }: EconomyStatementProps) {
             <TableCell>Data</TableCell>
             <TableCell>Categoria</TableCell>
             <TableCell>Subitem</TableCell>
-            <TableCell>Descricao</TableCell>
+            <TableCell>Descrição</TableCell>
             <TableCell align="right">Valor</TableCell>
           </TableRow>
         </TableHead>
@@ -60,7 +60,7 @@ export function EconomyStatement({ savings }: EconomyStatementProps) {
           {!orderedSavings.length ? (
             <TableRow>
               <TableCell colSpan={6}>
-                <EmptyState message="Nenhuma movimentacao de economia registrada." />
+                <EmptyState message="Nenhuma movimentação de economia registrada." />
               </TableCell>
             </TableRow>
           ) : null}

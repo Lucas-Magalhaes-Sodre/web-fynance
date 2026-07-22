@@ -58,6 +58,15 @@ import {
   typeLabels,
 } from "@/utils/format";
 
+function formatCompactMoney(value: number) {
+  if (Math.abs(value) >= 1000) {
+    return `R$ ${(value / 1000).toLocaleString("pt-BR", {
+      maximumFractionDigits: 1,
+    })}k`;
+  }
+  return formatMoney(value);
+}
+
 export function DashboardPage() {
   const [totals, setTotals] = useState<DashboardTotals | null>(null);
   const [annualTotals, setAnnualTotals] = useState({
@@ -133,7 +142,7 @@ export function DashboardPage() {
       color: financeColors.saving,
     },
     {
-      name: (totals?.finalBalance ?? 0) >= 0 ? "Saldo disponivel" : "Deficit",
+      name: (totals?.finalBalance ?? 0) >= 0 ? "Saldo disponível" : "Déficit",
       value: Math.abs(totals?.finalBalance ?? 0),
       color:
         (totals?.finalBalance ?? 0) >= 0
@@ -161,7 +170,7 @@ export function DashboardPage() {
       color: financeColors.saving,
     },
     {
-      name: "Saldo apos sugestao",
+      name: "Saldo livre no mês",
       value: savingsSummary?.monthlyBalance ?? 0,
       color:
         (savingsSummary?.monthlyBalance ?? 0) >= 0
@@ -274,21 +283,21 @@ export function DashboardPage() {
         </Grid>
         {/* <Grid item xs={12} md={4}>
           <StatCard
-            label="Saldo disponivel"
+            label="Saldo disponível"
             value={totals?.finalBalance ?? 0}
             tone="balance"
           />
         </Grid> */}
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Economias no mes"
+            label="Economias no mês"
             value={savingsSummary?.monthlyRegisteredSavings ?? 0}
             tone="saving"
           />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Sugestao para guardar no mes - clique"
+            label="Sugestão para guardar no mês - clique"
             value={savingsSummary?.suggestedSavings ?? 0}
             tone="saving"
             onClick={() => setSuggestionOpen(true)}
@@ -350,7 +359,7 @@ export function DashboardPage() {
         </Stack>
         <Box height={300}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={pulseData}>
+            <LineChart data={pulseData} margin={{ top: 10, right: 24, left: 24, bottom: 8 }}>
               <defs>
                 <linearGradient
                   id="pulseBalanceStroke"
@@ -384,10 +393,14 @@ export function DashboardPage() {
                 axisLine={false}
                 tickLine={false}
                 domain={[pulseDomainMin, pulseDomainMax]}
-                tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+                width={84}
+                tickMargin={8}
+                tick={{ fontSize: 12 }}
+                tickCount={5}
+                tickFormatter={(value) => formatCompactMoney(Number(value))}
               />
               <Tooltip
-                formatter={(value) => formatMoney(Number(value))}
+                formatter={(value) => [formatMoney(Number(value)), "Saldo"]}
                 contentStyle={{ borderRadius: 16, border: "1px solid #E2E8F0" }}
               />
               <ReferenceLine
@@ -421,20 +434,20 @@ export function DashboardPage() {
               Fluxo financeiro
             </Typography>
             <Typography color="text.secondary">
-              Receitas, despesas, economias e saldo em uma leitura rapida.
+              Receitas, despesas, economias e saldo em uma leitura rápida.
             </Typography>
           </Box>
         </Stack>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <Typography fontWeight={900} mb={1}>
-              Visao anual
+              Visão anual
             </Typography>
             <Box height={260}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Tooltip
-                    formatter={(value) => formatMoney(Number(value))}
+                    formatter={(value) => [formatMoney(Number(value)), "Valor"]}
                     contentStyle={{
                       borderRadius: 16,
                       border: "1px solid #E2E8F0",
@@ -475,11 +488,11 @@ export function DashboardPage() {
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography fontWeight={900} mb={1}>
-              Mes atual: {currentMonthName}
+              Mês atual: {currentMonthName}
             </Typography>
             <Box height={260}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={currentMonthFlowData}>
+                <BarChart data={currentMonthFlowData} margin={{ top: 10, right: 12, left: 12, bottom: 0 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="rgba(15,23,42,0.08)"
@@ -488,10 +501,13 @@ export function DashboardPage() {
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+                    width={72}
+                    tickMargin={8}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => formatCompactMoney(Number(value))}
                   />
                   <Tooltip
-                    formatter={(value) => formatMoney(Number(value))}
+                    formatter={(value) => [formatMoney(Number(value)), "Valor"]}
                     contentStyle={{
                       borderRadius: 16,
                       border: "1px solid #E2E8F0",
@@ -518,7 +534,7 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Contas do mes
+              Contas do mês
             </Typography>
             <Typography color="text.secondary">
               Pagamentos separados por situacao.
@@ -663,7 +679,7 @@ export function DashboardPage() {
               Insights financeiros
             </Typography>
             <Typography color="text.secondary">
-              Alertas automaticos gerados pelos seus lancamentos.
+              Alertas automáticos gerados pelos seus lançamentos.
             </Typography>
           </Box>
         </Stack>
@@ -775,7 +791,7 @@ export function DashboardPage() {
               <TableRow>
                 <TableCell>Registro</TableCell>
                 <TableCell>Categoria</TableCell>
-                <TableCell>Data da movimentacao</TableCell>
+                <TableCell>Data da movimentação</TableCell>
                 <TableCell align="right">Valor</TableCell>
               </TableRow>
             </TableHead>
@@ -829,7 +845,7 @@ export function DashboardPage() {
       <AppDialog
         open={suggestionOpen}
         onClose={() => setSuggestionOpen(false)}
-        title="Sugestao para guardar no mes"
+        title="Sugestão para guardar no mês"
         titleAccent={financeColors.saving}
         actions={
           <Button onClick={() => setSuggestionOpen(false)}>Entendi</Button>
@@ -837,9 +853,8 @@ export function DashboardPage() {
       >
         <Stack spacing={1.5}>
           <Typography color="text.secondary">
-            Esta sugestao e mensal e usa os valores cadastrados para{" "}
-            {currentMonthName}: receitas menos despesas e menos economias ja
-            registradas no mes.
+            O saldo livre do mês mostra quanto sobra em {currentMonthName}
+            depois de receitas, despesas e economias já registradas.
           </Typography>
           <Typography fontWeight={900}>
             Receitas: {formatMoney(savingsSummary?.monthlyIncome ?? 0)}
@@ -848,13 +863,12 @@ export function DashboardPage() {
             Despesas: {formatMoney(savingsSummary?.monthlyExpense ?? 0)}
           </Typography>
           <Typography fontWeight={900}>
-            Economias ja registradas:{" "}
+            Economias já registradas:{" "}
             {formatMoney(savingsSummary?.monthlyRegisteredSavings ?? 0)}
           </Typography>
           <Typography color="text.secondary">
-            Quando sobra saldo positivo, o sistema sugere guardar esse saldo
-            restante. Se o saldo do mes ja esta zerado ou negativo, a sugestao
-            fica em R$ 0,00.
+            Quando esse saldo fica positivo, o sistema sugere guardar esse valor.
+            Se o mês já está zerado ou negativo, a sugestão fica em R$ 0,00.
           </Typography>
         </Stack>
       </AppDialog>

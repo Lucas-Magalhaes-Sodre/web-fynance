@@ -15,6 +15,7 @@ import type {
 } from "@/interfaces/financial";
 import { financeColors, isoDate } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 
 const recurrenceLabels: Record<Exclude<RecurrenceType, "NONE">, string> = {
   DAILY: "Diaria",
@@ -213,6 +214,7 @@ export function FinancialEntryForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     const amount = currencyToNumber(form.amount);
     const date = new Date(`${form.date}T00:00:00`);
     const isRecurring = form.isFixed && form.recurrenceType !== "NONE";
@@ -265,20 +267,21 @@ export function FinancialEntryForm({
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button
+          <LoadingActionButton
             type="submit"
             form="financial-entry-form"
             variant="contained"
             disabled={
-              saving ||
               currencyToNumber(form.amount) <= 0 ||
               !form.name.trim() ||
               !form.category.trim() ||
               invalidCustomRecurrenceRange
             }
+            loading={saving}
+            loadingLabel="Salvando..."
           >
             Salvar
-          </Button>
+          </LoadingActionButton>
         </>
       }
     >
@@ -417,8 +420,8 @@ export function FinancialEntryForm({
                         select
                         label={
                           isIncome
-                            ? "Dia do mes do recebimento"
-                            : "Dia do mes da despesa"
+                            ? "Dia do mês do recebimento"
+                            : "Dia do mês da despesa"
                         }
                         required
                         value={form.dueDay}
@@ -441,7 +444,7 @@ export function FinancialEntryForm({
                           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             <TextField
                               select
-                              label="Mes inicial"
+                              label="Mês inicial"
                               value={form.recurrenceStartMonth}
                               onChange={(event) =>
                                 setForm({ ...form, recurrenceStartMonth: event.target.value })
@@ -477,7 +480,7 @@ export function FinancialEntryForm({
                           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             <TextField
                               select
-                              label="Mes final"
+                              label="Mês final"
                               value={form.recurrenceEndMonth}
                               onChange={(event) =>
                                 setForm({ ...form, recurrenceEndMonth: event.target.value })
@@ -547,7 +550,7 @@ export function FinancialEntryForm({
           </S.HighlightPanel>
 
           <TextField
-            label="Observacao opcional"
+            label="Observação opcional"
             multiline
             minRows={2}
             value={form.description}

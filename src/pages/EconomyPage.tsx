@@ -224,7 +224,7 @@ export function EconomyPage() {
       setOverview(nextOverview);
       setSavings(nextSavings);
     } catch {
-      setError("Nao foi possivel carregar suas economias.");
+      setError("Não foi possível carregar suas economias.");
     } finally {
       setLoading(false);
     }
@@ -308,6 +308,7 @@ export function EconomyPage() {
   }
 
   async function saveSaving() {
+    if (savingForm) return;
     const payload = toPayload(form);
     if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount))
       return;
@@ -340,7 +341,7 @@ export function EconomyPage() {
       setFormOpen(false);
       await loadData();
     } catch {
-      setError("Nao foi possivel salvar a economia.");
+      setError("Não foi possível salvar a economia.");
     } finally {
       setSavingForm(false);
     }
@@ -349,13 +350,13 @@ export function EconomyPage() {
   async function removeSaving(saving: Saving) {
     const confirmed = await confirm({
       title: "Excluir economia",
-      description: `Deseja excluir a economia "${saving.title}"? Esta acao nao pode ser desfeita.`,
+      description: `Deseja excluir a economia "${saving.title}"? Esta acao não pode ser desfeita.`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
     if (!confirmed) return;
     await deleteSaving(saving.id);
-    setNotice("Economia excluida com sucesso.");
+    setNotice("Economia excluída com sucesso.");
     await loadData();
   }
 
@@ -447,29 +448,29 @@ export function EconomyPage() {
       <AppDialog
         open={suggestionOpen}
         onClose={() => setSuggestionOpen(false)}
-        title="💰 Oportunidade de economia do mes"
+        title="💰 Oportunidade de economia do mês"
         titleAccent={financeColors.saving}
         actions={<Button onClick={() => setSuggestionOpen(false)}>Entendi</Button>}
       >
         <Stack spacing={2}>
           <Typography color="text.secondary">
-            Com base nas suas receitas, despesas e economias ja registradas,
-            voce ainda possui uma excelente oportunidade para fortalecer sua
-            vida financeira neste mes.
+            Com base nas suas receitas, despesas e economias já registradas,
+            você ainda possui uma excelente oportunidade para fortalecer sua
+            vida financeira neste mês.
           </Typography>
           <Typography color="text.secondary">
             Guardar uma parte do que sobra e um dos habitos mais importantes
             para construir uma reserva de emergencia, alcancar objetivos e
-            transformar seu saldo em patrimonio para o futuro.
+            transformar seu saldo em patrimônio para o futuro.
           </Typography>
           <Typography color="text.secondary" fontWeight={900}>
-            Valor disponivel para guardar:
+            Valor disponível para guardar:
           </Typography>
           <Typography variant="h4" fontWeight={950} color={financeColors.saving}>
             {formatMoney(overview?.monthlySavingsOpportunity ?? 0)}
           </Typography>
           <Typography color="text.secondary">
-            💡 Voce nao precisa guardar tudo. O mais importante e criar
+            💡 Voce não precisa guardar tudo. O mais importante e criar
             consistencia. Mesmo pequenas quantias, quando guardadas
             regularmente, podem gerar grandes resultados ao longo do tempo.
           </Typography>
@@ -514,7 +515,7 @@ export function EconomyPage() {
             <Typography color="text.secondary">
               Categoria: {detailSaving.category} • Data: {formatDate(detailSaving.date)} • Meta: {goals.find((goal) => goal.id === detailSaving.goalId)?.title ?? "-"}
             </Typography>
-            <Typography color="text.secondary">{detailSaving.description || "Sem descricao."}</Typography>
+            <Typography color="text.secondary">{detailSaving.description || "Sem descrição."}</Typography>
             <Paper sx={{ p: 2, borderRadius: 3, boxShadow: "none", bgcolor: "rgba(240,253,250,0.72)" }}>
               <Stack spacing={2}>
                 <Typography fontWeight={950}>Simulação</Typography>

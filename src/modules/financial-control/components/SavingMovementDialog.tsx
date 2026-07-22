@@ -15,6 +15,7 @@ import type {
 } from "@/interfaces/financial";
 import { currencyToNumber, digitsToCurrency, financeColors, formatMoney } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 
 export type SavingAction = "REGISTER" | SavingTransferDirection;
 
@@ -165,10 +166,9 @@ export function SavingMovementDialog({
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button
+          <LoadingActionButton
             variant="contained"
             disabled={
-              saving ||
               !form.title.trim() ||
               !form.category.trim() ||
               currencyToNumber(form.amount) <= 0 ||
@@ -177,16 +177,18 @@ export function SavingMovementDialog({
             }
             onClick={onSave}
             color={isWithdraw ? "error" : "warning"}
+            loading={saving}
+            loadingLabel="Salvando..."
           >
-            {saving ? "Salvando..." : isWithdraw ? "Confirmar saque" : "Salvar"}
-          </Button>
+            {isWithdraw ? "Confirmar saque" : "Salvar"}
+          </LoadingActionButton>
         </>
       }
     >
       <S.FormStack spacing={2}>
         <Typography color="text.secondary">
           {isWithdraw
-            ? "Escolha de onde deseja retirar o valor. O dinheiro sacado sera removido das suas economias e lancado como receita no mes atual."
+            ? "Escolha de onde deseja retirar o valor. O dinheiro sacado sera removido das suas economias e lancado como receita no mês atual."
             : "Cadastre valores guardados ou aplicados, como poupanca, caixinhas, cofrinho, renda fixa, investimentos e outras reservas."}
         </Typography>
 
@@ -267,7 +269,7 @@ export function SavingMovementDialog({
               sx={{ "& input": { py: 1.65 } }}
             />
             <TextField
-              label="Descricao opcional"
+              label="Descrição opcional"
               multiline
               minRows={2}
               value={form.description}
@@ -280,13 +282,13 @@ export function SavingMovementDialog({
               <Stack spacing={1.25}>
                 <Typography fontWeight={950}>Preview</Typography>
                 <Divider />
-                <Typography>Saldo disponivel: {formatMoney(selectedWithdrawBalance)}</Typography>
+                <Typography>Saldo disponível: {formatMoney(selectedWithdrawBalance)}</Typography>
                 <Typography>Valor solicitado: {formatMoney(requestedAmount)}</Typography>
                 <Typography color={balanceAfterWithdraw < 0 ? financeColors.negative : "text.primary"}>
-                  Saldo apos saque: {formatMoney(Math.max(balanceAfterWithdraw, 0))}
+                  Saldo após saque: {formatMoney(Math.max(balanceAfterWithdraw, 0))}
                 </Typography>
                 <Typography color={financeColors.income} fontWeight={900}>
-                  Receita criada no mes atual: {formatMoney(requestedAmount)}
+                  Receita criada no mês atual: {formatMoney(requestedAmount)}
                 </Typography>
               </Stack>
             </S.HighlightPanel>
@@ -352,7 +354,7 @@ export function SavingMovementDialog({
                       <>
                         <TextField
                           select
-                          label="Dia do mes da economia"
+                          label="Dia do mês da economia"
                           required
                           value={form.dueDay}
                           onChange={(event) => updateForm({ dueDay: event.target.value })}
@@ -370,7 +372,7 @@ export function SavingMovementDialog({
                         <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
                           <TextField
                             select
-                            label="Mes inicial"
+                            label="Mês inicial"
                             value={form.recurrenceStartMonth}
                             onChange={(event) => updateForm({ recurrenceStartMonth: event.target.value })}
                             fullWidth
@@ -402,7 +404,7 @@ export function SavingMovementDialog({
                         <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
                           <TextField
                             select
-                            label="Mes final"
+                            label="Mês final"
                             value={form.recurrenceEndMonth}
                             onChange={(event) => updateForm({ recurrenceEndMonth: event.target.value })}
                             error={invalidCustomRecurrenceRange}
@@ -517,13 +519,13 @@ export function SavingMovementDialog({
                     inputProps={{ min: 0, step: "0.01" }}
                     value={form.yieldRateMonthly}
                     onChange={(event) => updateForm({ yieldRateMonthly: event.target.value })}
-                    helperText={selectedGoal?.hasYield ? "A taxa da meta foi preenchida automaticamente, mas voce pode ajustar." : "Ex.: 1 para 1% ao mes."}
+                    helperText={selectedGoal?.hasYield ? "A taxa da meta foi preenchida automaticamente, mas você pode ajustar." : "Ex.: 1 para 1% ao mês."}
                   />
                 ) : null}
               </Stack>
             </S.HighlightPanel>
             <TextField
-              label="Observacao opcional"
+              label="Observação opcional"
               multiline
               minRows={2}
               value={form.description}

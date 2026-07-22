@@ -25,7 +25,7 @@ export function PeriodFilter({
         <TextField
           select
           size="small"
-          label="Mes"
+          label="Mês"
           value={month}
           onChange={(event) => onMonthChange(Number(event.target.value))}
           sx={{ minWidth: 180 }}

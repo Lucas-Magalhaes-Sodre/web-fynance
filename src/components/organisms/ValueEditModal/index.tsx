@@ -7,8 +7,9 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { EntryType, ValueUpdateScope } from '@/interfaces/financial';
-import { balanceColor, financeColors, formatMoney, months } from '@/utils/format';
+import { balanceColor, currencyToNumber, digitsToCurrency, financeColors, formatMoney, months } from '@/utils/format';
 import { AppDialog, AppDialogStyles as S } from '@/components/molecules/AppDialog';
+import { LoadingActionButton } from '@/components/molecules/LoadingActionButton';
 
 type Props = {
   open: boolean;
@@ -37,17 +38,17 @@ export function ValueEditModal({
   onClose,
   onSubmit
 }: Props) {
-  const [amount, setAmount] = useState(String(currentValue || 0));
+  const [amount, setAmount] = useState(formatMoney(currentValue || 0));
   const [scope, setScope] = useState<ValueUpdateScope>('ONLY_THIS_PERIOD');
   const [description, setDescription] = useState('');
 
   useEffect(() => {
-    setAmount(String(currentValue || 0));
+    setAmount(formatMoney(currentValue || 0));
     setScope('ONLY_THIS_PERIOD');
     setDescription('');
   }, [currentValue, open]);
 
-  const numericAmount = Number(amount) || 0;
+  const numericAmount = currencyToNumber(amount) || 0;
   const delta = numericAmount - currentValue;
   const preview = useMemo(() => {
     const income = type === 'INCOME' ? currentMonthIncome + delta : currentMonthIncome;
@@ -57,6 +58,7 @@ export function ValueEditModal({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     await onSubmit({ amount: numericAmount, scope, description: description || null });
   }
 
@@ -68,7 +70,9 @@ export function ValueEditModal({
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="value-edit-form" variant="contained" disabled={saving}>Salvar alteracao</Button>
+          <LoadingActionButton type="submit" form="value-edit-form" variant="contained" loading={saving} loadingLabel="Salvando...">
+            Salvar alteracao
+          </LoadingActionButton>
         </>
       }
     >
@@ -77,19 +81,19 @@ export function ValueEditModal({
             <Typography fontWeight={900}>{category}</Typography>
             <Typography color="text.secondary">{months[month - 1]} de {year} • {type === 'INCOME' ? 'Receita' : 'Despesa'}</Typography>
           </Stack>
-          <TextField label="Novo valor" type="number" required inputProps={{ min: 0, step: '0.01' }} value={amount} onChange={(event) => setAmount(event.target.value)} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
-          <TextField label="Descricao opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
+          <TextField label="Novo valor" required value={amount} onChange={(event) => setAmount(digitsToCurrency(event.target.value))} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
+          <TextField label="Descrição opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
           <RadioGroup value={scope} onChange={(event) => setScope(event.target.value as ValueUpdateScope)}>
-            <FormControlLabel value="ONLY_THIS_PERIOD" control={<Radio />} label="Alterar somente este mes" />
-            <FormControlLabel value="FROM_THIS_PERIOD_FORWARD" control={<Radio />} label="Alterar deste mes em diante" />
+            <FormControlLabel value="ONLY_THIS_PERIOD" control={<Radio />} label="Alterar somente este mês" />
+            <FormControlLabel value="FROM_THIS_PERIOD_FORWARD" control={<Radio />} label="Alterar deste mês em diante" />
             <FormControlLabel value="ALL_YEAR" control={<Radio />} label="Alterar todos os meses do ano" />
           </RadioGroup>
           <S.PreviewPanel spacing={1.2}>
             <Typography fontWeight={900}>Preview do impacto</Typography>
-            <Typography color={type === 'INCOME' ? financeColors.income : financeColors.expense}>Diferenca no mes: {formatMoney(delta)}</Typography>
+            <Typography color={type === 'INCOME' ? financeColors.income : financeColors.expense}>Diferenca no mês: {formatMoney(delta)}</Typography>
             <Typography color={financeColors.income}>Novo total de receitas: {formatMoney(preview.income)}</Typography>
             <Typography color={financeColors.expense}>Novo total de despesas: {formatMoney(preview.expense)}</Typography>
-            <Typography fontWeight={950} color={balanceColor(preview.balance)}>Novo saldo do mes: {formatMoney(preview.balance)}</Typography>
+            <Typography fontWeight={950} color={balanceColor(preview.balance)}>Novo saldo do mês: {formatMoney(preview.balance)}</Typography>
           </S.PreviewPanel>
         </S.FormStack>
     </AppDialog>

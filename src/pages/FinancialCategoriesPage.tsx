@@ -5,6 +5,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -44,6 +45,22 @@ const categoryTypeLabels: Record<FinancialCategoryType, string> = {
   EXPENSE: "Despesa",
   INVESTMENT: "Economia",
 };
+
+function CategoriesSkeleton() {
+  return (
+    <Paper className="soft-card" sx={{ p: 2, borderRadius: 4 }}>
+      <Stack spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
+          <Skeleton variant="rounded" width={180} height={48} />
+          <Skeleton variant="rounded" width={220} height={40} />
+        </Stack>
+        {[0, 1, 2, 3, 4].map((item) => (
+          <Skeleton key={item} variant="rounded" height={44} />
+        ))}
+      </Stack>
+    </Paper>
+  );
+}
 
 function isProtectedSavingsCategory(category: FinancialCategory) {
   const normalizedName = normalizeCategoryName(category.name);
@@ -103,7 +120,7 @@ export function FinancialCategoriesPage() {
     try {
       setCategories(await listFinancialCategories());
     } catch {
-      setError("Nao foi possivel carregar as categorias.");
+      setError("Não foi possível carregar as categorias.");
     } finally {
       setLoading(false);
     }
@@ -137,6 +154,7 @@ export function FinancialCategoriesPage() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!form.name.trim() || !isValidHex(form.color) || formDuplicate) return;
     setSaving(true);
     try {
@@ -151,6 +169,7 @@ export function FinancialCategoriesPage() {
 
   async function handleEditSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!editing || !editForm.name.trim() || !isValidHex(editForm.color) || editDuplicate) return;
     setSaving(true);
     try {
@@ -165,7 +184,7 @@ export function FinancialCategoriesPage() {
   async function removeCategory(category: FinancialCategory) {
     const confirmed = await confirm({
       title: "Excluir categoria",
-      description: `Deseja excluir a categoria "${category.name}"? Os lancamentos ja cadastrados continuam com este nome, mas a categoria sai das configuracoes.`,
+      description: `Deseja excluir a categoria "${category.name}"? Os lançamentos já cadastrados continuam com este nome, mas a categoria sai das configurações.`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
@@ -184,7 +203,7 @@ export function FinancialCategoriesPage() {
               Configurações
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
-              Ajuste preferencias e cadastros auxiliares do sistema.
+              Ajuste preferências e cadastros auxiliares do sistema.
             </Typography>
           </Box>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ alignSelf: { xs: "stretch", md: "center" } }}>
@@ -193,7 +212,7 @@ export function FinancialCategoriesPage() {
         </Stack>
       </Paper>
 
-      {loading ? <EmptyState message="Carregando categorias..." /> : null}
+      {loading ? <CategoriesSkeleton /> : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error ? (
@@ -239,7 +258,7 @@ export function FinancialCategoriesPage() {
                 <TableCell>Categoria</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell>Cor</TableCell>
-                <TableCell align="right">Acoes</TableCell>
+                <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

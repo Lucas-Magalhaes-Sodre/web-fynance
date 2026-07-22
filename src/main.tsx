@@ -15,7 +15,7 @@ import { theme } from '@/styles/theme';
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
-  throw new Error('Elemento root nao encontrado.');
+  throw new Error('Elemento root não encontrado.');
 }
 
 ReactDOM.createRoot(rootElement).render(

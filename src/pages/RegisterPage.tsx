@@ -32,7 +32,7 @@ export function RegisterPage() {
       await signUp(name, email, password, marketingConsent);
       navigate('/app');
     } catch {
-      setError('Nao foi possivel criar a conta.');
+      setError('Não foi possível criar a conta.');
     }
   }
 
@@ -53,7 +53,7 @@ export function RegisterPage() {
             label="Aceito receber comunicados e novidades do sistema. Posso alterar isso depois no perfil."
           />
           <Typography variant="caption" color="text.secondary">
-            Usamos seus dados para autenticar sua conta, salvar suas movimentacoes financeiras e permitir exportacao ou exclusao dos dados quando solicitado.
+            Usamos seus dados para autenticar sua conta, salvar suas movimentações financeiras e permitir exportação ou exclusão dos dados quando solicitado.
           </Typography>
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large" disabled={!lgpdAccepted}>Cadastrar</Button>

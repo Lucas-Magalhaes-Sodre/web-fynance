@@ -59,7 +59,7 @@ export function FinancialControlFilters({
         <Tabs value={mode} onChange={(_, value) => onModeChange(value)}>
           <Tab value="day" label="Por dia" />
           <Tab value="week" label="Por semana" />
-          <Tab value="month" label="Por mes" />
+          <Tab value="month" label="Por mês" />
           <Tab value="year" label="Por ano" />
         </Tabs>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
@@ -101,7 +101,7 @@ export function FinancialControlFilters({
             <TextField
               size="small"
               select
-              label="Mes que deseja ver"
+              label="Mês que deseja ver"
               value={month}
               onChange={(event) => onMonthChange(Number(event.target.value))}
             >

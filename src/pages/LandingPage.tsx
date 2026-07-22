@@ -31,8 +31,8 @@ const fadeUp = {
 
 const features = [
   [
-    "Controle por periodo",
-    "Veja suas financas por dia, semana, mes ou ano sem perder o contexto.",
+    "Controle por período",
+    "Veja suas finanças por dia, semana, mês ou ano sem perder o contexto.",
     CalendarDays,
   ],
   [
@@ -42,7 +42,7 @@ const features = [
   ],
   [
     "Economias e caixinhas",
-    "Registre economias, rendimentos, retiradas e historico por periodo.",
+    "Registre economias, rendimentos, retiradas e histórico por período.",
     WalletCards,
   ],
   [
@@ -50,16 +50,16 @@ const features = [
     "Planeje objetivos, acompanhe progresso e veja quanto precisa guardar.",
     LayoutGrid,
   ],
-  ["Receitas e despesas", "Cadastre entradas, saidas, status, vencimentos e recorrencias.", Sparkles],
-  ["Cartoes", "Controle cartoes, limites, compras parceladas e faturas por mes.", CreditCard],
+  ["Receitas e despesas", "Cadastre entradas, saídas, status, vencimentos e recorrências.", Sparkles],
+  ["Cartões", "Controle cartões, limites, compras parceladas e faturas por mês.", CreditCard],
   [
     "Dashboard inteligente",
-    "Resumo de receitas, despesas, saldo, metas e ultimas movimentacoes.",
+    "Resumo de receitas, despesas, saldo, metas e ultimas movimentações.",
     BarChart3,
   ],
   [
     "LGPD e privacidade",
-    "Consentimento, exportacao de dados, exclusao de conta e cookies configuraveis.",
+    "Consentimento, exportação de dados, exclusão de conta e cookies configuráveis.",
     Smartphone,
   ],
 ] as const;
@@ -299,8 +299,8 @@ export function LandingPage() {
                 "Recursos",
                 "Controle financeiro",
                 "App mobile",
-                "Seguranca",
-                "Precos",
+                "Segurança",
+                "Preços",
               ].map((item) => (
                 <Typography
                   key={item}
@@ -349,7 +349,7 @@ export function LandingPage() {
                   },
                 }}
               >
-                Comecar agora
+                Começar agora
               </Button>
             </Stack>
           </Stack>
@@ -432,7 +432,7 @@ export function LandingPage() {
                       lineHeight: 1.65,
                     }}
                   >
-                    Controle receitas, despesas, cartoes, economias, metas,
+                    Controle receitas, despesas, cartões, economias, metas,
                     vencimentos e saldo com uma experiencia visual, simples e
                     pronta para a rotina pessoal, familiar, MEI ou pequena
                     empresa.
@@ -462,7 +462,7 @@ export function LandingPage() {
                         },
                       }}
                     >
-                      Comecar agora
+                      Começar agora
                     </Button>
                     <Button
                       component={Link}
@@ -668,9 +668,9 @@ export function LandingPage() {
                   lineHeight: 1.75,
                 }}
               >
-                A visao anual mantem a clareza de uma planilha, mas o sistema
-                tambem entrega calendario, filtros por periodo, status de
-                pagamento, categorias, recorrencias e resumo automatico para
+                A visão anual mantém a clareza de uma planilha, mas o sistema
+                também entrega calendário, filtros por período, status de
+                pagamento, categorias, recorrências e resumo automático para
                 tomada de decisao.
               </Typography>
             </MotionBox>
@@ -695,14 +695,14 @@ export function LandingPage() {
                   letterSpacing: "-0.05em",
                 }}
               >
-                Privacidade e seguranca sem complicar o uso.
+                Privacidade e segurança sem complicar o uso.
               </Typography>
               <Typography
                 sx={{ mt: 2, color: "#475569", fontSize: 18, lineHeight: 1.7 }}
               >
-                Cada pessoa acessa apenas os proprios dados. O sistema ja nasce
-                com login seguro, separacao por usuario, aceite LGPD,
-                preferencias de cookies, exportacao dos dados e exclusao da
+                Cada pessoa acessa apenas os próprios dados. O sistema já nasce
+                com login seguro, separação por usuário, aceite LGPD,
+                preferências de cookies, exportação dos dados e exclusão da
                 conta pelo perfil.
               </Typography>
             </Grid>
@@ -712,7 +712,7 @@ export function LandingPage() {
                   "Login seguro",
                   "Dados por conta",
                   "Consentimento LGPD",
-                  "Exportacao e exclusao",
+                  "Exportação e exclusão",
                 ].map((item) => (
                   <Grid item xs={12} sm={6} key={item}>
                     <Paper
@@ -772,16 +772,16 @@ export function LandingPage() {
               >
                 Use a versao web para planejar com mais detalhe e o app mobile
                 para consultar rapidamente saldos, receitas, despesas e
-                movimentacoes quando estiver fora.
+                movimentações quando estiver fora.
               </Typography>
             </MotionBox>
           </Grid>
           <Grid item xs={12} lg={7}>
             <Grid container spacing={2}>
               {[
-                ["Dashboard", "Resumo claro para abrir o sistema e saber onde esta."],
-                ["Controle financeiro", "Tabela anual, calendario mensal e visoes por dia, semana e mes."],
-                ["Economias", "Caixinhas, rendimento, historico e simulacao para planejar melhor."],
+                ["Dashboard", "Resumo claro para abrir o sistema e saber onde está."],
+                ["Controle financeiro", "Tabela anual, calendario mensal e visoes por dia, semana e mês."],
+                ["Economias", "Caixinhas, rendimento, histórico e simulacao para planejar melhor."],
                 ["Metas", "Objetivos com fotos, cores, progresso e detalhes vinculados as economias."],
               ].map(([title, text]) => (
                 <Grid item xs={12} sm={6} key={title}>
@@ -831,7 +831,7 @@ export function LandingPage() {
                   color: "#0F172A",
                 }}
               >
-                Um plano simples para organizar suas financas de verdade.
+                Um plano simples para organizar suas finanças de verdade.
               </Typography>
               <Typography
                 sx={{
@@ -843,8 +843,8 @@ export function LandingPage() {
                   lineHeight: 1.7,
                 }}
               >
-                Tudo em uma assinatura: dashboard, controle por periodo,
-                calendario, cartoes, economias, metas, relatorios e recursos de
+                Tudo em uma assinatura: dashboard, controle por período,
+                calendário, cartões, economias, metas, relatórios e recursos de
                 privacidade.
               </Typography>
             </Box>
@@ -864,9 +864,9 @@ export function LandingPage() {
                   <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
                     R$ 24,90
                   </Typography>
-                  <Typography color="text.secondary">por mes</Typography>
+                  <Typography color="text.secondary">por mês</Typography>
                   <Typography mt={2} color="text.secondary" lineHeight={1.7}>
-                    Ideal para experimentar, validar a rotina e organizar o mes
+                    Ideal para experimentar, validar a rotina e organizar o mês
                     sem compromisso anual.
                   </Typography>
                 </Paper>
@@ -904,7 +904,7 @@ export function LandingPage() {
                     R$ 238,90
                   </Typography>
                   <Typography color="text.secondary">
-                    por ano, equivalente a R$ 19,91 por mes
+                    por ano, equivalente a R$ 19,91 por mês
                   </Typography>
                   <Typography mt={2} color="text.secondary" lineHeight={1.7}>
                     Economia de R$ 59,90 em relacao ao plano mensal, para quem
@@ -916,9 +916,9 @@ export function LandingPage() {
 
             <Grid container spacing={1.5}>
               {[
-                "Receitas, despesas e recorrencias",
+                "Receitas, despesas e recorrências",
                 "Calendario financeiro e status de pagamento",
-                "Cartoes, limites e compras parceladas",
+                "Cartões, limites e compras parceladas",
                 "Economias, rendimentos e simulacoes",
                 "Metas com fotos, cores e progresso",
                 "Exportacao de dados e controles LGPD",
@@ -948,7 +948,7 @@ export function LandingPage() {
                   "&:hover": { bgcolor: "#1E293B", transform: "translateY(-2px)" },
                 }}
               >
-                Comecar agora
+                Começar agora
               </Button>
             </Box>
           </Stack>

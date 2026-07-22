@@ -26,9 +26,9 @@ export function PeriodSummaryCards({ totalIncome, totalExpense, totalSavings = 0
       <StatCard label="Receitas" value={totalIncome} tone="income" />
       <StatCard label="Despesas" value={totalExpense} tone="expense" />
       <StatCard label="Economias" value={totalSavings} tone="saving" />
-      <StatCard label="Saldo disponivel" value={balance} tone="balance" />
-      {bestMonth ? <StatCard label={`Melhor mes: ${bestMonth}`} value={0} tone="income" /> : null}
-      {worstMonth ? <StatCard label={`Pior mes: ${worstMonth}`} value={0} tone="expense" /> : null}
+      <StatCard label="Saldo disponível" value={balance} tone="balance" />
+      {bestMonth ? <StatCard label={`Melhor mês: ${bestMonth}`} value={0} tone="income" /> : null}
+      {worstMonth ? <StatCard label={`Pior mês: ${worstMonth}`} value={0} tone="expense" /> : null}
     </Box>
   );
 }

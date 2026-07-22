@@ -15,7 +15,7 @@ type SavingRowsProps = {
 export function SavingRows({ items }: SavingRowsProps) {
   if (!items.length)
     return (
-      <EmptyState message="Nenhuma economia neste periodo." />
+      <EmptyState message="Nenhuma economia neste período." />
     );
 
   return (
@@ -26,7 +26,7 @@ export function SavingRows({ items }: SavingRowsProps) {
             <TableCell>Economia</TableCell>
             <TableCell>Categoria</TableCell>
             <TableCell>Data</TableCell>
-            <TableCell>Descricao</TableCell>
+            <TableCell>Descrição</TableCell>
             <TableCell align="right">Valor</TableCell>
           </TableRow>
         </TableHead>

@@ -21,6 +21,7 @@ import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Table from "@mui/material/Table";
@@ -38,6 +39,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import {
@@ -51,7 +53,7 @@ import {
   type CreditCardPurchasePayload,
 } from "@/services/financialControl";
 import type { CreditCard, CreditCardPurchase } from "@/interfaces/financial";
-import { financeColors, formatDate, formatMoney, isoDate, months } from "@/utils/format";
+import { currencyToNumber, digitsToCurrency, financeColors, formatDate, formatMoney, isoDate, months } from "@/utils/format";
 
 const current = new Date();
 const currentMonth = current.getMonth() + 1;
@@ -84,7 +86,7 @@ const emptyPurchaseForm: PurchaseForm = {
 };
 
 function cardPayload(form: CardForm): CreditCardPayload {
-  const limit = form.creditLimit.trim() ? Number(form.creditLimit) : null;
+  const limit = form.creditLimit.trim() ? currencyToNumber(form.creditLimit) : null;
   return {
     name: form.name.trim(),
     dueDay: Number(form.dueDay),
@@ -95,7 +97,7 @@ function cardPayload(form: CardForm): CreditCardPayload {
 
 function purchasePayload(form: PurchaseForm, cardId: string): CreditCardPurchasePayload {
   const installments = Math.max(1, Number(form.installments));
-  const amount = Number(form.amount);
+  const amount = currencyToNumber(form.amount);
   return {
     cardId,
     title: form.title.trim(),
@@ -109,6 +111,11 @@ function purchasePayload(form: PurchaseForm, cardId: string): CreditCardPurchase
 function usageText(card: CreditCard) {
   if (!card.creditLimit) return "Sem limite informado";
   return `${formatMoney(card.usedAmount)} de ${formatMoney(card.creditLimit)}`;
+}
+
+function usageTextForAmount(card: CreditCard, amount: number) {
+  if (!card.creditLimit) return "Sem limite informado";
+  return `${formatMoney(amount)} de ${formatMoney(card.creditLimit)}`;
 }
 
 function isValidHexColor(value: string) {
@@ -183,7 +190,7 @@ export function CreditCardsPage() {
         setSearchParams({ card: overview.cards[0].name });
       }
     } catch {
-      setError("Nao foi possivel carregar os cartoes.");
+      setError("Não foi possível carregar os cartões.");
     } finally {
       setLoading(false);
     }
@@ -215,7 +222,7 @@ export function CreditCardsPage() {
     setCardForm({
       name: card.name,
       dueDay: String(card.dueDay),
-      creditLimit: card.creditLimit ? String(card.creditLimit) : "",
+      creditLimit: card.creditLimit ? formatMoney(card.creditLimit) : "",
       color: card.color,
     });
     setCardModalOpen(true);
@@ -236,6 +243,7 @@ export function CreditCardsPage() {
 
   async function saveCard(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     const payload = cardPayload(cardForm);
     if (!payload.name || payload.dueDay < 1 || payload.dueDay > 31 || !isValidHexColor(cardForm.color)) return;
     setSaving(true);
@@ -253,10 +261,10 @@ export function CreditCardsPage() {
 
   async function toggleCardActive(card: CreditCard) {
     const confirmed = await confirm({
-      title: card.isActive ? "Inativar cartao" : "Reativar cartao",
+      title: card.isActive ? "Inativar cartão" : "Reativar cartão",
       description: card.isActive
-        ? `"${card.name}" saira da lista principal, mas todo o historico sera mantido.`
-        : `"${card.name}" voltara para a lista principal de cartoes.`,
+        ? `"${card.name}" saira da lista principal, mas todo o histórico sera mantido.`
+        : `"${card.name}" voltara para a lista principal de cartões.`,
       confirmLabel: card.isActive ? "Inativar" : "Reativar",
       tone: card.isActive ? "danger" : "primary",
     });
@@ -267,6 +275,7 @@ export function CreditCardsPage() {
 
   async function savePurchase(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!selectedCard) return;
     const payload = purchasePayload(purchaseForm, selectedCard.id);
     if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount)) return;
@@ -294,7 +303,7 @@ export function CreditCardsPage() {
 
     const confirmed = await confirm({
       title: "Excluir compra",
-      description: `Deseja excluir "${purchase.title}" do detalhamento deste cartao?`,
+      description: `Deseja excluir "${purchase.title}" do detalhamento deste cartão?`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
@@ -304,6 +313,7 @@ export function CreditCardsPage() {
   }
 
   async function confirmPurchaseDelete() {
+    if (saving) return;
     if (!deletingPurchase) return;
     setSaving(true);
     try {
@@ -326,7 +336,7 @@ export function CreditCardsPage() {
     setPurchaseForm({
       title: purchase.title,
       description: purchase.description ?? "",
-      amount: String(purchase.amount),
+      amount: formatMoney(purchase.amount),
       amountMode: "TOTAL",
       purchaseDate: purchase.purchaseDate.slice(0, 10),
       installments: String(purchase.installments),
@@ -341,7 +351,7 @@ export function CreditCardsPage() {
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <CreditCardIcon sx={{ color: financeColors.expense }} />
               <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
-                Cartoes
+                Cartões
               </Typography>
               <PageHelpButton title="Como funciona Cartões?">
                 <Typography color="text.secondary">
@@ -356,16 +366,24 @@ export function CreditCardsPage() {
               </PageHelpButton>
             </Stack>
             <Typography color="text.secondary" fontSize={17}>
-              Acompanhe limite, uso mensal e compras detalhadas por cartao.
+              Acompanhe limite, uso mensal e compras detalhadas por cartão.
             </Typography>
           </Box>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateCard} sx={{ alignSelf: { xs: "stretch", md: "center" } }}>
-            Adicionar cartao
+            Adicionar cartão
           </Button>
         </Stack>
       </Paper>
 
-      {loading ? <EmptyState message="Carregando cartoes..." /> : null}
+      {loading ? (
+        <Grid container spacing={2}>
+          {[0, 1, 2].map((item) => (
+            <Grid item xs={12} md={6} xl={4} key={item}>
+              <Skeleton variant="rounded" height={220} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error ? (
@@ -460,7 +478,7 @@ export function CreditCardsPage() {
           ))}
           {!visibleCards.length ? (
             <Grid item xs={12}>
-              <EmptyState message={cardTab === "ACTIVE" ? "Nenhum cartao ativo cadastrado." : "Nenhum cartao inativo."} />
+              <EmptyState message={cardTab === "ACTIVE" ? "Nenhum cartão ativo cadastrado." : "Nenhum cartão inativo."} />
             </Grid>
           ) : null}
           </Grid>
@@ -470,24 +488,29 @@ export function CreditCardsPage() {
       <AppDialog
         open={cardModalOpen}
         onClose={resetCardForm}
-        title={editingCard ? "Editar cartao" : "Adicionar cartao"}
-        eyebrow="Cartao de credito"
+        title={editingCard ? "Editar cartão" : "Adicionar cartão"}
+        eyebrow="Cartão de crédito"
         actions={
           <>
             <Button onClick={resetCardForm}>Cancelar</Button>
-            <Button type="submit" form="credit-card-form" variant="contained" disabled={saving}>
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
+            <LoadingActionButton type="submit" form="credit-card-form" variant="contained" loading={saving} loadingLabel="Salvando...">
+              Salvar
+            </LoadingActionButton>
           </>
         }
       >
         <Stack component="form" id="credit-card-form" spacing={2} onSubmit={saveCard}>
           <TextField label="Nome ou apelido" value={cardForm.name} onChange={(event) => setCardForm({ ...cardForm, name: event.target.value })} required />
           <TextField label="Vencimento mensal" type="number" value={cardForm.dueDay} onChange={(event) => setCardForm({ ...cardForm, dueDay: event.target.value })} inputProps={{ min: 1, max: 31 }} required />
-          <TextField label="Limite do cartao" type="number" value={cardForm.creditLimit} onChange={(event) => setCardForm({ ...cardForm, creditLimit: event.target.value })} inputProps={{ min: 0, step: 0.01 }} helperText="Opcional" />
+          <TextField
+            label="Limite do cartão"
+            value={cardForm.creditLimit}
+            onChange={(event) => setCardForm({ ...cardForm, creditLimit: digitsToCurrency(event.target.value) })}
+            helperText="Opcional"
+          />
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <TextField
-              label="Cor do cartao"
+              label="Cor do cartão"
               type="color"
               value={cardForm.color}
               onChange={(event) => setCardForm({ ...cardForm, color: event.target.value.toUpperCase() })}
@@ -517,14 +540,14 @@ export function CreditCardsPage() {
           <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
             <Box minWidth={0}>
               <Typography variant="h5" fontWeight={950} noWrap>
-                {selectedCard?.name ?? "Detalhes do cartao"}
+                {selectedCard?.name ?? "Detalhes do cartão"}
               </Typography>
               <Typography color="text.secondary">
-                {selectedCard ? `Vencimento dia ${selectedCard.dueDay} · ${usageText(selectedCard)}` : ""}
+                {selectedCard ? `Vencimento dia ${selectedCard.dueDay} · ${usageTextForAmount(selectedCard, selectedMonthSummary?.statementAmount ?? selectedCard.usedAmount)}` : ""}
               </Typography>
             </Box>
             <Stack direction="row" spacing={1} alignItems="center">
-              <TextField select size="small" label="Mes" value={selectedDetailMonth} onChange={(event) => setSelectedDetailMonth(Number(event.target.value))}>
+              <TextField select size="small" label="Mês" value={selectedDetailMonth} onChange={(event) => setSelectedDetailMonth(Number(event.target.value))}>
                 {months.map((label, index) => (
                   <MenuItem key={label} value={index + 1}>
                     {label}
@@ -659,10 +682,8 @@ export function CreditCardsPage() {
                         <TextField
                           fullWidth
                           label={purchaseForm.amountMode === "TOTAL" ? "Valor total" : "Valor da parcela"}
-                          type="number"
                           value={purchaseForm.amount}
-                          onChange={(event) => setPurchaseForm({ ...purchaseForm, amount: event.target.value })}
-                          inputProps={{ min: 0, step: 0.01 }}
+                          onChange={(event) => setPurchaseForm({ ...purchaseForm, amount: digitsToCurrency(event.target.value) })}
                           required
                         />
                       </Grid>
@@ -673,13 +694,13 @@ export function CreditCardsPage() {
                         <TextField fullWidth label="Data" type="date" value={purchaseForm.purchaseDate} onChange={(event) => setPurchaseForm({ ...purchaseForm, purchaseDate: event.target.value })} InputLabelProps={{ shrink: true }} required />
                       </Grid>
                       <Grid item xs={12}>
-                        <TextField fullWidth label="Observacao" value={purchaseForm.description} onChange={(event) => setPurchaseForm({ ...purchaseForm, description: event.target.value })} />
+                        <TextField fullWidth label="Observação" value={purchaseForm.description} onChange={(event) => setPurchaseForm({ ...purchaseForm, description: event.target.value })} />
                       </Grid>
                       <Grid item xs={12}>
                         <Stack direction="row" spacing={1}>
-                          <Button type="submit" variant="contained" disabled={saving}>
+                          <LoadingActionButton type="submit" variant="contained" loading={saving} loadingLabel="Salvando...">
                             {editingPurchase ? "Salvar despesa" : "Adicionar despesa"}
-                          </Button>
+                          </LoadingActionButton>
                           {editingPurchase ? <Button onClick={resetPurchaseForm}>Cancelar</Button> : null}
                         </Stack>
                       </Grid>
@@ -707,8 +728,8 @@ export function CreditCardsPage() {
                         <TableCell>Despesa</TableCell>
                         <TableCell>Data</TableCell>
                         <TableCell>Parcela</TableCell>
-                        <TableCell align="right">Valor no mes</TableCell>
-                        <TableCell align="right">Acoes</TableCell>
+                        <TableCell align="right">Valor no mês</TableCell>
+                        <TableCell align="right">Ações</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -747,7 +768,7 @@ export function CreditCardsPage() {
                       {!selectedMonthSummary || (!selectedMonthSummary.purchases.length && selectedMonthSummary.otherAmount <= 0) ? (
                         <TableRow>
                           <TableCell colSpan={5} sx={{ color: "text.secondary", fontStyle: "italic" }}>
-                            Nenhuma despesa detalhada neste mes.
+                            Nenhuma despesa detalhada neste mês.
                           </TableCell>
                         </TableRow>
                       ) : null}
@@ -757,7 +778,7 @@ export function CreditCardsPage() {
               </Grid>
             </Grid>
           ) : (
-            <EmptyState message="Selecione um cartao para ver os detalhes." />
+            <EmptyState message="Selecione um cartão para ver os detalhes." />
           )}
         </DialogContent>
         <DialogActions>
@@ -771,7 +792,7 @@ export function CreditCardsPage() {
           setDeleteAllInstallments(false);
         }}
         title="Excluir despesa"
-        eyebrow="Cartao de credito"
+        eyebrow="Cartão de crédito"
         actions={
           <>
             <Button
@@ -782,15 +803,15 @@ export function CreditCardsPage() {
             >
               Cancelar
             </Button>
-            <Button color="error" variant="contained" onClick={confirmPurchaseDelete} disabled={saving}>
+            <LoadingActionButton color="error" variant="contained" onClick={confirmPurchaseDelete} loading={saving} loadingLabel="Excluindo...">
               Excluir
-            </Button>
+            </LoadingActionButton>
           </>
         }
       >
         <Stack spacing={1.5}>
           <Typography color="text.secondary">
-            Deseja excluir "{deletingPurchase?.title}" deste mes?
+            Deseja excluir "{deletingPurchase?.title}" deste mês?
           </Typography>
           <FormControlLabel
             control={
@@ -799,7 +820,7 @@ export function CreditCardsPage() {
                 onChange={(event) => setDeleteAllInstallments(event.target.checked)}
               />
             }
-            label="Excluir tambem dos demais meses"
+            label="Excluir também dos demais meses"
           />
         </Stack>
       </AppDialog>

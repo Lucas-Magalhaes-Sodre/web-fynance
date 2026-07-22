@@ -25,7 +25,7 @@ export function EconomyCategoryBoxes({ categories, onEditItem, onDetailsItem }: 
       <Grid container spacing={2}>
         {!categories.length ? (
           <Grid item xs={12}>
-            <EmptyState message="Nenhuma caixinha com saldo ate hoje." />
+            <EmptyState message="Nenhuma caixinha com saldo até hoje." />
           </Grid>
         ) : null}
         {categories.map((category) => (
@@ -78,7 +78,7 @@ export function EconomyCategoryBoxes({ categories, onEditItem, onDetailsItem }: 
                         </Tooltip>
                         {item.hasYield ? (
                           <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                            {Number(item.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mes
+                            {Number(item.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mês
                           </Typography>
                         ) : null}
                       </Box>

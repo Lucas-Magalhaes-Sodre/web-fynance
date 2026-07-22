@@ -59,8 +59,8 @@ export function FinancialControlHero({
             </PageHelpButton>
           </Stack>
           <Typography color="text.secondary" fontSize={15}>
-            Veja entradas, saidas, vencimentos e saldo das suas financas por
-            dia, semana, mes ou ano.
+            Veja entradas, saídas, vencimentos e saldo das suas finanças por
+            dia, semana, mês ou ano.
           </Typography>
         </Box>
         <S.HeroActionsGrid>

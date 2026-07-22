@@ -39,7 +39,7 @@ export function MonthCalendarView({
             Calendario financeiro
           </Typography>
           <Typography color="text.secondary">
-            Receitas, despesas, economias e vencimentos do mes.
+            Receitas, despesas, economias e vencimentos do mês.
           </Typography>
         </Box>
         <Chip label={`${months[month - 1]} de ${year}`} />

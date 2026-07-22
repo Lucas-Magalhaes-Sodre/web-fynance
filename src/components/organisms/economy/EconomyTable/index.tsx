@@ -37,9 +37,9 @@ export function EconomyTable({
             <TableCell>Categoria</TableCell>
             <TableCell>Data</TableCell>
             <TableCell>Meta</TableCell>
-            <TableCell>Descricao</TableCell>
+            <TableCell>Descrição</TableCell>
             <TableCell align="right">Valor</TableCell>
-            <TableCell align="right">Acoes</TableCell>
+            <TableCell align="right">Ações</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -80,7 +80,7 @@ export function EconomyTable({
           {!savings.length ? (
             <TableRow>
               <TableCell colSpan={7}>
-                <EmptyState message="Nenhuma economia registrada neste periodo." />
+                <EmptyState message="Nenhuma economia registrada neste período." />
               </TableCell>
             </TableRow>
           ) : null}

@@ -10,6 +10,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { api } from "@/services/api";
 
 const COOKIE_CONSENT_KEY = "@minha-receita:cookie-consent";
@@ -76,6 +77,7 @@ function hasValidCookieConsent() {
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [savingAction, setSavingAction] = useState<"necessary" | "all" | "settings" | null>(null);
   const [preferences, setPreferences] = useState(true);
   const [analytics, setAnalytics] = useState(false);
   const [marketing, setMarketing] = useState(false);
@@ -85,21 +87,39 @@ export function CookieConsentBanner() {
   }, []);
 
   async function acceptNecessary() {
-    await saveCookieConsent({ preferences: false, analytics: false, marketing: false });
-    setVisible(false);
-    setSettingsOpen(false);
+    if (savingAction) return;
+    setSavingAction("necessary");
+    try {
+      await saveCookieConsent({ preferences: false, analytics: false, marketing: false });
+      setVisible(false);
+      setSettingsOpen(false);
+    } finally {
+      setSavingAction(null);
+    }
   }
 
   async function acceptAll() {
-    await saveCookieConsent({ preferences: true, analytics: true, marketing: true });
-    setVisible(false);
-    setSettingsOpen(false);
+    if (savingAction) return;
+    setSavingAction("all");
+    try {
+      await saveCookieConsent({ preferences: true, analytics: true, marketing: true });
+      setVisible(false);
+      setSettingsOpen(false);
+    } finally {
+      setSavingAction(null);
+    }
   }
 
   async function saveSettings() {
-    await saveCookieConsent({ preferences, analytics, marketing });
-    setVisible(false);
-    setSettingsOpen(false);
+    if (savingAction) return;
+    setSavingAction("settings");
+    try {
+      await saveCookieConsent({ preferences, analytics, marketing });
+      setVisible(false);
+      setSettingsOpen(false);
+    } finally {
+      setSavingAction(null);
+    }
   }
 
   if (!visible) return null;
@@ -152,15 +172,15 @@ export function CookieConsentBanner() {
             </Stack>
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="flex-end">
-              <Button variant="text" onClick={acceptNecessary}>
+              <LoadingActionButton variant="text" onClick={acceptNecessary} loading={savingAction === "necessary"} disabled={Boolean(savingAction)}>
                 Apenas necessários
-              </Button>
-              <Button variant="outlined" onClick={() => setSettingsOpen(true)}>
+              </LoadingActionButton>
+              <Button variant="outlined" onClick={() => setSettingsOpen(true)} disabled={Boolean(savingAction)}>
                 Configurar
               </Button>
-              <Button variant="contained" onClick={acceptAll}>
+              <LoadingActionButton variant="contained" onClick={acceptAll} loading={savingAction === "all"} disabled={Boolean(savingAction)}>
                 Aceitar todos
-              </Button>
+              </LoadingActionButton>
             </Stack>
           </Stack>
         </Paper>
@@ -173,8 +193,12 @@ export function CookieConsentBanner() {
         maxWidth="sm"
         actions={
           <>
-            <Button onClick={acceptNecessary}>Apenas necessários</Button>
-            <Button variant="contained" onClick={saveSettings}>Salvar escolhas</Button>
+            <LoadingActionButton onClick={acceptNecessary} loading={savingAction === "necessary"} disabled={Boolean(savingAction)}>
+              Apenas necessários
+            </LoadingActionButton>
+            <LoadingActionButton variant="contained" onClick={saveSettings} loading={savingAction === "settings"} disabled={Boolean(savingAction)}>
+              Salvar escolhas
+            </LoadingActionButton>
           </>
         }
       >

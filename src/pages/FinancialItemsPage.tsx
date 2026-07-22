@@ -44,8 +44,8 @@ export function FinancialItemsPage({ title, description, type }: Props) {
 
   async function removeItem(item: FinancialItem) {
     const confirmed = await confirm({
-      title: "Excluir lancamento",
-      description: `Deseja excluir "${item.title}"? Esta acao nao pode ser desfeita.`,
+      title: "Excluir lançamento",
+      description: `Deseja excluir "${item.title}"? Esta acao não pode ser desfeita.`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
@@ -98,7 +98,7 @@ export function FinancialItemsPage({ title, description, type }: Props) {
                   : "Vencimento e pagamento"}
               </TableCell>
               <TableCell align="right">Valor</TableCell>
-              <TableCell align="right">Acoes</TableCell>
+              <TableCell align="right">Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

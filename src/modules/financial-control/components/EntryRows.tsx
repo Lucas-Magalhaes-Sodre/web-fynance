@@ -34,7 +34,7 @@ export function EntryRows({
   onMarkPending,
 }: EntryRowsProps) {
   if (!items.length)
-    return <EmptyState message="Nada cadastrado para este periodo." />;
+    return <EmptyState message="Nada cadastrado para este período." />;
 
   return (
     <S.TableCard className="soft-card">
@@ -43,11 +43,11 @@ export function EntryRows({
           <TableRow>
             <TableCell>Nome</TableCell>
             <TableCell>Categoria</TableCell>
-            <TableCell>Data da movimentacao</TableCell>
+            <TableCell>Data da movimentação</TableCell>
             <TableCell>Situacao</TableCell>
             <TableCell>Tipo</TableCell>
             <TableCell align="right">Valor</TableCell>
-            <TableCell align="right">Acoes</TableCell>
+            <TableCell align="right">Ações</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

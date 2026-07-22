@@ -10,6 +10,7 @@ import {
   AppDialog,
   AppDialogStyles as S,
 } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 
 export type CategoryFormState = {
   name: string;
@@ -69,15 +70,17 @@ export function CategoryFormDialog({
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button
+          <LoadingActionButton
             type="submit"
             form={formId}
             variant="contained"
             startIcon={<Icon />}
-            disabled={saving || !form.name.trim() || !isValidColor || duplicate}
+            disabled={!form.name.trim() || !isValidColor || duplicate}
+            loading={saving}
+            loadingLabel="Salvando..."
           >
-            {saving ? "Salvando..." : actionLabel}
-          </Button>
+            {actionLabel}
+          </LoadingActionButton>
         </>
       }
     >

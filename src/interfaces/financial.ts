@@ -160,6 +160,20 @@ export type SavingsProjection = {
   items: SavingsProjectionItem[];
 };
 
+export type GoalSavingItem = Saving & {
+  countsAsSaved: boolean;
+};
+
+export type GoalSavingsPage = {
+  items: GoalSavingItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
 export type PaymentSummary = {
   paidCount: number;
   pendingCount: number;

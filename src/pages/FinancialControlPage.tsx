@@ -1,3 +1,5 @@
+import Grid from "@mui/material/Grid";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -92,6 +94,22 @@ const initialSavingForm: SavingMovementFormState = {
 };
 
 const current = new Date();
+
+function FinancialControlSkeleton({ mode }: { mode: ViewMode }) {
+  return (
+    <Stack spacing={mode === "year" ? 1.75 : 3}>
+      <Grid container spacing={2}>
+        {[0, 1, 2, 3].map((item) => (
+          <Grid item xs={12} md={3} key={item}>
+            <Skeleton variant="rounded" height={86} />
+          </Grid>
+        ))}
+      </Grid>
+      {mode !== "year" ? <Skeleton variant="rounded" height={260} /> : null}
+      <Skeleton variant="rounded" height={mode === "year" ? 320 : 520} />
+    </Stack>
+  );
+}
 
 export function FinancialControlPage() {
   const navigate = useNavigate();
@@ -276,7 +294,7 @@ export function FinancialControlPage() {
       if (mode === "week")
         setWeekData(await getWeekControl(week.startDate, week.endDate));
     } catch {
-      setError("Nao foi possivel carregar os dados financeiros.");
+      setError("Não foi possível carregar os dados financeiros.");
     } finally {
       setLoading(false);
     }
@@ -399,6 +417,7 @@ export function FinancialControlPage() {
   }
 
   async function saveSavingFlow() {
+    if (savingTransferSaving) return;
     const payload = savingPayload();
     if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount))
       return;
@@ -443,7 +462,7 @@ export function FinancialControlPage() {
 
       if (endCursor < startCursor) {
         throw new Error(
-          "Periodo final da recorrencia anterior ao periodo inicial.",
+          "Período final da recorrência anterior ao período inicial.",
         );
       }
 
@@ -482,8 +501,8 @@ export function FinancialControlPage() {
 
   async function removeItem(item: FinancialItem) {
     const confirmed = await confirm({
-      title: "Excluir lancamento",
-      description: `Deseja excluir "${item.name ?? item.title}"? Esta acao nao pode ser desfeita.`,
+      title: "Excluir lançamento",
+      description: `Deseja excluir "${item.name ?? item.title}"? Esta ação não pode ser desfeita.`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
@@ -728,16 +747,22 @@ export function FinancialControlPage() {
         onWeekChange={setWeek}
       />
 
-      <PeriodSummaryCards
-        totalIncome={selectedTotals?.totalIncome ?? 0}
-        totalExpense={selectedTotals?.totalExpense ?? 0}
-        totalSavings={selectedTotals?.totalSavings ?? 0}
-        balance={selectedTotals?.balance ?? 0}
-      />
+      {loading ? (
+        <FinancialControlSkeleton mode={mode} />
+      ) : (
+        <>
+          <PeriodSummaryCards
+            totalIncome={selectedTotals?.totalIncome ?? 0}
+            totalExpense={selectedTotals?.totalExpense ?? 0}
+            totalSavings={selectedTotals?.totalSavings ?? 0}
+            balance={selectedTotals?.balance ?? 0}
+          />
 
-      {mode !== "year" && selectedTotals ? (
-        <FinancialSummaryChart totals={selectedTotals} />
-      ) : null}
+          {mode !== "year" && selectedTotals ? (
+            <FinancialSummaryChart totals={selectedTotals} />
+          ) : null}
+        </>
+      )}
 
       {!loading && !error && mode === "month" && calendarData ? (
         <MonthCalendarView
@@ -752,9 +777,6 @@ export function FinancialControlPage() {
         />
       ) : null}
 
-      {loading ? (
-        <EmptyState message="Carregando dados financeiros..." />
-      ) : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error && mode === "year" && yearData ? (

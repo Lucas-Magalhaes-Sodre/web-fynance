@@ -79,11 +79,11 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
           <Box
             sx={{
               position: "relative",
-              width: `calc(100% + ${compact ? 32 : 40}px)`,
+              width: "100%",
               height: compact ? 118 : 150,
-              mx: compact ? -2 : -2.5,
-              mt: compact ? -2 : -2.5,
+              mt: 0,
               mb: 0.5,
+              borderRadius: 2.5,
               overflow: "hidden",
               cursor: "pointer",
             }}
@@ -152,7 +152,7 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
             </Typography>
             {goal.hasYield ? (
               <Typography color="text.secondary" variant="body2">
-                Rendimento composto: {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mes
+                Rendimento composto: {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mês
               </Typography>
             ) : null}
           </Box>
@@ -207,13 +207,13 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
           </Typography>
           {goal.hasYield ? (
             <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" mb={0.75}>
-              Considerando rendimento de {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mes.
+              Considerando rendimento de {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mês.
             </Typography>
           ) : null}
           <Stack direction="row" spacing={1}>
             {[
               ["Por dia", goal.requiredDailySavings ?? 0],
-              ["Por mes", goal.requiredMonthlySavings ?? 0],
+              ["Por mês", goal.requiredMonthlySavings ?? 0],
               ["Por ano", yearlySavings],
             ].map(([label, value]) => (
               <Box key={String(label)} flex={1} minWidth={0}>
