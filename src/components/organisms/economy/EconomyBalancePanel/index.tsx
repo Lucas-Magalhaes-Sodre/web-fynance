@@ -6,6 +6,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { financeColors, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type EconomyBalancePanelProps = {
   balance: number;
@@ -18,6 +19,7 @@ export function EconomyBalancePanel({
   onOpenExtract,
   onOpenProjection,
 }: EconomyBalancePanelProps) {
+  const { t } = usePreferences();
   return (
     <Paper
       className="glass-card"
@@ -54,19 +56,19 @@ export function EconomyBalancePanel({
             <AccountBalanceWalletIcon />
           </Box>
           <Typography color="text.secondary" fontWeight={900}>
-            Saldo economizado
+            {t("savedValue")}
           </Typography>
         </Stack>
         <Typography
           fontWeight={950}
-          color={financeColors.neutral}
+          color="text.primary"
           sx={{ fontSize: { xs: 38, md: 58 }, lineHeight: 1, letterSpacing: 0 }}
         >
           {formatMoney(balance)}
         </Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
           <Button variant="text" onClick={onOpenExtract} sx={{ alignSelf: "flex-start", fontWeight: 950 }}>
-            Ver extrato
+            {t("viewExtract")}
           </Button>
           <Button
             variant="outlined"
@@ -74,7 +76,7 @@ export function EconomyBalancePanel({
             onClick={onOpenProjection}
             sx={{ alignSelf: "flex-start", borderRadius: 2.5, fontWeight: 950 }}
           >
-            Simular saldo futuro
+            {t("simulateFutureBalance")}
           </Button>
         </Stack>
       </Stack>

@@ -25,26 +25,28 @@ import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { PreferenceControls } from '@/components/molecules/PreferenceControls';
 
 const drawerWidth = 260;
 const collapsedDrawerWidth = 76;
 
-const links = [
-  { to: '/app', label: 'Dashboard', icon: <DashboardIcon /> },
-  { to: '/app/control', label: 'Controle financeiro', icon: <CalendarMonthIcon /> },
-  { to: '/app/cards', label: 'Cartões', icon: <CreditCardIcon /> },
-  { to: '/app/economy', label: 'Economias', icon: <SavingsIcon /> },
-  { to: '/app/goals', label: 'Metas', icon: <FlagIcon /> },
-  { to: '/app/profile', label: 'Meu perfil', icon: <PersonIcon /> },
-  { to: '/app/settings', label: 'Configurações', icon: <SettingsIcon /> }
-];
-
 export function AppLayout() {
   const { user, signOut } = useAuth();
+  const { t } = usePreferences();
   const location = useLocation();
   const [open, setOpen] = useState(() => localStorage.getItem('@minha-receita:menu-open') !== 'false');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const currentWidth = open ? drawerWidth : collapsedDrawerWidth;
+  const links = [
+    { to: '/app', label: t('menuDashboard'), icon: <DashboardIcon /> },
+    { to: '/app/control', label: t('menuFinancialControl'), icon: <CalendarMonthIcon /> },
+    { to: '/app/cards', label: t('menuCards'), icon: <CreditCardIcon /> },
+    { to: '/app/economy', label: t('menuSavings'), icon: <SavingsIcon /> },
+    { to: '/app/goals', label: t('menuGoals'), icon: <FlagIcon /> },
+    { to: '/app/profile', label: t('menuProfile'), icon: <PersonIcon /> },
+    { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon /> }
+  ];
 
   function toggleMenu() {
     setOpen((current) => {
@@ -68,8 +70,7 @@ export function AppLayout() {
             transition: 'width 180ms ease, box-shadow 180ms ease',
             boxShadow: open ? '12px 0 32px rgba(15, 23, 42, 0.16)' : 'none',
             zIndex: (theme) => theme.zIndex.drawer + 2,
-            background:
-              'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92))',
+            background: 'var(--mr-drawer-bg)',
             backdropFilter: 'blur(18px)'
           }
         }}
@@ -81,14 +82,14 @@ export function AppLayout() {
               <AccountBalanceWalletIcon fontSize="small" />
             </Box>
             <Box minWidth={0}>
-              <Typography fontWeight={800} noWrap>Minha Receita</Typography>
+              <Typography fontWeight={800} noWrap>{t('appName')}</Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
                 {user?.name}
               </Typography>
             </Box>
           </Box>
           ) : null}
-          <Tooltip title={open ? 'Recolher menu' : 'Abrir menu'}>
+          <Tooltip title={open ? t('collapseMenu') : t('openMenu')}>
             <IconButton size="small" onClick={toggleMenu}>
               {open ? <MenuOpenIcon /> : <MenuIcon />}
             </IconButton>
@@ -121,13 +122,16 @@ export function AppLayout() {
             </Tooltip>
           ))}
         </List>
+        <Box px={open ? 2 : 1} pb={1.5} display="flex" justifyContent="center">
+          <PreferenceControls compact={!open} />
+        </Box>
         <Box p={2}>
           {open ? (
             <Button fullWidth variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={() => setLogoutOpen(true)}>
-              Sair
+              {t('signOut')}
             </Button>
           ) : (
-            <Tooltip title="Sair" placement="right">
+            <Tooltip title={t('signOut')} placement="right">
               <IconButton color="error" onClick={() => setLogoutOpen(true)}>
                 <LogoutIcon />
               </IconButton>
@@ -141,20 +145,25 @@ export function AppLayout() {
         px={{ xs: 2, md: 3 }}
         py={{ xs: 2, md: 2.5 }}
         pl={{ xs: 11, md: 12 }}
+        onClick={() => {
+          if (open) {
+            localStorage.setItem('@minha-receita:menu-open', 'false');
+            setOpen(false);
+          }
+        }}
         sx={{
-        background:
-          'radial-gradient(circle at 18% 0%, rgba(45,212,191,0.12), transparent 28rem), radial-gradient(circle at 90% 10%, rgba(96,165,250,0.1), transparent 28rem), #F8FAFC'
+        background: 'var(--mr-main-bg)'
       }}
       >
         <Outlet />
       </Box>
       <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)}>
         <Box p={3}>
-          <Typography variant="h6" fontWeight={900} mb={1}>Deseja sair?</Typography>
-          <Typography color="text.secondary" mb={3}>Voce sera desconectada da sua conta.</Typography>
+          <Typography variant="h6" fontWeight={900} mb={1}>{t('signOutTitle')}</Typography>
+          <Typography color="text.secondary" mb={3}>{t('signOutMessage')}</Typography>
           <Box display="flex" justifyContent="flex-end" gap={1}>
-            <Button onClick={() => setLogoutOpen(false)}>Cancelar</Button>
-            <Button color="error" variant="contained" onClick={signOut}>Sair</Button>
+            <Button onClick={() => setLogoutOpen(false)}>{t('cancel')}</Button>
+            <Button color="error" variant="contained" onClick={signOut}>{t('signOut')}</Button>
           </Box>
         </Box>
       </Dialog>

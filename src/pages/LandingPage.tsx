@@ -20,6 +20,8 @@ import {
   WalletCards,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PreferenceControls } from "@/components/molecules/PreferenceControls";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 const MotionBox = motion(Box);
 const MotionPaper = motion(Paper);
@@ -29,42 +31,9 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
-const features = [
-  [
-    "Controle por período",
-    "Veja suas finanças por dia, semana, mês ou ano sem perder o contexto.",
-    CalendarDays,
-  ],
-  [
-    "Calendario financeiro",
-    "Acompanhe vencimentos, receitas, despesas e contas pagas direto no calendario.",
-    BarChart3,
-  ],
-  [
-    "Economias e caixinhas",
-    "Registre economias, rendimentos, retiradas e histórico por período.",
-    WalletCards,
-  ],
-  [
-    "Metas com fotos",
-    "Planeje objetivos, acompanhe progresso e veja quanto precisa guardar.",
-    LayoutGrid,
-  ],
-  ["Receitas e despesas", "Cadastre entradas, saídas, status, vencimentos e recorrências.", Sparkles],
-  ["Cartões", "Controle cartões, limites, compras parceladas e faturas por mês.", CreditCard],
-  [
-    "Dashboard inteligente",
-    "Resumo de receitas, despesas, saldo, metas e ultimas movimentações.",
-    BarChart3,
-  ],
-  [
-    "LGPD e privacidade",
-    "Consentimento, exportação de dados, exclusão de conta e cookies configuráveis.",
-    Smartphone,
-  ],
-] as const;
-
 function MiniDashboard() {
+  const { t } = usePreferences();
+
   return (
     <MotionPaper
       initial={{ opacity: 0, y: 36, rotateX: 8 }}
@@ -86,7 +55,7 @@ function MiniDashboard() {
           borderRadius: 5,
           border: "1px solid rgba(226,232,240,0.85)",
           boxShadow: "none",
-          bgcolor: "rgba(255,255,255,0.9)",
+          bgcolor: "var(--mr-card-solid)",
         }}
       >
         <Stack
@@ -97,7 +66,7 @@ function MiniDashboard() {
         >
           <Box>
             <Typography fontWeight={800} color="text.secondary">
-              Saldo final
+              {t('miniFinalBalance')}
             </Typography>
             <Typography variant="h3" fontWeight={950} letterSpacing="-0.05em">
               R$ 8.420,00
@@ -119,9 +88,9 @@ function MiniDashboard() {
 
         <Grid container spacing={1.5}>
           {[
-            ["Receitas", "R$ 12.800", "#EFF6FF", "#2563EB"],
-            ["Despesas", "R$ 4.380", "#FFF7ED", "#EA580C"],
-            ["Pendentes", "R$ 920", "#FFFBEB", "#B45309"],
+            [t('miniIncomes'), "R$ 12.800", "rgba(37,99,235,0.12)", "#2563EB"],
+            [t('miniExpenses'), "R$ 4.380", "rgba(234,88,12,0.12)", "#EA580C"],
+            [t('miniPending'), "R$ 920", "rgba(180,83,9,0.12)", "#B45309"],
           ].map(([label, value, bg, color]) => (
             <Grid item xs={4} key={label}>
               <Box sx={{ p: 2, borderRadius: 4, bgcolor: bg }}>
@@ -145,7 +114,7 @@ function MiniDashboard() {
           mt={3}
           sx={{
             border: "1px solid #E2E8F0",
-            bgcolor: "#F8FAFC",
+            bgcolor: "var(--mr-field)",
             borderRadius: 4,
             p: 2,
           }}
@@ -156,7 +125,7 @@ function MiniDashboard() {
               fontWeight={900}
               color="text.secondary"
             >
-              RESULTADO ANUAL
+              {t('miniAnnualResult')}
             </Typography>
             <Typography
               variant="caption"
@@ -194,15 +163,15 @@ function MiniDashboard() {
           top: { xs: 86, md: 94 },
           minWidth: 124,
           borderRadius: 4,
-          bgcolor: "rgba(255,255,255,0.84)",
-          border: "1px solid rgba(255,255,255,0.8)",
+          bgcolor: "var(--mr-card)",
+          border: "1px solid var(--mr-line)",
           backdropFilter: "blur(16px)",
           boxShadow: "0 24px 60px rgba(15,23,42,0.16)",
           p: 2.2,
         }}
       >
         <Typography variant="caption" fontWeight={900} color="text.secondary">
-          Pago hoje
+          {t('miniPaidToday')}
         </Typography>
         <Typography variant="h6" fontWeight={950} color="#047857">
           R$ 1.240
@@ -216,8 +185,8 @@ function MiniDashboard() {
           right: { xs: 10, md: -24 },
           bottom: 72,
           borderRadius: 4,
-          bgcolor: "rgba(255,255,255,0.84)",
-          border: "1px solid rgba(255,255,255,0.8)",
+          bgcolor: "var(--mr-card)",
+          border: "1px solid var(--mr-line)",
           backdropFilter: "blur(16px)",
           boxShadow: "0 24px 60px rgba(15,23,42,0.16)",
           p: 2,
@@ -225,10 +194,10 @@ function MiniDashboard() {
         }}
       >
         <Typography variant="caption" fontWeight={900} color="text.secondary">
-          Atrasadas
+          {t('miniOverdue')}
         </Typography>
         <Typography variant="h6" fontWeight={950} color="#BE123C">
-          2 contas
+          {t('miniOverdueCount')}
         </Typography>
       </Box>
     </MotionPaper>
@@ -236,12 +205,30 @@ function MiniDashboard() {
 }
 
 export function LandingPage() {
+  const { themeMode, t } = usePreferences();
   const { scrollY } = useScroll();
   const navBg = useTransform(
     scrollY,
     [0, 120],
-    ["rgba(255,255,255,0.62)", "rgba(255,255,255,0.92)"],
+    themeMode === 'dark' ? ["rgba(7,17,31,0.72)", "rgba(7,17,31,0.94)"] : ["rgba(255,255,255,0.62)", "rgba(255,255,255,0.92)"],
   );
+  const navItems = [
+    [t('landingNavFeatures'), '#recursos'],
+    [t('landingNavControl'), '#controle-financeiro'],
+    [t('landingNavMobile'), '#app-mobile'],
+    [t('landingNavSecurity'), '#seguranca'],
+    [t('landingNavPricing'), '#precos']
+  ];
+  const features = [
+    [t('featurePeriodTitle'), t('featurePeriodText'), CalendarDays],
+    [t('featureCalendarTitle'), t('featureCalendarText'), BarChart3],
+    [t('featureSavingsTitle'), t('featureSavingsText'), WalletCards],
+    [t('featureGoalsTitle'), t('featureGoalsText'), LayoutGrid],
+    [t('featureEntriesTitle'), t('featureEntriesText'), Sparkles],
+    [t('featureCardsTitle'), t('featureCardsText'), CreditCard],
+    [t('featureDashboardTitle'), t('featureDashboardText'), BarChart3],
+    [t('featurePrivacyTitle'), t('featurePrivacyText'), Smartphone]
+  ] as const;
 
   return (
     <Box className="premium-page" sx={{ overflow: "hidden" }}>
@@ -252,7 +239,7 @@ export function LandingPage() {
           position: "fixed",
           inset: "0 0 auto 0",
           zIndex: 50,
-          borderBottom: "1px solid rgba(255,255,255,0.7)",
+          borderBottom: "1px solid var(--mr-line)",
           backdropFilter: "blur(18px)",
         }}
       >
@@ -269,7 +256,7 @@ export function LandingPage() {
               direction="row"
               alignItems="center"
               spacing={1.5}
-              sx={{ color: "#0F172A", textDecoration: "none" }}
+              sx={{ color: "var(--mr-ink)", textDecoration: "none" }}
             >
               <Box
                 className="premium-gradient"
@@ -286,7 +273,7 @@ export function LandingPage() {
                 <WalletCards size={21} />
               </Box>
               <Typography fontWeight={950} fontSize={18}>
-                Minha Receita
+                {t('appName')}
               </Typography>
             </Stack>
 
@@ -295,22 +282,16 @@ export function LandingPage() {
               spacing={3.5}
               sx={{ display: { xs: "none", lg: "flex" } }}
             >
-              {[
-                "Recursos",
-                "Controle financeiro",
-                "App mobile",
-                "Segurança",
-                "Preços",
-              ].map((item) => (
+              {navItems.map(([item, href]) => (
                 <Typography
                   key={item}
                   component="a"
-                  href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
+                  href={href}
                   fontWeight={800}
                   color="text.secondary"
                   sx={{
                     textDecoration: "none",
-                    "&:hover": { color: "#0F172A" },
+                    "&:hover": { color: "var(--mr-hover-ink)" },
                   }}
                 >
                   {item}
@@ -318,7 +299,10 @@ export function LandingPage() {
               ))}
             </Stack>
 
-            <Stack direction="row" spacing={1.5}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Box sx={{ display: { xs: "none", md: "block" } }}>
+                <PreferenceControls />
+              </Box>
               <Button
                 component={Link}
                 to="/login"
@@ -327,10 +311,10 @@ export function LandingPage() {
                   px: 2.5,
                   fontWeight: 900,
                   textTransform: "none",
-                  color: "#334155",
+                  color: "text.secondary",
                 }}
               >
-                Entrar
+                {t('landingEnter')}
               </Button>
               <Button
                 component={Link}
@@ -342,14 +326,14 @@ export function LandingPage() {
                   py: 1.2,
                   fontWeight: 900,
                   textTransform: "none",
-                  bgcolor: "#0F172A",
+                      bgcolor: "var(--mr-hover-ink)",
                   "&:hover": {
                     bgcolor: "#1E293B",
                     transform: "translateY(-1px)",
                   },
                 }}
               >
-                Começar agora
+                {t('landingStart')}
               </Button>
             </Stack>
           </Stack>
@@ -394,8 +378,8 @@ export function LandingPage() {
                     alignItems: "center",
                     gap: 1,
                     borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.78)",
-                    bgcolor: "rgba(255,255,255,0.72)",
+                    border: "1px solid var(--mr-line)",
+                    bgcolor: "var(--mr-card)",
                     px: 2,
                     py: 1,
                     mb: 3,
@@ -405,8 +389,7 @@ export function LandingPage() {
                     backdropFilter: "blur(14px)",
                   }}
                 >
-                  <Sparkles size={16} /> Controle financeiro completo para
-                  organizar dinheiro, metas e vencimentos
+                  <Sparkles size={16} /> {t('landingBadge')}
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
                   <Typography
@@ -416,10 +399,10 @@ export function LandingPage() {
                       lineHeight: 0.96,
                       letterSpacing: "-0.06em",
                       fontWeight: 950,
-                      color: "#0F172A",
+                      color: "var(--mr-ink)",
                     }}
                   >
-                    Organize sua vida financeira em um só lugar
+                    {t('landingTitle')}
                   </Typography>
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
@@ -427,15 +410,12 @@ export function LandingPage() {
                     sx={{
                       mt: 3.5,
                       maxWidth: 680,
-                      color: "#475569",
+                      color: "text.secondary",
                       fontSize: { xs: 18, md: 21 },
                       lineHeight: 1.65,
                     }}
                   >
-                    Controle receitas, despesas, cartões, economias, metas,
-                    vencimentos e saldo com uma experiencia visual, simples e
-                    pronta para a rotina pessoal, familiar, MEI ou pequena
-                    empresa.
+                    {t('landingSubtitle')}
                   </Typography>
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
@@ -462,7 +442,7 @@ export function LandingPage() {
                         },
                       }}
                     >
-                      Começar agora
+                      {t('landingStart')}
                     </Button>
                     <Button
                       component={Link}
@@ -474,13 +454,13 @@ export function LandingPage() {
                         py: 1.8,
                         fontWeight: 950,
                         textTransform: "none",
-                        bgcolor: "rgba(255,255,255,0.74)",
-                        borderColor: "#CBD5E1",
-                        color: "#0F172A",
+                        bgcolor: "var(--mr-card)",
+                        borderColor: "divider",
+                        color: "var(--mr-ink)",
                         backdropFilter: "blur(12px)",
                       }}
                     >
-                      Entrar na demo
+                      {t('landingDemo')}
                     </Button>
                   </Stack>
                 </MotionBox>
@@ -559,7 +539,7 @@ export function LandingPage() {
                   p: 3,
                   borderRadius: 6,
                   boxShadow: "none",
-                  bgcolor: "rgba(255,255,255,0.9)",
+                  bgcolor: "var(--mr-card-solid)",
                 }}
               >
                 <Stack
@@ -569,7 +549,7 @@ export function LandingPage() {
                   mb={2.5}
                 >
                   <Typography variant="h5" fontWeight={950}>
-                    Planilha anual moderna
+                    {t('annualSheetTitle')}
                   </Typography>
                   <Box
                     sx={{
@@ -581,29 +561,29 @@ export function LandingPage() {
                       fontWeight: 900,
                     }}
                   >
-                    positivo
+                    {t('positive')}
                   </Box>
                 </Stack>
                 <Box
                   sx={{
                     overflow: "hidden",
                     borderRadius: 4,
-                    border: "1px solid #E2E8F0",
+                  border: "1px solid var(--mr-line)",
                   }}
                 >
-                  {["Receitas", "Despesas", "Resultado"].map(
+                  {[t('miniIncomes'), t('miniExpenses'), t('result')].map(
                     (row, rowIndex) => (
                       <Grid
                         container
                         key={row}
                         sx={{
-                          borderBottom: rowIndex < 2 ? "1px solid #E2E8F0" : 0,
+                          borderBottom: rowIndex < 2 ? "1px solid var(--mr-line)" : 0,
                         }}
                       >
                         <Grid
                           item
                           xs={4}
-                          sx={{ bgcolor: "#F8FAFC", p: 1.7, fontWeight: 950 }}
+                          sx={{ bgcolor: "var(--mr-field)", p: 1.7, fontWeight: 950 }}
                         >
                           {row}
                         </Grid>
@@ -646,7 +626,7 @@ export function LandingPage() {
                 letterSpacing="0.18em"
                 textTransform="uppercase"
               >
-                Produto
+                {t('productEyebrow')}
               </Typography>
               <Typography
                 variant="h2"
@@ -657,21 +637,17 @@ export function LandingPage() {
                   letterSpacing: "-0.05em",
                 }}
               >
-                Da planilha para uma rotina financeira visual, completa e
-                facil de manter.
+                {t('productTitle')}
               </Typography>
               <Typography
                 sx={{
                   mt: 2.5,
-                  color: "#475569",
+                  color: "text.secondary",
                   fontSize: 18,
                   lineHeight: 1.75,
                 }}
               >
-                A visão anual mantém a clareza de uma planilha, mas o sistema
-                também entrega calendário, filtros por período, status de
-                pagamento, categorias, recorrências e resumo automático para
-                tomada de decisao.
+                {t('productText')}
               </Typography>
             </MotionBox>
           </Grid>
@@ -695,24 +671,21 @@ export function LandingPage() {
                   letterSpacing: "-0.05em",
                 }}
               >
-                Privacidade e segurança sem complicar o uso.
+                {t('securityTitle')}
               </Typography>
               <Typography
-                sx={{ mt: 2, color: "#475569", fontSize: 18, lineHeight: 1.7 }}
+                sx={{ mt: 2, color: "text.secondary", fontSize: 18, lineHeight: 1.7 }}
               >
-                Cada pessoa acessa apenas os próprios dados. O sistema já nasce
-                com login seguro, separação por usuário, aceite LGPD,
-                preferências de cookies, exportação dos dados e exclusão da
-                conta pelo perfil.
+                {t('securityText')}
               </Typography>
             </Grid>
             <Grid item xs={12} md={7}>
               <Grid container spacing={2}>
                 {[
-                  "Login seguro",
-                  "Dados por conta",
-                  "Consentimento LGPD",
-                  "Exportação e exclusão",
+                  t('secureLogin'),
+                  t('accountData'),
+                  t('lgpdConsent'),
+                  t('exportDelete'),
                 ].map((item) => (
                   <Grid item xs={12} sm={6} key={item}>
                     <Paper
@@ -720,8 +693,8 @@ export function LandingPage() {
                         p: 3,
                         borderRadius: 5,
                         boxShadow: "none",
-                        bgcolor: "rgba(255,255,255,0.72)",
-                        border: "1px solid rgba(255,255,255,0.82)",
+                        bgcolor: "var(--mr-card-soft)",
+                        border: "1px solid var(--mr-line)",
                       }}
                     >
                       <LockKeyhole color="#0F766E" size={22} />
@@ -729,7 +702,7 @@ export function LandingPage() {
                         {item}
                       </Typography>
                       <Typography mt={0.7} color="text.secondary">
-                        Protecao aplicada sem atrapalhar a experiencia.
+                        {t('protectionNote')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -754,7 +727,7 @@ export function LandingPage() {
                 letterSpacing="0.18em"
                 textTransform="uppercase"
               >
-                Web e mobile
+                {t('webMobile')}
               </Typography>
               <Typography
                 variant="h2"
@@ -765,24 +738,22 @@ export function LandingPage() {
                   letterSpacing: "-0.05em",
                 }}
               >
-                Acompanhe o dinheiro no computador ou no celular.
+                {t('mobileTitle')}
               </Typography>
               <Typography
-                sx={{ mt: 2.5, color: "#475569", fontSize: 18, lineHeight: 1.75 }}
+                sx={{ mt: 2.5, color: "text.secondary", fontSize: 18, lineHeight: 1.75 }}
               >
-                Use a versao web para planejar com mais detalhe e o app mobile
-                para consultar rapidamente saldos, receitas, despesas e
-                movimentações quando estiver fora.
+                {t('mobileText')}
               </Typography>
             </MotionBox>
           </Grid>
           <Grid item xs={12} lg={7}>
             <Grid container spacing={2}>
               {[
-                ["Dashboard", "Resumo claro para abrir o sistema e saber onde está."],
-                ["Controle financeiro", "Tabela anual, calendario mensal e visoes por dia, semana e mês."],
-                ["Economias", "Caixinhas, rendimento, histórico e simulacao para planejar melhor."],
-                ["Metas", "Objetivos com fotos, cores, progresso e detalhes vinculados as economias."],
+                [t('menuDashboard'), t('moduleDashboardText')],
+                [t('menuFinancialControl'), t('moduleControlText')],
+                [t('menuSavings'), t('moduleSavingsText')],
+                [t('menuGoals'), t('moduleGoalsText')],
               ].map(([title, text]) => (
                 <Grid item xs={12} sm={6} key={title}>
                   <MotionPaper
@@ -813,8 +784,8 @@ export function LandingPage() {
           sx={{
             p: { xs: 4, md: 7 },
             borderRadius: 8,
-            bgcolor: "rgba(255,255,255,0.92)",
-            border: "1px solid rgba(226,232,240,0.9)",
+            bgcolor: "var(--mr-card-solid)",
+            border: "1px solid var(--mr-line)",
             boxShadow: "0 34px 100px rgba(15,23,42,0.22)",
           }}
         >
@@ -828,24 +799,22 @@ export function LandingPage() {
                   fontSize: { xs: 34, md: 46 },
                   fontWeight: 950,
                   letterSpacing: "-0.05em",
-                  color: "#0F172A",
+                  color: "var(--mr-ink)",
                 }}
               >
-                Um plano simples para organizar suas finanças de verdade.
+                {t('pricingTitle')}
               </Typography>
               <Typography
                 sx={{
                   mx: "auto",
                   mt: 2,
                   maxWidth: 650,
-                  color: "#475569",
+                  color: "text.secondary",
                   fontSize: 18,
                   lineHeight: 1.7,
                 }}
               >
-                Tudo em uma assinatura: dashboard, controle por período,
-                calendário, cartões, economias, metas, relatórios e recursos de
-                privacidade.
+                {t('pricingText')}
               </Typography>
             </Box>
 
@@ -860,14 +829,13 @@ export function LandingPage() {
                     border: "1px solid #E2E8F0",
                   }}
                 >
-                  <Typography fontWeight={950} color="#0F766E">Mensal</Typography>
+                  <Typography fontWeight={950} color="primary">{t('monthly')}</Typography>
                   <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
                     R$ 24,90
                   </Typography>
-                  <Typography color="text.secondary">por mês</Typography>
+                  <Typography color="text.secondary">{t('perMonth')}</Typography>
                   <Typography mt={2} color="text.secondary" lineHeight={1.7}>
-                    Ideal para experimentar, validar a rotina e organizar o mês
-                    sem compromisso anual.
+                    {t('monthlyDescription')}
                   </Typography>
                 </Paper>
               </Grid>
@@ -897,18 +865,17 @@ export function LandingPage() {
                       fontWeight: 950,
                     }}
                   >
-                    Melhor escolha
+                    {t('bestChoice')}
                   </Box>
-                  <Typography fontWeight={950} color="#0F766E">Anual</Typography>
+                  <Typography fontWeight={950} color="primary">{t('yearly')}</Typography>
                   <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
                     R$ 238,90
                   </Typography>
                   <Typography color="text.secondary">
-                    por ano, equivalente a R$ 19,91 por mês
+                    {t('annualEquivalent')}
                   </Typography>
                   <Typography mt={2} color="text.secondary" lineHeight={1.7}>
-                    Economia de R$ 59,90 em relacao ao plano mensal, para quem
-                    quer manter o controle financeiro o ano todo.
+                    {t('yearlyDescription')}
                   </Typography>
                 </Paper>
               </Grid>
@@ -916,17 +883,17 @@ export function LandingPage() {
 
             <Grid container spacing={1.5}>
               {[
-                "Receitas, despesas e recorrências",
-                "Calendario financeiro e status de pagamento",
-                "Cartões, limites e compras parceladas",
-                "Economias, rendimentos e simulacoes",
-                "Metas com fotos, cores e progresso",
-                "Exportacao de dados e controles LGPD",
+                t('priceFeatureEntries'),
+                t('priceFeatureCalendar'),
+                t('priceFeatureCards'),
+                t('priceFeatureSavings'),
+                t('priceFeatureGoals'),
+                t('priceFeaturePrivacy'),
               ].map((item) => (
                 <Grid item xs={12} sm={6} key={item}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <CheckCircle2 color="#0F766E" size={18} />
-                    <Typography fontWeight={800} color="#334155">{item}</Typography>
+                    <Typography fontWeight={800} color="text.primary">{item}</Typography>
                   </Stack>
                 </Grid>
               ))}
@@ -948,7 +915,7 @@ export function LandingPage() {
                   "&:hover": { bgcolor: "#1E293B", transform: "translateY(-2px)" },
                 }}
               >
-                Começar agora
+                {t('landingStart')}
               </Button>
             </Box>
           </Stack>

@@ -7,7 +7,7 @@ import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialo
 
 type ConfirmOptions = {
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: "danger" | "primary";
@@ -68,7 +68,11 @@ export function useConfirmDialog() {
         </>
       }
     >
-        <Typography color="text.secondary">{state?.description}</Typography>
+      {typeof state?.description === "string" ? (
+        <Typography color="text.secondary">{state.description}</Typography>
+      ) : (
+        state?.description
+      )}
     </AppDialog>
   );
 

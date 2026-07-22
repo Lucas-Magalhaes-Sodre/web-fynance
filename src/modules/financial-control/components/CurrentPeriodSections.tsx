@@ -4,6 +4,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { FinancialItem, Saving } from "@/interfaces/financial";
 import { financeColors } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { EntryRows } from "./EntryRows";
 import { SavingRows } from "./SavingRows";
 
@@ -26,6 +27,7 @@ export function CurrentPeriodSections({
   onMarkPending,
   onMarkManyPaid,
 }: CurrentPeriodSectionsProps) {
+  const { t } = usePreferences();
   const incomeItems = items.filter((item) => item.type.includes("INCOME"));
   const expenseItems = items.filter((item) => item.type.includes("EXPENSE"));
   const payableExpenses = expenseItems.filter((item) => item.status !== "PAGO");
@@ -33,7 +35,7 @@ export function CurrentPeriodSections({
   return (
     <Stack spacing={2}>
       <Typography variant="h6" fontWeight={900}>
-        Receitas
+        {t("incomes")}
       </Typography>
       <EntryRows
         items={incomeItems}
@@ -48,7 +50,7 @@ export function CurrentPeriodSections({
         spacing={1}
       >
         <Typography variant="h6" fontWeight={900}>
-          Despesas
+          {t("expenses")}
         </Typography>
         {payableExpenses.length ? (
           <Button
@@ -58,7 +60,7 @@ export function CurrentPeriodSections({
             startIcon={<CheckCircleIcon />}
             onClick={() => onMarkManyPaid(payableExpenses)}
           >
-            Marcar {payableExpenses.length} como pago
+            {t("markManyPaid").replace("{count}", String(payableExpenses.length))}
           </Button>
         ) : null}
       </Stack>
@@ -70,7 +72,7 @@ export function CurrentPeriodSections({
         onMarkPending={onMarkPending}
       />
       <Typography variant="h6" fontWeight={900} color={financeColors.saving}>
-        Economias
+        {t("savings")}
       </Typography>
       <SavingRows items={savings} />
     </Stack>

@@ -6,7 +6,9 @@ import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { FinancialCalendarDay } from "@/interfaces/financial";
-import { financeColors, formatMoney, months } from "@/utils/format";
+import { financeColors, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { monthsByLanguage } from "@/i18n/display";
 import { amountColor } from "./helpers";
 import { weekDayLabels } from "./constants";
 import * as S from "./styles";
@@ -26,6 +28,9 @@ export function MonthCalendarView({
   onSelectDay,
   onMarkDayPaid,
 }: MonthCalendarViewProps) {
+  const { language, t } = usePreferences();
+  const months = monthsByLanguage[language];
+
   return (
     <S.SectionCard className="soft-card">
       <Stack
@@ -36,10 +41,10 @@ export function MonthCalendarView({
       >
         <Box>
           <Typography variant="h6" fontWeight={900}>
-            Calendario financeiro
+            {t("financialCalendar")}
           </Typography>
           <Typography color="text.secondary">
-            Receitas, despesas, economias e vencimentos do mês.
+            {t("financialCalendarText")}
           </Typography>
         </Box>
         <Chip label={`${months[month - 1]} de ${year}`} />
@@ -79,25 +84,25 @@ export function MonthCalendarView({
                 </Stack>
                 <Stack spacing={0.5}>
                   <Typography variant="caption" color={financeColors.income}>
-                    Receitas {formatMoney(day.incomes)}
+                    {t("incomes")} {formatMoney(day.incomes)}
                   </Typography>
                   <Typography variant="caption" color={financeColors.expense}>
-                    Despesas {formatMoney(day.expenses)}
+                    {t("expenses")} {formatMoney(day.expenses)}
                   </Typography>
                   <Typography variant="caption" color={financeColors.saving}>
-                    Economias {formatMoney(day.savings)}
+                    {t("savings")} {formatMoney(day.savings)}
                   </Typography>
                   {day.pendingBills > 0 ? (
                     <Chip
                       size="small"
-                      label={`${day.pendingBills} pendente(s)`}
+                      label={t("pendingCount").replace("{count}", String(day.pendingBills))}
                       color="warning"
                     />
                   ) : null}
                   {day.overdueBills > 0 ? (
                     <Chip
                       size="small"
-                      label={`${day.overdueBills} atrasada(s)`}
+                      label={t("overdueCount").replace("{count}", String(day.overdueBills))}
                       color="error"
                     />
                   ) : null}
@@ -121,7 +126,7 @@ export function MonthCalendarView({
                         fontWeight: 800,
                       }}
                     >
-                      Pagar pendentes
+                      {t("payPending")}
                     </Button>
                   ) : null}
                 </Stack>

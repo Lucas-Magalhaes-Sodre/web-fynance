@@ -33,6 +33,7 @@ import { FinancialGoalCard } from '@/components/organisms/goals/FinancialGoalCar
 import { StatCard } from '@/components/molecules/StatCard';
 import { AppDialog } from '@/components/molecules/AppDialog';
 import { PageHelpButton } from '@/components/molecules/PageHelpButton';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import type { FinancialGoal, FinancialGoalStatus, GoalSavingsPage } from '@/interfaces/financial';
 import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate } from '@/utils/format';
 
@@ -70,6 +71,7 @@ function toPayload(form: GoalFormState): FinancialGoalPayload {
 }
 
 export function FinancialGoalsPage() {
+  const { t } = usePreferences();
   const [status, setStatus] = useState<FinancialGoalStatus | 'ALL'>('ACTIVE');
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -200,7 +202,7 @@ export function FinancialGoalsPage() {
   function GoalsSkeleton() {
     return (
       <Stack spacing={2}>
-        <Grid container spacing={2}>
+        <Grid container spacing={2} className="goals-aligned-grid">
           {[0, 1, 2].map((item) => (
             <Grid item xs={12} md={4} key={item}>
               <Skeleton variant="rounded" height={86} />
@@ -208,7 +210,7 @@ export function FinancialGoalsPage() {
           ))}
         </Grid>
         <Skeleton variant="rounded" height={126} />
-        <Grid container spacing={2}>
+        <Grid container spacing={2} className="goals-aligned-grid">
           {[0, 1, 2].map((item) => (
             <Grid item xs={12} md={6} lg={4} key={item}>
               <Skeleton variant="rounded" height={360} />
@@ -220,32 +222,32 @@ export function FinancialGoalsPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ '& .goals-aligned-grid': { mx: 0, width: '100%' } }}>
       <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} mb={1}>
               <FlagIcon sx={{ color: financeColors.saving }} />
               <Typography color="primary" fontWeight={900}>
-                Metas financeiras
+                {t('goalsEyebrow')}
               </Typography>
-              <PageHelpButton title="Como funcionam as Metas?">
+              <PageHelpButton title={t('goalsHelpTitle')}>
                 <Typography color="text.secondary">
-                  Metas financeiras representam objetivos que você quer alcançar, como reserva de emergência, viagem, casa, curso ou investimento.
+                  {t('goalsHelpText1')}
                 </Typography>
                 <Typography color="text.secondary">
-                  Informe o valor alvo, o prazo e, se quiser, fotos e uma cor para identificar a meta. O sistema mostra quanto falta e quanto seria necessário guardar por dia, mês e ano.
+                  {t('goalsHelpText2')}
                 </Typography>
                 <Typography color="text.secondary">
-                  Economias podem ser vinculadas a uma meta. Quando essas economias têm rendimento cadastrado, o progresso da meta considera o valor projetado dessas economias.
+                  {t('goalsHelpText3')}
                 </Typography>
               </PageHelpButton>
             </Stack>
             <Typography variant="h3" fontWeight={950} letterSpacing={0}>
-              Objetivos em progresso
+              {t('goalsTitle')}
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
-              Planeje reservas, viagens, investimentos e acompanhe quanto falta.
+              {t('goalsSubtitle')}
             </Typography>
           </Box>
           <Button
@@ -254,7 +256,7 @@ export function FinancialGoalsPage() {
             onClick={openCreate}
             sx={{ alignSelf: { xs: 'stretch', md: 'center' }, minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Nova meta
+            {t('newGoal')}
           </Button>
         </Stack>
       </Paper>
@@ -263,15 +265,15 @@ export function FinancialGoalsPage() {
         <TextField
           select
           size="small"
-          label="Status"
+          label={t('status')}
           value={status}
           onChange={(event) => setStatus(event.target.value as FinancialGoalStatus | 'ALL')}
           sx={{ minWidth: 180 }}
         >
-          <MenuItem value="ACTIVE">Ativas</MenuItem>
-          <MenuItem value="COMPLETED">Concluídas</MenuItem>
-          <MenuItem value="CANCELED">Canceladas</MenuItem>
-          <MenuItem value="ALL">Todas</MenuItem>
+          <MenuItem value="ACTIVE">{t('active')}</MenuItem>
+          <MenuItem value="COMPLETED">{t('completed')}</MenuItem>
+          <MenuItem value="CANCELED">{t('canceled')}</MenuItem>
+          <MenuItem value="ALL">{t('all')}</MenuItem>
         </TextField>
       </Paper>
 
@@ -280,35 +282,46 @@ export function FinancialGoalsPage() {
 
       {!loading && !error ? (
         <>
-          <Grid container spacing={2}>
+          <Grid container spacing={2} className="goals-aligned-grid">
             <Grid item xs={12} md={4}>
-              <StatCard label="Valor das metas" value={totals.targetAmount} tone="saving" />
+              <StatCard label={t('totalGoalValue')} value={totals.targetAmount} tone="saving" />
             </Grid>
             <Grid item xs={12} md={4}>
-              <StatCard label="Progresso acumulado" value={totals.currentAmount} tone="saving" />
+              <StatCard label={t('accumulatedProgress')} value={totals.currentAmount} tone="saving" />
             </Grid>
             <Grid item xs={12} md={4}>
-              <StatCard label="Valor restante" value={totals.remainingAmount} tone="expense" />
+              <StatCard label={t('remainingValue')} value={totals.remainingAmount} tone="expense" />
             </Grid>
           </Grid>
 
           {closestGoal ? (
             <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
               <Typography variant="h6" fontWeight={900}>
-                Meta mais próxima de concluir
+                {t('closestGoal')}
               </Typography>
               <Typography color="text.secondary" mb={2}>
-                {closestGoal.title} está em {closestGoal.progressPercent.toFixed(0)}% de progresso.
+                {closestGoal.title} - {closestGoal.progressPercent.toFixed(0)}% {t('progress')}.
               </Typography>
               <LinearProgress
                 variant="determinate"
                 value={closestGoal.progressPercent}
-                sx={{ height: 10, borderRadius: 999 }}
+                sx={{
+                  height: 10,
+                  borderRadius: 999,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(148,163,184,0.18)'
+                      : 'rgba(15,23,42,0.10)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 999,
+                    bgcolor: 'primary.main',
+                  },
+                }}
               />
             </Paper>
           ) : null}
 
-          <Grid container spacing={2}>
+          <Grid container spacing={2} className="goals-aligned-grid">
             {goals.map((goal) => (
               <Grid item xs={12} md={6} lg={4} key={goal.id}>
                 <FinancialGoalCard
@@ -329,7 +342,7 @@ export function FinancialGoalsPage() {
             ))}
             {!goals.length ? (
               <Grid item xs={12}>
-                <EmptyState message="Nenhuma meta financeira encontrada." />
+                <EmptyState message={t('noGoal')} />
               </Grid>
             ) : null}
           </Grid>
@@ -347,22 +360,22 @@ export function FinancialGoalsPage() {
       <AppDialog
         open={Boolean(detailGoal)}
         onClose={() => setDetailGoal(null)}
-        title={detailGoal?.title ?? 'Detalhes da meta'}
+        title={detailGoal?.title ?? t('goalDetails')}
         titleAccent={detailGoal?.color ?? financeColors.saving}
         maxWidth="md"
-        actions={<Button onClick={() => setDetailGoal(null)}>Fechar</Button>}
+        actions={<Button onClick={() => setDetailGoal(null)}>{t('close')}</Button>}
       >
         {detailGoal ? (
           <Stack spacing={2}>
-            <Typography color="text.secondary">{detailGoal.description || 'Sem descrição cadastrada.'}</Typography>
+            <Typography color="text.secondary">{detailGoal.description || t('noDescription')}</Typography>
             <Grid container spacing={2}>
               {[
-                ['Valor alvo', detailGoal.targetAmount],
-                ['Valor em progresso', detailGoal.currentAmount],
-                ['Valor restante', detailGoal.remainingAmount],
-                ['Guardar por dia', detailGoal.requiredDailySavings ?? 0],
-                ['Guardar por mês', detailGoal.requiredMonthlySavings ?? 0],
-                ['Guardar por ano', (detailGoal.requiredMonthlySavings ?? 0) * 12],
+                [t('targetValue'), detailGoal.targetAmount],
+                [t('valueInProgress'), detailGoal.currentAmount],
+                [t('remainingValue'), detailGoal.remainingAmount],
+                [t('saveDaily'), detailGoal.requiredDailySavings ?? 0],
+                [t('saveMonthly'), detailGoal.requiredMonthlySavings ?? 0],
+                [t('saveYearly'), (detailGoal.requiredMonthlySavings ?? 0) * 12],
               ].map(([label, value]) => (
                 <Grid item xs={12} sm={6} md={4} key={String(label)}>
                   <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 'none', border: `1px solid ${(detailGoal.color ?? financeColors.saving)}33` }}>
@@ -372,7 +385,7 @@ export function FinancialGoalsPage() {
                 </Grid>
               ))}
             </Grid>
-            <Typography fontWeight={950}>Economias vinculadas</Typography>
+            <Typography fontWeight={950}>{t('linkedSavings')}</Typography>
             <Stack spacing={1}>
               {goalSavingsLoading ? (
                 <>
@@ -387,31 +400,31 @@ export function FinancialGoalsPage() {
                     <Box>
                       <Typography fontWeight={950}>{saving.title}</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {saving.countsAsSaved ? 'Guardado' : 'Programado'}: {formatMoney(saving.amount)}
+                        {saving.countsAsSaved ? t('saved') : t('scheduled')}: {formatMoney(saving.amount)}
                         {' • '}
-                        Data: {formatDate(saving.date)}
-                        {saving.hasYield ? ` • Rendimento: ${Number(saving.yieldRateMonthly ?? 0).toLocaleString('pt-BR')}% ao mês` : ''}
+                        {t('date')}: {formatDate(saving.date)}
+                        {saving.hasYield ? ` • ${t('yield')}: ${Number(saving.yieldRateMonthly ?? 0).toLocaleString('pt-BR')}%` : ''}
                       </Typography>
                     </Box>
                     <Button component={RouterLink} to={`/app/economy?saving=${saving.id}`} size="small">
-                      Ir para economia
+                      {t('goToSaving')}
                     </Button>
                   </Stack>
                 </Paper>
               ))}
               {!goalSavingsLoading && !goalSavingsPage?.items.length ? (
-                <Typography color="text.secondary">Nenhuma economia vinculada a está meta.</Typography>
+                <Typography color="text.secondary">{t('noLinkedSaving')}</Typography>
               ) : null}
               {!goalSavingsLoading && goalSavingsPage && goalSavingsPage.totalPages > 1 ? (
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                   <Button size="small" disabled={!goalSavingsPage.hasPreviousPage} onClick={() => changeGoalSavingsPage(goalSavingsPage.page - 1)}>
-                    Anterior
+                    {t('previous')}
                   </Button>
                   <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                    Página {goalSavingsPage.page} de {goalSavingsPage.totalPages} • {goalSavingsPage.total} registro(s)
+                    {t('page')} {goalSavingsPage.page} / {goalSavingsPage.totalPages} • {goalSavingsPage.total} {t('records')}
                   </Typography>
                   <Button size="small" disabled={!goalSavingsPage.hasNextPage} onClick={() => changeGoalSavingsPage(goalSavingsPage.page + 1)}>
-                    Próxima
+                    {t('next')}
                   </Button>
                 </Stack>
               ) : null}

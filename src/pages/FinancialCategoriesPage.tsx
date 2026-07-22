@@ -33,17 +33,13 @@ import {
   type CategoryFormState,
 } from "@/components/organisms/categories/CategoryFormDialog";
 import type { FinancialCategory, FinancialCategoryType } from "@/interfaces/financial";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName } from "@/i18n/display";
 
 const emptyForm: CategoryFormState = {
   name: "",
   type: "EXPENSE",
   color: "#EA580C",
-};
-
-const categoryTypeLabels: Record<FinancialCategoryType, string> = {
-  INCOME: "Receita",
-  EXPENSE: "Despesa",
-  INVESTMENT: "Economia",
 };
 
 function CategoriesSkeleton() {
@@ -85,6 +81,7 @@ function normalizeCategoryName(value: string) {
 }
 
 export function FinancialCategoriesPage() {
+  const { language, t } = usePreferences();
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
@@ -200,14 +197,14 @@ export function FinancialCategoriesPage() {
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Box>
             <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
-              Configurações
+              {t("menuSettings")}
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
               Ajuste preferências e cadastros auxiliares do sistema.
             </Typography>
           </Box>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ alignSelf: { xs: "stretch", md: "center" } }}>
-            Adicionar categoria
+            {t("addCategory")}
           </Button>
         </Stack>
       </Paper>
@@ -220,21 +217,21 @@ export function FinancialCategoriesPage() {
           <Box px={2} pt={2}>
             <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
               <Tabs value="categories">
-                <Tab value="categories" label="Categorias" />
+                <Tab value="categories" label={t("categories")} />
               </Tabs>
-              <PageHelpButton title="O que são categorias?" label="O que são categorias?">
+              <PageHelpButton title={t("categoriesHelpTitle")} label={t("categoriesHelpTitle")}>
                 <Typography color="text.secondary">
-                  Categorias são grupos usados para organizar receitas, despesas e economias. Elas ajudam o sistema a separar seus lançamentos por assunto, como salário, moradia, cartão de crédito, poupança ou caixinha.
+                  {t("categoriesHelpText1")}
                 </Typography>
                 <Typography color="text.secondary">
-                  Elas aparecem nos formulários de cadastro, nos filtros, nos resumos, nos gráficos e na planilha do controle financeiro. A cor escolhida também ajuda a identificar visualmente cada grupo.
+                  {t("categoriesHelpText2")}
                 </Typography>
-                <Typography fontWeight={950}>Como usar</Typography>
+                <Typography fontWeight={950}>{t("howToUse")}</Typography>
                 <Typography color="text.secondary">
-                  Clique em “Adicionar categoria”, escolha se ela pertence a receitas, despesas ou economias, informe um nome e selecione uma cor. Depois, essa categoria ficará disponível nos cadastros correspondentes.
+                  {t("categoriesHelpText3")}
                 </Typography>
                 <Typography color="text.secondary">
-                  Algumas categorias do sistema são obrigatórias e não podem ser excluídas, porque são usadas em fluxos automáticos, como economias e cartão de crédito.
+                  {t("categoriesHelpText4")}
                 </Typography>
               </PageHelpButton>
             </Stack>
@@ -246,26 +243,26 @@ export function FinancialCategoriesPage() {
               value={filter}
               onChange={(_, value) => value && setFilter(value)}
             >
-              <ToggleButton value="ALL">Todas</ToggleButton>
-              <ToggleButton value="INCOME">Receitas</ToggleButton>
-              <ToggleButton value="EXPENSE">Despesas</ToggleButton>
-              <ToggleButton value="INVESTMENT">Economias</ToggleButton>
+              <ToggleButton value="ALL">{t("all")}</ToggleButton>
+              <ToggleButton value="INCOME">{t("incomes")}</ToggleButton>
+              <ToggleButton value="EXPENSE">{t("expenses")}</ToggleButton>
+              <ToggleButton value="INVESTMENT">{t("savings")}</ToggleButton>
             </ToggleButtonGroup>
           </Box>
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Categoria</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Cor</TableCell>
-                <TableCell align="right">Ações</TableCell>
+                <TableCell>{t("category")}</TableCell>
+                <TableCell>{t("recordType")}</TableCell>
+                <TableCell>{t("color")}</TableCell>
+                <TableCell align="right">{t("actions")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {visibleCategories.map((category) => (
                 <TableRow key={category.id} hover>
-                  <TableCell sx={{ fontWeight: 900 }}>{category.name}</TableCell>
-                  <TableCell>{categoryTypeLabels[category.type]}</TableCell>
+                  <TableCell sx={{ fontWeight: 900 }}>{translateCategoryName(category.name, language)}</TableCell>
+                  <TableCell>{category.type === "INCOME" ? t("income") : category.type === "EXPENSE" ? t("expense") : t("savings")}</TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
                       <Box width={22} height={22} borderRadius={1} sx={{ bgcolor: category.color, border: "1px solid rgba(15,23,42,0.16)" }} />

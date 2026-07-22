@@ -45,6 +45,8 @@ import type {
 } from "@/interfaces/financial";
 import { currencyToNumber, digitsToCurrency, financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
 import { dateForMonthlyOccurrence } from "@/modules/financial-control/components/helpers";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName } from "@/i18n/display";
 
 const today = new Date();
 
@@ -125,6 +127,7 @@ function projectedAmount(initial: number, monthlyContribution: number, months: n
 }
 
 export function EconomyPage() {
+  const { language, t } = usePreferences();
   const [searchParams, setSearchParams] = useSearchParams();
   const [overview, setOverview] = useState<SavingsOverview | null>(null);
   const [savings, setSavings] = useState<Saving[]>([]);
@@ -224,7 +227,7 @@ export function EconomyPage() {
       setOverview(nextOverview);
       setSavings(nextSavings);
     } catch {
-      setError("Não foi possível carregar suas economias.");
+      setError(t("savingsLoadError"));
     } finally {
       setLoading(false);
     }
@@ -329,19 +332,19 @@ export function EconomyPage() {
           direction: "WITHDRAW_TO_BALANCE",
           goalId: null,
         });
-        setNotice("Economia sacada com sucesso.");
+        setNotice(t("savingWithdrawn"));
       } else if (editingSaving) {
         await updateSaving(editingSaving.id, payload);
-        setNotice("Economia atualizada com sucesso.");
+        setNotice(t("savingUpdated"));
       } else {
         await createSaving(payload);
-        setNotice("Economia adicionada com sucesso.");
+        setNotice(t("savingAdded"));
       }
 
       setFormOpen(false);
       await loadData();
     } catch {
-      setError("Não foi possível salvar a economia.");
+      setError(t("savingSaveError"));
     } finally {
       setSavingForm(false);
     }
@@ -349,14 +352,14 @@ export function EconomyPage() {
 
   async function removeSaving(saving: Saving) {
     const confirmed = await confirm({
-      title: "Excluir economia",
-      description: `Deseja excluir a economia "${saving.title}"? Esta acao não pode ser desfeita.`,
-      confirmLabel: "Excluir",
+      title: t("deleteSaving"),
+      description: t("deleteSavingConfirm").replace("{name}", saving.title),
+      confirmLabel: t("delete"),
       tone: "danger",
     });
     if (!confirmed) return;
     await deleteSaving(saving.id);
-    setNotice("Economia excluída com sucesso.");
+    setNotice(t("savingDeleted"));
     await loadData();
   }
 
@@ -402,11 +405,11 @@ export function EconomyPage() {
           <Stack spacing={1}>
             <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
               <Typography variant="h5" fontWeight={950}>
-                Histórico de Economias registradas
+                {t("savingsHistory")}
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                 <TextField
-                  label="Inicio"
+                  label={t("start")}
                   type="date"
                   size="small"
                   InputLabelProps={{ shrink: true }}
@@ -414,7 +417,7 @@ export function EconomyPage() {
                   onChange={(event) => setPeriodStart(event.target.value)}
                 />
                 <TextField
-                  label="Fim"
+                  label={t("end")}
                   type="date"
                   size="small"
                   InputLabelProps={{ shrink: true }}
@@ -448,31 +451,25 @@ export function EconomyPage() {
       <AppDialog
         open={suggestionOpen}
         onClose={() => setSuggestionOpen(false)}
-        title="💰 Oportunidade de economia do mês"
+        title={t("monthlyOpportunity")}
         titleAccent={financeColors.saving}
-        actions={<Button onClick={() => setSuggestionOpen(false)}>Entendi</Button>}
+        actions={<Button onClick={() => setSuggestionOpen(false)}>{t("understand")}</Button>}
       >
         <Stack spacing={2}>
           <Typography color="text.secondary">
-            Com base nas suas receitas, despesas e economias já registradas,
-            você ainda possui uma excelente oportunidade para fortalecer sua
-            vida financeira neste mês.
+            {t("monthlyOpportunityText")}
           </Typography>
           <Typography color="text.secondary">
-            Guardar uma parte do que sobra e um dos habitos mais importantes
-            para construir uma reserva de emergencia, alcancar objetivos e
-            transformar seu saldo em patrimônio para o futuro.
+            {t("monthlyOpportunityHabit")}
           </Typography>
           <Typography color="text.secondary" fontWeight={900}>
-            Valor disponível para guardar:
+            {t("availableToSave")}
           </Typography>
           <Typography variant="h4" fontWeight={950} color={financeColors.saving}>
             {formatMoney(overview?.monthlySavingsOpportunity ?? 0)}
           </Typography>
           <Typography color="text.secondary">
-            💡 Voce não precisa guardar tudo. O mais importante e criar
-            consistencia. Mesmo pequenas quantias, quando guardadas
-            regularmente, podem gerar grandes resultados ao longo do tempo.
+            {t("monthlyOpportunityTip")}
           </Typography>
         </Stack>
       </AppDialog>
@@ -485,44 +482,53 @@ export function EconomyPage() {
       <AppDialog
         open={Boolean(detailSaving)}
         onClose={() => setDetailSaving(null)}
-        title={detailSaving?.title ?? "Detalhes da economia"}
+        title={detailSaving?.title ?? t("savingDetails")}
         titleAccent={detailSaving?.color ?? financeColors.saving}
         maxWidth="md"
-        actions={<Button onClick={() => setDetailSaving(null)}>Fechar</Button>}
+        actions={<Button onClick={() => setDetailSaving(null)}>{t("close")}</Button>}
       >
         {detailSaving ? (
           <Stack spacing={2}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
                 <Paper sx={{ p: 2, borderRadius: 3, boxShadow: "none", border: `1px solid ${detailSaving.color}44` }}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={900}>Valor guardado</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={900}>{t("savedValue")}</Typography>
                   <Typography fontWeight={950}>{formatMoney(detailSaving.amount)}</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Paper sx={{ p: 2, borderRadius: 3, boxShadow: "none", border: `1px solid ${detailSaving.color}44` }}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={900}>Rendimento mensal</Typography>
-                  <Typography fontWeight={950}>{detailSaving.hasYield ? `${Number(detailSaving.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}%` : "Sem rendimento"}</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={900}>{t("monthlyYield")}</Typography>
+                  <Typography fontWeight={950}>{detailSaving.hasYield ? `${Number(detailSaving.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}%` : t("noYield")}</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Paper sx={{ p: 2, borderRadius: 3, boxShadow: "none", border: `1px solid ${detailSaving.color}44` }}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={900}>Em 12 meses</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={900}>{t("in12Months")}</Typography>
                   <Typography fontWeight={950}>{formatMoney(projectedAmount(detailSaving.amount, 0, 12, detailSaving.yieldRateMonthly ?? 0))}</Typography>
                 </Paper>
               </Grid>
             </Grid>
             <Typography color="text.secondary">
-              Categoria: {detailSaving.category} • Data: {formatDate(detailSaving.date)} • Meta: {goals.find((goal) => goal.id === detailSaving.goalId)?.title ?? "-"}
+              {t("category")}: {translateCategoryName(detailSaving.category, language)} • {t("date")}: {formatDate(detailSaving.date)} • {t("menuGoals")}: {goals.find((goal) => goal.id === detailSaving.goalId)?.title ?? "-"}
             </Typography>
-            <Typography color="text.secondary">{detailSaving.description || "Sem descrição."}</Typography>
-            <Paper sx={{ p: 2, borderRadius: 3, boxShadow: "none", bgcolor: "rgba(240,253,250,0.72)" }}>
+            <Typography color="text.secondary">{detailSaving.description || t("noDescription")}</Typography>
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                boxShadow: "none",
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(20,34,55,0.92)" : "rgba(240,253,250,0.72)",
+              }}
+            >
               <Stack spacing={2}>
-                <Typography fontWeight={950}>Simulação</Typography>
+                <Typography fontWeight={950}>{t("simulation")}</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <TextField
-                      label="Aporte mensal"
+                      label={t("monthlyContribution")}
                       value={detailSimulation.monthly}
                       onChange={(event) => setDetailSimulation((current) => ({ ...current, monthly: digitsToCurrency(event.target.value) }))}
                       fullWidth
@@ -530,7 +536,7 @@ export function EconomyPage() {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
-                      label="Tempo em meses"
+                      label={t("timeInMonths")}
                       type="number"
                       value={detailSimulation.months}
                       onChange={(event) => setDetailSimulation((current) => ({ ...current, months: event.target.value }))}
@@ -550,31 +556,31 @@ export function EconomyPage() {
       <AppDialog
         open={calculatorOpen}
         onClose={() => setCalculatorOpen(false)}
-        title="Calculadora de rendimentos"
+        title={t("yieldCalculator")}
         titleAccent={financeColors.saving}
         maxWidth="md"
-        actions={<Button onClick={() => setCalculatorOpen(false)}>Fechar</Button>}
+        actions={<Button onClick={() => setCalculatorOpen(false)}>{t("close")}</Button>}
       >
         <Stack spacing={2}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <TextField label="Valor inicial" value={simulation.initial} onChange={(event) => setSimulation((current) => ({ ...current, initial: digitsToCurrency(event.target.value) }))} fullWidth />
+              <TextField label={t("initialValue")} value={simulation.initial} onChange={(event) => setSimulation((current) => ({ ...current, initial: digitsToCurrency(event.target.value) }))} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Aporte mensal" value={simulation.monthly} onChange={(event) => setSimulation((current) => ({ ...current, monthly: digitsToCurrency(event.target.value) }))} fullWidth />
+              <TextField label={t("monthlyContribution")} value={simulation.monthly} onChange={(event) => setSimulation((current) => ({ ...current, monthly: digitsToCurrency(event.target.value) }))} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Tempo em meses" type="number" value={simulation.months} onChange={(event) => setSimulation((current) => ({ ...current, months: event.target.value }))} fullWidth />
+              <TextField label={t("timeInMonths")} type="number" value={simulation.months} onChange={(event) => setSimulation((current) => ({ ...current, months: event.target.value }))} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Rendimento mensal (%)" type="number" value={simulation.rate} onChange={(event) => setSimulation((current) => ({ ...current, rate: event.target.value }))} fullWidth />
+              <TextField label={`${t("monthlyYield")} (%)`} type="number" value={simulation.rate} onChange={(event) => setSimulation((current) => ({ ...current, rate: event.target.value }))} fullWidth />
             </Grid>
           </Grid>
           <Paper sx={{ p: 2.5, borderRadius: 3, boxShadow: "none", border: `1px solid ${financeColors.saving}44` }}>
-            <Typography color="text.secondary" fontWeight={900}>Resultado previsto</Typography>
+            <Typography color="text.secondary" fontWeight={900}>{t("expectedResult")}</Typography>
             <Typography variant="h4" fontWeight={950} color={financeColors.saving}>{formatMoney(simulationResult)}</Typography>
             <Typography color="text.secondary">
-              Total aportado: {formatMoney(currencyToNumber(simulation.initial) + currencyToNumber(simulation.monthly) * Number(simulation.months || 0))}
+              {t("totalContributed")}: {formatMoney(currencyToNumber(simulation.initial) + currencyToNumber(simulation.monthly) * Number(simulation.months || 0))}
             </Typography>
           </Paper>
         </Stack>

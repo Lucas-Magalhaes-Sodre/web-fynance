@@ -14,12 +14,7 @@ import Typography from "@mui/material/Typography";
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import type { FinancialGoal, FinancialGoalStatus } from "@/interfaces/financial";
 import { financeColors, formatDate, formatMoney } from "@/utils/format";
-
-const statusLabels: Record<FinancialGoalStatus, string> = {
-  ACTIVE: "Ativa",
-  COMPLETED: "Concluida",
-  CANCELED: "Cancelada",
-};
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type FinancialGoalCardProps = {
   goal: FinancialGoal;
@@ -33,11 +28,17 @@ function goalImages(goal: FinancialGoal) {
 }
 
 export function FinancialGoalCard({ goal, actions, compact = false, onDetails }: FinancialGoalCardProps) {
+  const { t } = usePreferences();
   const images = useMemo(() => goalImages(goal), [goal]);
   const [imageIndex, setImageIndex] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
   const color = goal.color ?? financeColors.saving;
   const yearlySavings = (goal.requiredMonthlySavings ?? 0) * 12;
+  const translatedStatusLabels: Record<FinancialGoalStatus, string> = {
+    ACTIVE: t("active"),
+    COMPLETED: t("completed"),
+    CANCELED: t("canceled"),
+  };
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -152,11 +153,11 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
             </Typography>
             {goal.hasYield ? (
               <Typography color="text.secondary" variant="body2">
-                Rendimento composto: {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mês
+                {t("compoundYield")}: {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% {t("perMonthSuffix")}
               </Typography>
             ) : null}
           </Box>
-          <Chip size="small" label={statusLabels[goal.status]} />
+          <Chip size="small" label={translatedStatusLabels[goal.status]} />
         </Stack>
 
         <Box>
@@ -174,7 +175,7 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
             sx={{
               height: compact ? 8 : 10,
               borderRadius: 999,
-              bgcolor: `${color}22`,
+              bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(148,163,184,0.18)" : `${color}22`,
               "& .MuiLinearProgress-bar": { bgcolor: color },
             }}
           />
@@ -184,37 +185,37 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
           <Stack direction="row" justifyContent="space-between">
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                Falta
+                {t("missing")}
               </Typography>
               <Typography fontWeight={950}>{formatMoney(goal.remainingAmount)}</Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                Prazo
+                {t("deadline")}
               </Typography>
               <Typography fontWeight={950}>{formatDate(goal.targetDate)}</Typography>
             </Box>
           </Stack>
         ) : (
           <Typography variant="body2" color="text.secondary">
-            Falta {formatMoney(goal.remainingAmount)}
+            {t("missing")} {formatMoney(goal.remainingAmount)}
           </Typography>
         )}
 
         <Box>
           <Typography fontWeight={950} mb={0.75}>
-            Quanto preciso guardar?
+            {t("needToSave")}
           </Typography>
           {goal.hasYield ? (
             <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" mb={0.75}>
-              Considerando rendimento de {Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mês.
+              {t("consideringYield").replace("{rate}", Number(goal.yieldRateMonthly ?? 0).toLocaleString("pt-BR"))}
             </Typography>
           ) : null}
           <Stack direction="row" spacing={1}>
             {[
-              ["Por dia", goal.requiredDailySavings ?? 0],
-              ["Por mês", goal.requiredMonthlySavings ?? 0],
-              ["Por ano", yearlySavings],
+              [t("byDay"), goal.requiredDailySavings ?? 0],
+              [t("byMonth"), goal.requiredMonthlySavings ?? 0],
+              [t("byYear"), yearlySavings],
             ].map(([label, value]) => (
               <Box key={String(label)} flex={1} minWidth={0}>
                 <Typography variant="caption" color="text.secondary" fontWeight={800}>
@@ -232,7 +233,7 @@ export function FinancialGoalCard({ goal, actions, compact = false, onDetails }:
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             {onDetails ? (
               <Button size="small" onClick={() => onDetails(goal)} sx={{ px: 0, fontWeight: 950 }}>
-                Ver detalhes
+                {t("viewDetails")}
               </Button>
             ) : <Box />}
             {actions ? <Stack direction="row">{actions}</Stack> : null}

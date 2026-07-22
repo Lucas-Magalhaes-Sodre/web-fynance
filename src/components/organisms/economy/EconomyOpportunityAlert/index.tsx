@@ -4,12 +4,14 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { financeColors } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type EconomyOpportunityAlertProps = {
   onClick: () => void;
 };
 
 export function EconomyOpportunityAlert({ onClick }: EconomyOpportunityAlertProps) {
+  const { t } = usePreferences();
   return (
     <Paper
       onClick={onClick}
@@ -21,8 +23,8 @@ export function EconomyOpportunityAlert({ onClick }: EconomyOpportunityAlertProp
       sx={{
         p: 2,
         borderRadius: 3,
-        border: "1px solid rgba(15,118,110,0.18)",
-        bgcolor: "rgba(240,253,250,0.78)",
+        border: (theme) => `1px solid ${theme.palette.mode === "dark" ? "rgba(45,212,191,0.28)" : "rgba(15,118,110,0.18)"}`,
+        bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(20,34,55,0.92)" : "rgba(240,253,250,0.78)",
         boxShadow: "0 14px 32px rgba(15,23,42,0.08)",
         cursor: "pointer",
         transition: "transform 160ms ease, box-shadow 160ms ease",
@@ -42,9 +44,9 @@ export function EconomyOpportunityAlert({ onClick }: EconomyOpportunityAlertProp
           <LightbulbIcon />
         </Box>
         <Box minWidth={0}>
-          <Typography fontWeight={950}>💰 Oportunidade de economia</Typography>
+          <Typography fontWeight={950}>{t("economyOpportunityTitle")}</Typography>
           <Typography color="text.secondary">
-            Você ainda pode transformar parte do seu saldo em patrimônio este mês.
+            {t("economyOpportunityText")}
           </Typography>
         </Box>
       </Stack>

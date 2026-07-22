@@ -19,9 +19,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { AppDialog } from "@/components/molecules/AppDialog";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 export function ProfilePage() {
   const { user, refreshUser, signOut } = useAuth();
+  const { t } = usePreferences();
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -59,7 +61,7 @@ export function ProfilePage() {
         occupation: form.occupation.trim() || null,
       });
       await refreshUser();
-      setNotice("Perfil atualizado com sucesso.");
+      setNotice(t("profileUpdated"));
       setError("");
     } finally {
       setSaving(false);
@@ -74,7 +76,7 @@ export function ProfilePage() {
         marketingConsent,
       });
       await refreshUser();
-      setNotice("Preferências de privacidade atualizadas.");
+      setNotice(t("privacyUpdated"));
       setError("");
     } finally {
       setPrivacySaving(false);
@@ -94,7 +96,7 @@ export function ProfilePage() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setNotice("Arquivo com seus dados gerado com sucesso.");
+      setNotice(t("dataExported"));
       setError("");
     } finally {
       setExporting(false);
@@ -103,7 +105,7 @@ export function ProfilePage() {
 
   async function deleteAccount() {
     if (!deletePassword.trim()) {
-      setError("Informe sua senha para excluir a conta.");
+      setError(t("passwordRequiredDelete"));
       return;
     }
     setDeleting(true);
@@ -111,7 +113,7 @@ export function ProfilePage() {
       await api.delete("/users/me", { data: { password: deletePassword } });
       signOut();
     } catch {
-      setError("Não foi possível excluir a conta. Confira sua senha.");
+      setError(t("deleteAccountError"));
     } finally {
       setDeleting(false);
     }
@@ -119,42 +121,42 @@ export function ProfilePage() {
 
   const lgpdAcceptedLabel = user?.lgpdAcceptedAt
     ? new Date(user.lgpdAcceptedAt).toLocaleDateString("pt-BR")
-    : "Pendente";
+    : t("consentPending");
 
   return (
     <Stack spacing={3}>
       <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
           <AccountCircleIcon color="primary" />
-          <Typography color="primary" fontWeight={900}>Meu perfil</Typography>
-          <PageHelpButton title="Como funciona Meu perfil?">
+          <Typography color="primary" fontWeight={900}>{t("menuProfile")}</Typography>
+          <PageHelpButton title={t("profileHelpTitle")}>
             <Typography color="text.secondary">
-              Meu perfil reúne os dados básicos da sua conta e algumas informações não sensíveis que ajudam a personalizar seu cadastro.
+              {t("profileHelpText1")}
             </Typography>
             <Typography color="text.secondary">
-              Você pode editar nome, telefone, cidade e profissão. O e-mail aparece apenas para consulta, porque ele é usado no acesso à conta.
+              {t("profileHelpText2")}
             </Typography>
             <Typography color="text.secondary">
-              Nesta tela também ficam as opções LGPD para consultar o consentimento, exportar seus dados e solicitar a exclusão definitiva da conta.
+              {t("profileHelpText3")}
             </Typography>
           </PageHelpButton>
         </Stack>
-        <Typography variant="h3" fontWeight={950} letterSpacing={0}>Dados da conta</Typography>
+        <Typography variant="h3" fontWeight={950} letterSpacing={0}>{t("profileAccountData")}</Typography>
         <Typography color="text.secondary" fontSize={17}>
-          Consulte e atualize informações não sensiveis do seu cadastro.
+          {t("profileSubtitle")}
         </Typography>
       </Paper>
 
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
         <Stack spacing={2}>
-          <TextField label="Nome" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} fullWidth />
-          <TextField label="E-mail" value={user?.email ?? ""} fullWidth disabled />
-          <TextField label="Telefone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} fullWidth />
-          <TextField label="Cidade" value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} fullWidth />
-          <TextField label="Profissao" value={form.occupation} onChange={(event) => setForm({ ...form, occupation: event.target.value })} fullWidth />
+          <TextField label={t("name")} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} fullWidth />
+          <TextField label={t("email")} value={user?.email ?? ""} fullWidth disabled />
+          <TextField label={t("phone")} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} fullWidth />
+          <TextField label={t("city")} value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} fullWidth />
+          <TextField label={t("occupation")} value={form.occupation} onChange={(event) => setForm({ ...form, occupation: event.target.value })} fullWidth />
           <Box display="flex" justifyContent="flex-end">
-            <LoadingActionButton variant="contained" onClick={saveProfile} disabled={!form.name.trim()} loading={saving} loadingLabel="Salvando...">
-              Salvar perfil
+            <LoadingActionButton variant="contained" onClick={saveProfile} disabled={!form.name.trim()} loading={saving} loadingLabel={t("saving")}>
+              {t("saveProfile")}
             </LoadingActionButton>
           </Box>
         </Stack>
@@ -165,45 +167,45 @@ export function ProfilePage() {
           <Stack direction="row" spacing={1.5} alignItems="center">
             <PrivacyTipIcon color="primary" />
             <Box>
-              <Typography variant="h5" fontWeight={950}>Privacidade e LGPD</Typography>
+              <Typography variant="h5" fontWeight={950}>{t("privacyLgpd")}</Typography>
               <Typography color="text.secondary">
-                Controle seu consentimento e seus dados pessoais cadastrados no sistema.
+                {t("privacyLgpdText")}
               </Typography>
             </Box>
           </Stack>
 
           <Box>
-            <Typography fontWeight={900}>Consentimento</Typography>
+            <Typography fontWeight={900}>{t("consent")}</Typography>
             <Typography color="text.secondary">
-              Aceite LGPD: {lgpdAcceptedLabel}
-              {user?.lgpdConsentVersion ? ` · Versao ${user.lgpdConsentVersion}` : ""}
+              {t("lgpdAccepted")}: {lgpdAcceptedLabel}
+              {user?.lgpdConsentVersion ? ` · ${t("version")} ${user.lgpdConsentVersion}` : ""}
             </Typography>
           </Box>
 
           <FormControlLabel
             control={<Checkbox checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} />}
-            label="Aceito receber comunicados e novidades do sistema."
+            label={t("registerMarketingConsent")}
           />
 
           <Box display="flex" justifyContent="flex-end">
-            <LoadingActionButton variant="outlined" onClick={savePrivacyConsent} loading={privacySaving} loadingLabel="Salvando...">
-              Salvar preferências
+            <LoadingActionButton variant="outlined" onClick={savePrivacyConsent} loading={privacySaving} loadingLabel={t("saving")}>
+              {t("savePreferences")}
             </LoadingActionButton>
           </Box>
 
           <Divider />
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <LoadingActionButton variant="outlined" startIcon={<DownloadIcon />} onClick={exportMyData} loading={exporting} loadingLabel="Gerando...">
-              Exportar meus dados
+            <LoadingActionButton variant="outlined" startIcon={<DownloadIcon />} onClick={exportMyData} loading={exporting} loadingLabel={t("generating")}>
+              {t("exportMyData")}
             </LoadingActionButton>
             <Button color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteModalOpen(true)}>
-              Excluir minha conta
+              {t("deleteMyAccount")}
             </Button>
           </Stack>
 
           <Typography variant="caption" color="text.secondary">
-            A exportação gera um arquivo JSON com perfil, categorias, movimentações, economias, metas e cartões vinculados ao seu usuário. A exclusão remove definitivamente sua conta e os registros vinculados.
+            {t("profileExportNote")}
           </Typography>
         </Stack>
       </Paper>
@@ -211,23 +213,23 @@ export function ProfilePage() {
       <AppDialog
         open={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        title="Excluir conta"
+        title={t("deleteAccount")}
         maxWidth="xs"
         actions={
           <>
-            <Button onClick={() => setDeleteModalOpen(false)}>Cancelar</Button>
-            <LoadingActionButton color="error" variant="contained" onClick={deleteAccount} loading={deleting} loadingLabel="Excluindo...">
-              Excluir definitivamente
+            <Button onClick={() => setDeleteModalOpen(false)}>{t("cancel")}</Button>
+            <LoadingActionButton color="error" variant="contained" onClick={deleteAccount} loading={deleting} loadingLabel={t("deleting")}>
+              {t("deleteForever")}
             </LoadingActionButton>
           </>
         }
       >
         <Stack spacing={2}>
           <Typography color="text.secondary">
-            Essa acao remove sua conta e todos os dados financeiros vinculados. Para confirmar, informe sua senha.
+            {t("deleteAccountWarning")}
           </Typography>
           <TextField
-            label="Senha"
+            label={t("password")}
             type="password"
             value={deletePassword}
             onChange={(event) => setDeletePassword(event.target.value)}

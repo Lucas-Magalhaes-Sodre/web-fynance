@@ -32,6 +32,8 @@ import type {
   YearControl,
 } from "@/interfaces/financial";
 import { financeColors, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
 import {
   realCurrentMonth,
   realCurrentYear,
@@ -103,6 +105,7 @@ export function YearSpreadsheet({
   onEditCell,
   onOpenCreditCard,
 }: YearSpreadsheetProps) {
+  const { language, t } = usePreferences();
   const [groupsSeparated, setGroupsSeparated] = useState(false);
   const [tableScale, setTableScale] = useState(0);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
@@ -140,20 +143,10 @@ export function YearSpreadsheet({
   const groupTotalTextSx = {
     textShadow: "0 1px 2px rgba(15,23,42,0.28)",
   };
-  const compactMonthLabels: Record<number, string> = {
-    1: "Jan",
-    2: "Fev",
-    3: "Mar",
-    4: "Abr",
-    5: "Mai",
-    6: "Jun",
-    7: "Jul",
-    8: "Ago",
-    9: "Set",
-    10: "Out",
-    11: "Nov",
-    12: "Dez",
-  };
+  const compactMonthLabels = monthsByLanguage[language].reduce<Record<number, string>>((acc, label, index) => {
+    acc[index + 1] = label.slice(0, 3).toUpperCase();
+    return acc;
+  }, {});
 
   function isCreditCardCategory(category: string) {
     const name = category
@@ -211,8 +204,8 @@ export function YearSpreadsheet({
     for (const row of yearData.incomeRows) {
       options.push({
         key: searchKey("INCOME", row.category),
-        label: row.category,
-        group: "Receitas",
+        label: translateCategoryName(row.category, language),
+        group: t("incomes"),
         type: "INCOME",
         category: row.category,
       });
@@ -220,7 +213,7 @@ export function YearSpreadsheet({
         options.push({
           key: searchKey("INCOME", detail.category, detail.name),
           label: detail.name,
-          group: `Receitas / ${detail.category}`,
+          group: `${t("incomes")} / ${translateCategoryName(detail.category, language)}`,
           type: "INCOME",
           category: detail.category,
           name: detail.name,
@@ -230,8 +223,8 @@ export function YearSpreadsheet({
     for (const row of yearData.expenseRows) {
       options.push({
         key: searchKey("EXPENSE", row.category),
-        label: row.category,
-        group: "Despesas",
+        label: translateCategoryName(row.category, language),
+        group: t("expenses"),
         type: "EXPENSE",
         category: row.category,
       });
@@ -239,7 +232,7 @@ export function YearSpreadsheet({
         options.push({
           key: searchKey("EXPENSE", detail.category, detail.name),
           label: detail.name,
-          group: `Despesas / ${detail.category}`,
+          group: `${t("expenses")} / ${translateCategoryName(detail.category, language)}`,
           type: "EXPENSE",
           category: detail.category,
           name: detail.name,
@@ -249,8 +242,8 @@ export function YearSpreadsheet({
     for (const row of yearData.savingRows) {
       options.push({
         key: searchKey("INVESTMENT", row.category),
-        label: row.category,
-        group: "Economias",
+        label: translateCategoryName(row.category, language),
+        group: t("savings"),
         type: "INVESTMENT",
         category: row.category,
       });
@@ -260,7 +253,7 @@ export function YearSpreadsheet({
         options.push({
           key: searchKey("INVESTMENT", detail.category, detail.name),
           label: detail.name,
-          group: `Economias / ${detail.category}`,
+          group: `${t("savings")} / ${translateCategoryName(detail.category, language)}`,
           type: "INVESTMENT",
           category: detail.category,
           name: detail.name,
@@ -268,7 +261,7 @@ export function YearSpreadsheet({
       }
     }
     return options;
-  }, [investmentDetails, rowsForCategory, yearData.expenseRows, yearData.incomeRows, yearData.savingRows]);
+  }, [investmentDetails, language, rowsForCategory, t, yearData.expenseRows, yearData.incomeRows, yearData.savingRows]);
 
   function noteMarker(notes: string[]) {
     const cleanNotes = notes.filter(Boolean);
@@ -291,9 +284,9 @@ export function YearSpreadsheet({
     );
   }
 
-  function truncatedName(name: string, color?: string, fontWeight = 850) {
+  function truncatedName(name: string, color?: string, fontWeight = 850, displayName = name) {
     return (
-      <Tooltip title={name}>
+      <Tooltip title={displayName}>
         <Typography
           component="span"
           noWrap
@@ -306,7 +299,7 @@ export function YearSpreadsheet({
             fontWeight,
           }}
         >
-          {name}
+          {displayName}
         </Typography>
       </Tooltip>
     );
@@ -391,7 +384,7 @@ export function YearSpreadsheet({
           justifyContent="space-between"
           spacing={1}
         >
-          <Tooltip title={expanded ? "Recolher itens" : "Expandir itens"}>
+          <Tooltip title={expanded ? t("collapseItems") : t("expandItems")}>
             <IconButton
               size="small"
               onClick={() => onToggleCategoryDetails(type, category)}
@@ -420,13 +413,13 @@ export function YearSpreadsheet({
                   maxWidth: "100%",
                 }}
               >
-                {truncatedName(category, "#111827")}
+                {truncatedName(category, "#111827", 850, translateCategoryName(category, language))}
               </Button>
             ) : (
-              truncatedName(category, "#111827")
+              truncatedName(category, "#111827", 850, translateCategoryName(category, language))
             )}
           </Box>
-          <Tooltip title="Excluir linha e valores deste ano">
+          <Tooltip title={t("deleteYearLine")}>
             <IconButton
               size="small"
               color="error"
@@ -498,7 +491,7 @@ export function YearSpreadsheet({
             >
               {truncatedName(child.name, textColor, 500)}
             </Button>
-            <Tooltip title="Excluir linha">
+            <Tooltip title={t("delete")}>
               <IconButton
                 size="small"
                 color="error"
@@ -599,7 +592,7 @@ export function YearSpreadsheet({
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Tooltip title={expanded ? "Recolher economias" : "Expandir economias"}>
+          <Tooltip title={expanded ? t("collapseSavings") : t("expandSavings")}>
             <IconButton
               size="small"
               onClick={() => onToggleInvestmentCategoryDetails(category)}
@@ -613,7 +606,7 @@ export function YearSpreadsheet({
             </IconButton>
           </Tooltip>
           <Box flex={1} minWidth={0}>
-            {truncatedName(category, color)}
+            {truncatedName(category, color, 850, translateCategoryName(category, language))}
           </Box>
         </Stack>
       </TableCell>
@@ -756,21 +749,21 @@ export function YearSpreadsheet({
           groupBy={(option) => option.group}
           getOptionLabel={(option) => option.label}
           isOptionEqualToValue={(option, value) => option.key === value.key}
-          noOptionsText="Nenhuma opcao encontrada"
-          clearText="Limpar"
-          openText="Abrir"
-          closeText="Fechar"
+          noOptionsText={t("noOptionsFound")}
+          clearText={t("clear")}
+          openText={t("open")}
+          closeText={t("close")}
           sx={{
             width: { xs: "100%", md: 420 },
             "& .MuiOutlinedInput-root": {
-              bgcolor: "rgba(255,255,255,0.92)",
+              bgcolor: "var(--mr-card)",
               borderRadius: 2,
             },
           }}
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Buscar categoria ou subitem"
+              placeholder={t("searchCategoryOrSubitem")}
               InputProps={{
                 ...params.InputProps,
                 startAdornment: (
@@ -797,7 +790,7 @@ export function YearSpreadsheet({
             </Box>
           )}
         />
-        <Tooltip title="Configuracoes da tabela">
+        <Tooltip title={t("tableSettings")}>
           <IconButton
             size="small"
             onClick={(event) => setSettingsAnchor(event.currentTarget)}
@@ -805,10 +798,13 @@ export function YearSpreadsheet({
               alignSelf: { xs: "flex-end", md: "center" },
               width: 38,
               height: 38,
-              border: "1px solid rgba(15,23,42,0.14)",
-              bgcolor: "rgba(255,255,255,0.92)",
-              color: "#0F766E",
-              "&:hover": { bgcolor: "rgba(240,253,250,0.96)" },
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "var(--mr-card)",
+              color: "primary.main",
+              "&:hover": {
+                bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(45,212,191,0.12)" : "rgba(240,253,250,0.96)",
+              },
             }}
           >
             <SettingsIcon fontSize="small" />
@@ -835,7 +831,7 @@ export function YearSpreadsheet({
         }}
       >
         <Stack spacing={1.5}>
-          <Typography fontWeight={950}>Configuracoes da tabela</Typography>
+          <Typography fontWeight={950}>{t("tableSettings")}</Typography>
           <FormControlLabel
             control={
               <Switch
@@ -843,7 +839,7 @@ export function YearSpreadsheet({
                 onChange={(event) => setGroupsSeparated(event.target.checked)}
               />
             }
-            label="Separar grupos"
+            label={t("separateGroups")}
             sx={{
               mr: 0,
               justifyContent: "space-between",
@@ -855,10 +851,10 @@ export function YearSpreadsheet({
           />
           <Stack spacing={0.75}>
             <Typography variant="body2" color="text.secondary" fontWeight={800}>
-              Tamanho
+              {t("size")}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={0.75}>
-              <Tooltip title="Diminuir tabela">
+              <Tooltip title={t("shrinkTable")}>
                 <span>
                   <IconButton
                     size="small"
@@ -870,7 +866,7 @@ export function YearSpreadsheet({
                       width: 30,
                       height: 30,
                       border: "1px solid rgba(15,23,42,0.14)",
-                      bgcolor: "rgba(255,255,255,0.82)",
+                      bgcolor: "var(--mr-card)",
                     }}
                   >
                     <RemoveIcon fontSize="small" />
@@ -885,7 +881,7 @@ export function YearSpreadsheet({
               >
                 {scaleLabel}
               </Typography>
-              <Tooltip title="Aumentar tabela">
+              <Tooltip title={t("enlargeTable")}>
                 <span>
                   <IconButton
                     size="small"
@@ -897,7 +893,7 @@ export function YearSpreadsheet({
                       width: 30,
                       height: 30,
                       border: "1px solid rgba(15,23,42,0.14)",
-                      bgcolor: "rgba(255,255,255,0.82)",
+                      bgcolor: "var(--mr-card)",
                     }}
                   >
                     <AddIcon fontSize="small" />
@@ -911,7 +907,7 @@ export function YearSpreadsheet({
                 onClick={() => setTableScale(0)}
                 sx={{ minWidth: 0, px: 0.75, fontWeight: 800 }}
               >
-                Reset
+                {t("reset")}
               </Button>
             </Stack>
           </Stack>
@@ -926,8 +922,8 @@ export function YearSpreadsheet({
             }
             label={
               allCategoryRowsExpanded
-                ? "Categorias expandidas"
-                : "Categorias recolhidas"
+                ? t("categoriesExpanded")
+                : t("categoriesCollapsed")
             }
             sx={{
               mr: 0,
@@ -948,8 +944,10 @@ export function YearSpreadsheet({
           maxHeight: "none",
           pt: 0.75,
           border: `1px solid ${sheetColors.grid}`,
-          background:
-            "linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)), #f8fafc",
+          background: (theme) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(135deg, rgba(15, 27, 45, 0.96), rgba(10, 24, 44, 0.98) 48%, rgba(42, 32, 12, 0.34)), #07111f"
+              : "linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)), #f8fafc",
           borderTop: "none",
         }}
       >
@@ -991,14 +989,23 @@ export function YearSpreadsheet({
                   position: "sticky",
                   left: 0,
                   zIndex: 3,
-                  bgcolor: "#FFFFFF !important",
-                  color: `${sheetColors.headerBlue} !important`,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "#132238 !important"
+                      : "#FFFFFF !important",
+                  color: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "#D7E2F0 !important"
+                      : `${sheetColors.headerBlue} !important`,
                   width: stickyCategoryWidth,
                   minWidth: stickyCategoryWidth,
                   maxWidth: stickyCategoryWidth,
                   fontWeight: 950,
                   py: 1.45,
-                  borderColor: "rgba(15,23,42,0.12)",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(148,163,184,0.22)"
+                      : "rgba(15,23,42,0.12)",
                   borderBottom: `2px solid ${sheetColors.grid}`,
                 }}
               />
@@ -1023,14 +1030,30 @@ export function YearSpreadsheet({
                       px: 0.35,
                       minWidth: monthColumnMinWidth,
                       fontSize: tableHeaderFontSize,
-                      bgcolor: "#FFFFFF !important",
-                      color: "#0F172A",
+                      bgcolor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "#132238 !important"
+                          : "#FFFFFF !important",
+                      color: (theme) =>
+                        theme.palette.mode === "dark" ? "#E5EEF8" : "#0F172A",
                       borderLeft: isCurrent
                         ? `2px solid ${financeColors.income}`
-                        : "1px solid rgba(15,23,42,0.08)",
+                        : "1px solid",
                       borderRight: isCurrent
                         ? `2px solid ${financeColors.income}`
-                        : "1px solid rgba(15,23,42,0.08)",
+                        : "1px solid",
+                      borderLeftColor: (theme) =>
+                        isCurrent
+                          ? financeColors.income
+                          : theme.palette.mode === "dark"
+                            ? "rgba(148,163,184,0.18)"
+                            : "rgba(15,23,42,0.08)",
+                      borderRightColor: (theme) =>
+                        isCurrent
+                          ? financeColors.income
+                          : theme.palette.mode === "dark"
+                            ? "rgba(148,163,184,0.18)"
+                            : "rgba(15,23,42,0.08)",
                       borderBottom: `2px solid ${sheetColors.grid}`,
                       opacity: isFuture ? 0.94 : 1,
                     }}
@@ -1058,17 +1081,22 @@ export function YearSpreadsheet({
                             fontWeight: 950,
                             lineHeight: 1,
                             boxShadow: "0 8px 18px rgba(37,99,235,0.22)",
-                            border: "2px solid white",
+                            border: (theme) =>
+                              `2px solid ${theme.palette.mode === "dark" ? "#132238" : "white"}`,
                           }}
                         >
-                          Atual
+                          {t("current")}
                         </Box>
                       ) : (
                         <Box component="span" sx={{ height: 16 }} />
                       )}
                       <Box
                         component="span"
-                        sx={{ color: "#0F172A", whiteSpace: "nowrap" }}
+                        sx={{
+                          color: (theme) =>
+                            theme.palette.mode === "dark" ? "#E5EEF8" : "#0F172A",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         {compactMonthLabels[monthItem.value] ?? monthItem.label}
                       </Box>
@@ -1079,8 +1107,14 @@ export function YearSpreadsheet({
               <TableCell
                 align="right"
                 sx={{
-                  bgcolor: "rgba(15,118,110,0.11) !important",
-                  color: `#0F766E !important`,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(15,118,110,0.26) !important"
+                      : "rgba(15,118,110,0.11) !important",
+                  color: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "#5EEAD4 !important"
+                      : "#0F766E !important",
                   fontWeight: 950,
                   width: totalColumnWidth,
                   py: 1.45,
@@ -1088,7 +1122,7 @@ export function YearSpreadsheet({
                   ...totalColumnSx,
                 }}
               >
-                Total
+                {t("total")}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -1130,7 +1164,7 @@ export function YearSpreadsheet({
                       <KeyboardArrowRightIcon fontSize="small" />
                     )}
                   </IconButton>
-                  <Typography fontWeight={950}>Receitas</Typography>
+                  <Typography fontWeight={950}>{t("incomes")}</Typography>
                 </Stack>
               </TableCell>
               <TableCell
@@ -1147,7 +1181,7 @@ export function YearSpreadsheet({
                   colSpan={yearData.months.length + 2}
                   sx={{ color: "text.secondary", fontStyle: "italic" }}
                 >
-                  Nenhuma receita cadastrada ainda.
+                  {t("noIncomeRegistered")}
                 </TableCell>
               </TableRow>
             ) : null}
@@ -1172,7 +1206,7 @@ export function YearSpreadsheet({
                   ...groupTotalTextSx,
                 }}
               >
-                Total receitas
+                {t("totalIncome")}
               </TableCell>
               {yearData.monthlySummary.map((summary) => (
                 <TableCell
@@ -1236,7 +1270,7 @@ export function YearSpreadsheet({
                       <KeyboardArrowRightIcon fontSize="small" />
                     )}
                   </IconButton>
-                  <Typography fontWeight={950}>Despesas</Typography>
+                  <Typography fontWeight={950}>{t("expenses")}</Typography>
                 </Stack>
               </TableCell>
               <TableCell
@@ -1253,7 +1287,7 @@ export function YearSpreadsheet({
                   colSpan={yearData.months.length + 2}
                   sx={{ color: "text.secondary", fontStyle: "italic" }}
                 >
-                  Nenhuma despesa cadastrada ainda.
+                  {t("noExpenseRegistered")}
                 </TableCell>
               </TableRow>
             ) : null}
@@ -1278,7 +1312,7 @@ export function YearSpreadsheet({
                   ...groupTotalTextSx,
                 }}
               >
-                Total despesas
+                {t("totalExpenses")}
               </TableCell>
               {yearData.monthlySummary.map((summary) => (
                 <TableCell
@@ -1342,7 +1376,7 @@ export function YearSpreadsheet({
                       <KeyboardArrowRightIcon fontSize="small" />
                     )}
                   </IconButton>
-                  <Typography fontWeight={950}>Economias</Typography>
+                  <Typography fontWeight={950}>{t("savings")}</Typography>
                 </Stack>
               </TableCell>
               <TableCell
@@ -1359,7 +1393,7 @@ export function YearSpreadsheet({
                   colSpan={yearData.months.length + 2}
                   sx={{ color: "text.secondary", fontStyle: "italic" }}
                 >
-                  Nenhuma economia cadastrada ainda.
+                  {t("noSavingRegistered")}
                 </TableCell>
               </TableRow>
             ) : null}
@@ -1380,7 +1414,7 @@ export function YearSpreadsheet({
                           align="right"
                           sx={{
                             color,
-                            bgcolor: "#FFFFFF",
+                            bgcolor: "var(--mr-card-solid)",
                             fontWeight: 750,
                             borderRight: `1px solid ${color}`,
                             borderBottom: `1px solid ${color}`,
@@ -1393,7 +1427,7 @@ export function YearSpreadsheet({
                         align="right"
                         sx={{
                           color,
-                          bgcolor: "#FFFFFF",
+                          bgcolor: "var(--mr-card-solid)",
                           fontWeight: 900,
                           borderBottom: `1px solid ${color}`,
                           ...totalColumnSx,
@@ -1429,7 +1463,7 @@ export function YearSpreadsheet({
                   ...groupTotalTextSx,
                 }}
               >
-                Total economias
+                {t("totalSavings")}
               </TableCell>
               {yearData.monthlySummary.map((summary) => (
                 <TableCell
@@ -1457,7 +1491,7 @@ export function YearSpreadsheet({
             <TableRow
               sx={{
                 "& > *": {
-                  bgcolor: "rgba(255,255,255,0.98)",
+                  bgcolor: "var(--mr-card-solid)",
                   borderTop: `4px solid ${sheetColors.resultSection}`,
                   borderBottom: `4px solid ${sheetColors.resultSection}`,
                   py: tableCellPaddingY + 0.8,
@@ -1478,7 +1512,7 @@ export function YearSpreadsheet({
                   textAlign: "center",
                 }}
               >
-                Resultado
+                {t("result")}
               </TableCell>
               {yearData.monthlySummary.map((summary) => (
                 <TableCell

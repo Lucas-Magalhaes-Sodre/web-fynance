@@ -12,6 +12,8 @@ import Tooltip from "@mui/material/Tooltip";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import type { FinancialGoal, Saving } from "@/interfaces/financial";
 import { financeColors, formatDate, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName } from "@/i18n/display";
 
 type EconomyTableProps = {
   savings: Saving[];
@@ -28,25 +30,27 @@ export function EconomyTable({
   onDelete,
   onDetails,
 }: EconomyTableProps) {
+  const { language, t } = usePreferences();
+
   return (
     <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Economia</TableCell>
-            <TableCell>Categoria</TableCell>
-            <TableCell>Data</TableCell>
-            <TableCell>Meta</TableCell>
-            <TableCell>Descrição</TableCell>
-            <TableCell align="right">Valor</TableCell>
-            <TableCell align="right">Ações</TableCell>
+            <TableCell>{t("singleSaving")}</TableCell>
+            <TableCell>{t("category")}</TableCell>
+            <TableCell>{t("date")}</TableCell>
+            <TableCell>{t("menuGoals")}</TableCell>
+            <TableCell>{t("description")}</TableCell>
+            <TableCell align="right">{t("value")}</TableCell>
+            <TableCell align="right">{t("actions")}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {savings.map((saving) => (
             <TableRow key={saving.id} hover>
               <TableCell>{saving.title}</TableCell>
-              <TableCell>{saving.category}</TableCell>
+              <TableCell>{translateCategoryName(saving.category, language)}</TableCell>
               <TableCell>{formatDate(saving.date)}</TableCell>
               <TableCell>
                 {goals.find((goal) => goal.id === saving.goalId)?.title ?? "-"}
@@ -59,17 +63,17 @@ export function EconomyTable({
                 {formatMoney(saving.amount)}
               </TableCell>
               <TableCell align="right">
-                <Tooltip title="Editar">
+                <Tooltip title={t("edit")}>
                   <IconButton onClick={() => onEdit(saving)}>
                     <EditIcon />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Ver detalhes">
+                <Tooltip title={t("viewDetails")}>
                   <IconButton color="primary" onClick={() => onDetails(saving)}>
                     <InfoOutlinedIcon />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Excluir">
+                <Tooltip title={t("delete")}>
                   <IconButton color="error" onClick={() => onDelete(saving)}>
                     <DeleteIcon />
                   </IconButton>
@@ -80,7 +84,7 @@ export function EconomyTable({
           {!savings.length ? (
             <TableRow>
               <TableCell colSpan={7}>
-                <EmptyState message="Nenhuma economia registrada neste período." />
+                <EmptyState message={t("noRegisteredSavingPeriod")} />
               </TableCell>
             </TableRow>
           ) : null}

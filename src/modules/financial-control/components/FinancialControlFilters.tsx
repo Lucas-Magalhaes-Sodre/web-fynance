@@ -7,7 +7,8 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
-import { months } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { monthsByLanguage } from "@/i18n/display";
 import type { ViewMode } from "./types";
 import * as S from "./styles";
 
@@ -49,6 +50,9 @@ export function FinancialControlFilters({
   onDateChange,
   onWeekChange,
 }: FinancialControlFiltersProps) {
+  const { language, t } = usePreferences();
+  const months = monthsByLanguage[language];
+
   return (
     <S.FilterCard className="soft-card">
       <Stack
@@ -57,16 +61,16 @@ export function FinancialControlFilters({
         justifyContent="space-between"
       >
         <Tabs value={mode} onChange={(_, value) => onModeChange(value)}>
-          <Tab value="day" label="Por dia" />
-          <Tab value="week" label="Por semana" />
-          <Tab value="month" label="Por mês" />
-          <Tab value="year" label="Por ano" />
+          <Tab value="day" label={t("byDay")} />
+          <Tab value="week" label={t("byWeek")} />
+          <Tab value="month" label={t("byMonth")} />
+          <Tab value="year" label={t("byYear")} />
         </Tabs>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           {mode === "day" ? (
             <TextField
               size="small"
-              label="Dia que deseja ver"
+              label={t("dayToView")}
               type="date"
               InputLabelProps={{ shrink: true }}
               value={date}
@@ -77,7 +81,7 @@ export function FinancialControlFilters({
             <>
               <TextField
                 size="small"
-                label="Comeco da semana"
+                label={t("weekStart")}
                 type="date"
                 InputLabelProps={{ shrink: true }}
                 value={week.startDate}
@@ -87,7 +91,7 @@ export function FinancialControlFilters({
               />
               <TextField
                 size="small"
-                label="Fim da semana"
+                label={t("weekEnd")}
                 type="date"
                 InputLabelProps={{ shrink: true }}
                 value={week.endDate}
@@ -101,7 +105,7 @@ export function FinancialControlFilters({
             <TextField
               size="small"
               select
-              label="Mês que deseja ver"
+              label={t("monthToView")}
               value={month}
               onChange={(event) => onMonthChange(Number(event.target.value))}
             >
@@ -114,7 +118,7 @@ export function FinancialControlFilters({
           ) : null}
           {mode !== "day" ? (
             <Stack direction="row" alignItems="center" spacing={0.5}>
-              <Tooltip title="Ano anterior">
+              <Tooltip title={t("previousYear")}>
                 <S.YearIconButton
                   size="small"
                   onClick={() => onYearChange((currentYear) => currentYear - 1)}
@@ -150,7 +154,7 @@ export function FinancialControlFilters({
                   <S.YearField
                     {...params}
                     size="small"
-                    label="Ano que deseja ver"
+                    label={t("yearToView")}
                     inputProps={{
                       ...params.inputProps,
                       inputMode: "numeric",
@@ -159,7 +163,7 @@ export function FinancialControlFilters({
                   />
                 )}
               />
-              <Tooltip title="Proximo ano">
+              <Tooltip title={t("nextYear")}>
                 <S.YearIconButton
                   size="small"
                   onClick={() => onYearChange((currentYear) => currentYear + 1)}

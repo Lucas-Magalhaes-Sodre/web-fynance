@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 import { ArrowDownRight, ArrowUpRight, PiggyBank, ThumbsDown, ThumbsUp, Wallet } from 'lucide-react';
 import { amountToneColor, formatMoney } from '@/utils/format';
 
@@ -13,7 +14,8 @@ type StatCardProps = {
 };
 
 export function StatCard({ label, value, tone, helperText, onClick }: StatCardProps) {
-  const color = amountToneColor(tone, value);
+  const theme = useTheme();
+  const color = tone === 'neutral' ? theme.palette.text.primary : amountToneColor(tone, value);
   const Icon = tone === 'expense'
     ? ArrowDownRight
     : tone === 'income'

@@ -144,6 +144,17 @@ export const ExpenseButton = styled(Button)`
     background-color: rgba(255, 237, 213, 0.72);
     box-shadow: 0 14px 28px rgba(234, 88, 12, 0.16);
   }
+
+  :root[data-theme='dark'] & {
+    color: #fb923c;
+    border-color: rgba(251, 146, 60, 0.38);
+    background-color: rgba(124, 45, 18, 0.24);
+  }
+
+  :root[data-theme='dark'] &:hover {
+    border-color: rgba(251, 146, 60, 0.58);
+    background-color: rgba(124, 45, 18, 0.34);
+  }
 `;
 
 export const SavingButton = styled(Button)`
@@ -162,6 +173,17 @@ export const SavingButton = styled(Button)`
     background-color: rgba(255, 248, 219, 0.92);
     box-shadow: 0 14px 28px rgba(212, 160, 23, 0.18);
   }
+
+  :root[data-theme='dark'] & {
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.38);
+    background-color: rgba(113, 63, 18, 0.24);
+  }
+
+  :root[data-theme='dark'] &:hover {
+    border-color: rgba(251, 191, 36, 0.58);
+    background-color: rgba(113, 63, 18, 0.34);
+  }
 `;
 
 export const FilterCard = styled(Paper)`
@@ -175,7 +197,7 @@ export const YearField = styled(TextField)`
 
 export const YearIconButton = styled(IconButton)`
   border: 1px solid rgba(15, 23, 42, 0.12);
-  background-color: rgba(255, 255, 255, 0.72);
+  background-color: var(--mr-card);
 `;
 
 export const SectionCard = styled(Paper)`

@@ -16,6 +16,8 @@ import type {
 import { financeColors, isoDate } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
 
 const recurrenceLabels: Record<Exclude<RecurrenceType, "NONE">, string> = {
   DAILY: "Diaria",
@@ -106,6 +108,7 @@ export function FinancialEntryForm({
   onClose,
   onSubmit,
 }: Props) {
+  const { language, t } = usePreferences();
   const initialDate = new Date(`${defaultDate}T00:00:00`);
   const [form, setForm] = useState<FormState>({
     name: "",
@@ -126,16 +129,32 @@ export function FinancialEntryForm({
 
   const isIncome = form.type === "INCOME";
   const modalTitle = item
-    ? `Editar ${isIncome ? "Receita" : "Despesa"}`
-    : `Adicionar ${isIncome ? "Receita" : "Despesa"}`;
+    ? isIncome ? t("editIncome") : t("editExpenseRecord")
+    : isIncome ? t("addIncome") : t("addExpenseRecord");
   const accentColor = isIncome ? financeColors.income : financeColors.expense;
   const softColor = isIncome
     ? financeColors.incomeSoft
     : financeColors.expenseSoft;
-  const amountLabel = isIncome ? "Valor recebido" : "Valor pago";
-  const nameLabel = isIncome ? "Nome da receita" : "Nome da despesa";
-  const categoryLabel = isIncome ? "Categoria" : "Categoria";
-  const singleDateLabel = isIncome ? "Data do recebimento" : "Data da despesa";
+  const amountLabel = isIncome ? t("receivedValue") : t("paidValue");
+  const nameLabel = isIncome ? t("incomeName") : t("expenseRecordName");
+  const categoryLabel = t("category");
+  const singleDateLabel = isIncome ? t("receiptDate") : t("expenseDate");
+  const recurrenceLabelItems: Record<Exclude<RecurrenceType, "NONE">, string> = {
+    DAILY: t("daily"),
+    WEEKLY: t("weekly"),
+    MONTHLY: t("monthly"),
+    YEARLY: t("yearly"),
+  };
+  const weekDayItems = [
+    { value: 1, label: t("monday") },
+    { value: 2, label: t("tuesday") },
+    { value: 3, label: t("wednesday") },
+    { value: 4, label: t("thursday") },
+    { value: 5, label: t("friday") },
+    { value: 6, label: t("saturday") },
+    { value: 7, label: t("sunday") },
+  ];
+  const monthItems = monthsByLanguage[language].map((label, index) => ({ value: index + 1, label }));
   const availableCategories = categories.filter((category) => category.type === form.type);
   const selectedCategoryExists = availableCategories.some((category) => category.name === form.category);
   const invalidCustomRecurrenceRange =
@@ -261,12 +280,12 @@ export function FinancialEntryForm({
     <AppDialog
       open={open}
       onClose={onClose}
-      eyebrow={isIncome ? "Entrada" : "Saida"}
+      eyebrow={isIncome ? t("incomeEyebrow") : t("expenseEyebrow")}
       title={modalTitle}
       titleAccent={accentColor}
       actions={
         <>
-          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={onClose}>{t("cancel")}</Button>
           <LoadingActionButton
             type="submit"
             form="financial-entry-form"
@@ -278,9 +297,9 @@ export function FinancialEntryForm({
               invalidCustomRecurrenceRange
             }
             loading={saving}
-            loadingLabel="Salvando..."
+            loadingLabel={t("saving")}
           >
-            Salvar
+            {t("save")}
           </LoadingActionButton>
         </>
       }
@@ -300,7 +319,7 @@ export function FinancialEntryForm({
             onChange={(event) =>
               setForm({ ...form, category: event.target.value })
             }
-            helperText="Configure as categorias no menu Categorias."
+            helperText={t("configureCategories")}
           >
             {availableCategories.map((category) => (
               <MenuItem key={category.id} value={category.name}>
@@ -311,12 +330,12 @@ export function FinancialEntryForm({
                     borderRadius="50%"
                     bgcolor={category.color}
                   />
-                  {category.name}
+                  {translateCategoryName(category.name, language)}
                 </Box>
               </MenuItem>
             ))}
             {form.category && !selectedCategoryExists ? (
-              <MenuItem value={form.category}>{form.category}</MenuItem>
+              <MenuItem value={form.category}>{translateCategoryName(form.category, language)}</MenuItem>
             ) : null}
           </TextField>
 
@@ -329,8 +348,8 @@ export function FinancialEntryForm({
             }
             helperText={
               isIncome
-                ? "Ex.: salario da empresa, cliente X, rendimento"
-                : "Ex.: Riachuelo, Itau, aluguel, internet"
+                ? t("incomeExample")
+                : t("expenseExample")
             }
           />
 
@@ -353,18 +372,18 @@ export function FinancialEntryForm({
               <S.SplitFormControlLabel
                 label={
                   <Box display={"flex"}>
-                    <Typography fontWeight={900}>Recorrente: </Typography>
+                    <Typography fontWeight={900}>{t("recurring")}: </Typography>
                     <Typography
                       fontWeight={900}
                       ml={1}
                       color={form.isFixed ? "success" : "error"}
-                    >{`${form.isFixed ? "sim" : "não"}`}</Typography>
+                    >{form.isFixed ? t("yes") : t("no")}</Typography>
                   </Box>
                 }
                 labelPlacement="start"
                 control={
                   <Switch
-                    color={isIncome ? "error" : "success"}
+                    color="success"
                     checked={form.isFixed}
                     onChange={(event) => updateRecurring(event.target.checked)}
                   />
@@ -375,7 +394,7 @@ export function FinancialEntryForm({
                 <>
                   <TextField
                     select
-                    label="Recorrencia"
+                    label={t("recurrence")}
                     value={
                       form.recurrenceType === "NONE"
                         ? "MONTHLY"
@@ -385,7 +404,7 @@ export function FinancialEntryForm({
                       updateRecurrenceType(event.target.value as RecurrenceType)
                     }
                   >
-                    {Object.entries(recurrenceLabels).map(([value, label]) => (
+                    {Object.entries(recurrenceLabelItems).map(([value, label]) => (
                       <MenuItem key={value} value={value}>
                         {label}
                       </MenuItem>
@@ -397,8 +416,8 @@ export function FinancialEntryForm({
                       select
                       label={
                         isIncome
-                          ? "Dia da semana do recebimento"
-                          : "Dia da semana da despesa"
+                          ? t("incomeWeekDay")
+                          : t("expenseWeekDay")
                       }
                       required
                       value={form.dueDay}
@@ -406,7 +425,7 @@ export function FinancialEntryForm({
                         setForm({ ...form, dueDay: event.target.value })
                       }
                     >
-                      {weekDays.map((day) => (
+                      {weekDayItems.map((day) => (
                         <MenuItem key={day.value} value={day.value}>
                           {day.label}
                         </MenuItem>
@@ -420,8 +439,8 @@ export function FinancialEntryForm({
                         select
                         label={
                           isIncome
-                            ? "Dia do mês do recebimento"
-                            : "Dia do mês da despesa"
+                            ? t("incomeMonthDay")
+                            : t("expenseMonthDay")
                         }
                         required
                         value={form.dueDay}
@@ -431,7 +450,7 @@ export function FinancialEntryForm({
                       >
                         {monthDays.map((day) => (
                           <MenuItem key={day} value={day}>
-                            Dia {day}
+                            {t("dayNumber").replace("{day}", String(day))}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -439,19 +458,19 @@ export function FinancialEntryForm({
                       {!item ? (
                         <>
                           <Typography variant="caption" color="text.secondary" fontWeight={900}>
-                            Quando comeca:
+                            {t("whenStarts")}
                           </Typography>
                           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             <TextField
                               select
-                              label="Mês inicial"
+                              label={t("startMonth")}
                               value={form.recurrenceStartMonth}
                               onChange={(event) =>
                                 setForm({ ...form, recurrenceStartMonth: event.target.value })
                               }
                               fullWidth
                             >
-                              {monthOptions.map((monthItem) => (
+                              {monthItems.map((monthItem) => (
                                 <MenuItem key={monthItem.value} value={monthItem.value}>
                                   {monthItem.label}
                                 </MenuItem>
@@ -459,7 +478,7 @@ export function FinancialEntryForm({
                             </TextField>
                             <TextField
                               select
-                              label="Ano inicial"
+                              label={t("startYear")}
                               value={form.recurrenceStartYear}
                               onChange={(event) =>
                                 setForm({ ...form, recurrenceStartYear: event.target.value })
@@ -475,12 +494,12 @@ export function FinancialEntryForm({
                           </Stack>
 
                           <Typography variant="caption" color="text.secondary" fontWeight={900}>
-                            Quando termina:
+                            {t("whenEnds")}
                           </Typography>
                           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             <TextField
                               select
-                              label="Mês final"
+                              label={t("endMonth")}
                               value={form.recurrenceEndMonth}
                               onChange={(event) =>
                                 setForm({ ...form, recurrenceEndMonth: event.target.value })
@@ -488,7 +507,7 @@ export function FinancialEntryForm({
                               error={invalidCustomRecurrenceRange}
                               fullWidth
                             >
-                              {monthOptions.map((monthItem) => (
+                              {monthItems.map((monthItem) => (
                                 <MenuItem key={monthItem.value} value={monthItem.value}>
                                   {monthItem.label}
                                 </MenuItem>
@@ -496,13 +515,13 @@ export function FinancialEntryForm({
                             </TextField>
                             <TextField
                               select
-                              label="Ano final"
+                              label={t("endYear")}
                               value={form.recurrenceEndYear}
                               onChange={(event) =>
                                 setForm({ ...form, recurrenceEndYear: event.target.value })
                               }
                               error={invalidCustomRecurrenceRange}
-                              helperText={invalidCustomRecurrenceRange ? "O fim precisa ser depois do inicio." : " "}
+                              helperText={invalidCustomRecurrenceRange ? t("endAfterStart") : " "}
                               fullWidth
                             >
                               {yearOptions.map((year) => (
@@ -521,8 +540,8 @@ export function FinancialEntryForm({
                     <TextField
                       label={
                         isIncome
-                          ? "Data anual do recebimento"
-                          : "Data anual da despesa"
+                          ? t("annualIncomeDate")
+                          : t("annualExpenseDate")
                       }
                       type="date"
                       required
@@ -550,7 +569,7 @@ export function FinancialEntryForm({
           </S.HighlightPanel>
 
           <TextField
-            label="Observação opcional"
+            label={t("optionalNote")}
             multiline
             minRows={2}
             value={form.description}

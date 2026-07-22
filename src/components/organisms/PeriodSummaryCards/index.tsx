@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import { StatCard } from '@/components/molecules/StatCard';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 type Props = {
   totalIncome: number;
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function PeriodSummaryCards({ totalIncome, totalExpense, totalSavings = 0, balance, bestMonth, worstMonth }: Props) {
+  const { t } = usePreferences();
   const columns = bestMonth ? 6 : 4;
   return (
     <Box
@@ -23,12 +25,12 @@ export function PeriodSummaryCards({ totalIncome, totalExpense, totalSavings = 0
         },
       }}
     >
-      <StatCard label="Receitas" value={totalIncome} tone="income" />
-      <StatCard label="Despesas" value={totalExpense} tone="expense" />
-      <StatCard label="Economias" value={totalSavings} tone="saving" />
-      <StatCard label="Saldo disponível" value={balance} tone="balance" />
-      {bestMonth ? <StatCard label={`Melhor mês: ${bestMonth}`} value={0} tone="income" /> : null}
-      {worstMonth ? <StatCard label={`Pior mês: ${worstMonth}`} value={0} tone="expense" /> : null}
+      <StatCard label={t("incomes")} value={totalIncome} tone="income" />
+      <StatCard label={t("expenses")} value={totalExpense} tone="expense" />
+      <StatCard label={t("savings")} value={totalSavings} tone="saving" />
+      <StatCard label={t("availableBalance")} value={balance} tone="balance" />
+      {bestMonth ? <StatCard label={`${t("bestMonth")}: ${bestMonth}`} value={0} tone="income" /> : null}
+      {worstMonth ? <StatCard label={`${t("worstMonth")}: ${worstMonth}`} value={0} tone="expense" /> : null}
     </Box>
   );
 }

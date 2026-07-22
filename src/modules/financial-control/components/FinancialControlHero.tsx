@@ -4,6 +4,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import type { EntryType } from "@/interfaces/financial";
 import type { SavingAction } from "./SavingMovementDialog";
 import * as S from "./styles";
@@ -17,6 +18,7 @@ export function FinancialControlHero({
   onCreateEntry,
   onCreateSaving,
 }: FinancialControlHeroProps) {
+  const { t } = usePreferences();
   return (
     <S.HeroCard className="glass-card">
       <Stack
@@ -28,39 +30,38 @@ export function FinancialControlHero({
         <Box>
           <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
             <Typography variant="h4" fontWeight={950} sx={{ fontSize: { xs: 26, md: 30 } }}>
-              Controle financeiro
+              {t("menuFinancialControl")}
             </Typography>
-            <PageHelpButton title="Como funciona o Controle financeiro?">
+            <PageHelpButton title={t("controlHelpTitle")}>
               <Typography color="text.secondary">
-                O Controle financeiro reúne suas receitas, despesas, economias, vencimentos e saldos por período.
+                {t("controlHelpIntro")}
               </Typography>
               <Typography color="text.secondary">
-                Use as visões por dia, semana, mês e ano para acompanhar entradas e saídas, marcar contas como pagas, consultar o calendário financeiro e analisar a planilha anual.
+                {t("controlHelpViews")}
               </Typography>
-              <Typography fontWeight={950}>Visão por ano</Typography>
+              <Typography fontWeight={950}>{t("viewByYear")}</Typography>
               <Typography color="text.secondary">
-                Mostra uma planilha anual com receitas, despesas, economias e saldo mês a mês. É ideal para comparar períodos, ajustar valores recorrentes e enxergar o resultado do ano inteiro.
+                {t("controlHelpYear")}
               </Typography>
-              <Typography fontWeight={950}>Visão por mês</Typography>
+              <Typography fontWeight={950}>{t("viewByMonth")}</Typography>
               <Typography color="text.secondary">
-                Mostra o resumo do mês selecionado e o Calendário financeiro. No calendário, você vê os totais por dia e pode abrir um dia específico ou marcar pendências como pagas.
+                {t("controlHelpMonth")}
               </Typography>
-              <Typography fontWeight={950}>Visão por semana</Typography>
+              <Typography fontWeight={950}>{t("viewByWeek")}</Typography>
               <Typography color="text.secondary">
-                Ajuda a acompanhar uma semana específica, com os lançamentos e saldos dentro daquele intervalo. É útil para revisar pagamentos próximos e organizar o curto prazo.
+                {t("controlHelpWeek")}
               </Typography>
-              <Typography fontWeight={950}>Visão por dia</Typography>
+              <Typography fontWeight={950}>{t("viewByDay")}</Typography>
               <Typography color="text.secondary">
-                Exibe todos os lançamentos daquele dia, incluindo receitas, despesas e economias. Nessa visão você pode editar, excluir e marcar despesas como pagas.
+                {t("controlHelpDay")}
               </Typography>
               <Typography color="text.secondary">
-                As receitas aumentam seu saldo, as despesas reduzem, e as economias representam valores guardados ou aplicados. As categorias ajudam a organizar tudo por tipo.
+                {t("controlHelpTypes")}
               </Typography>
             </PageHelpButton>
           </Stack>
           <Typography color="text.secondary" fontSize={15}>
-            Veja entradas, saídas, vencimentos e saldo das suas finanças por
-            dia, semana, mês ou ano.
+            {t("controlSubtitle")}
           </Typography>
         </Box>
         <S.HeroActionsGrid>
@@ -72,7 +73,7 @@ export function FinancialControlHero({
             <S.HeroActionIcon $tone="income">
               <AddIcon sx={{ fontSize: 16 }} />
             </S.HeroActionIcon>
-            Nova receita
+            {t("newIncome")}
           </S.HeroActionButton>
           <S.HeroActionButton
             $tone="expense"
@@ -82,7 +83,7 @@ export function FinancialControlHero({
             <S.HeroActionIcon $tone="expense">
               <AddIcon sx={{ fontSize: 16 }} />
             </S.HeroActionIcon>
-            Nova despesa
+            {t("newExpense")}
           </S.HeroActionButton>
           <S.HeroActionButton
             $tone="saving"
@@ -92,7 +93,7 @@ export function FinancialControlHero({
             <S.HeroActionIcon $tone="saving">
               <AddIcon sx={{ fontSize: 16 }} />
             </S.HeroActionIcon>
-            Adicionar economia
+            {t("addSaving")}
           </S.HeroActionButton>
           <S.HeroActionButton
             $tone="withdraw"
@@ -102,7 +103,7 @@ export function FinancialControlHero({
             <S.HeroActionIcon $tone="withdraw">
               <PaymentsIcon sx={{ fontSize: 15 }} />
             </S.HeroActionIcon>
-            Sacar economia
+            {t("withdrawSaving")}
           </S.HeroActionButton>
         </S.HeroActionsGrid>
       </Stack>

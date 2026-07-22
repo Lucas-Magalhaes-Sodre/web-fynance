@@ -1,6 +1,8 @@
 import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -24,6 +26,7 @@ import {
   updateEntryValue,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { FinancialEntryForm } from "@/components/organisms/FinancialEntryForm";
 import { CurrentPeriodSections } from "@/modules/financial-control/components/CurrentPeriodSections";
@@ -71,7 +74,7 @@ import type {
   WeekControl,
   YearControl,
 } from "@/interfaces/financial";
-import { currencyToNumber, financeColors, isoDate, weekRange } from "@/utils/format";
+import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate, weekRange } from "@/utils/format";
 
 const initialSavingForm: SavingMovementFormState = {
   action: "REGISTER",
@@ -150,6 +153,7 @@ export function FinancialControlPage() {
   const [lineEdit, setLineEdit] = useState<LineEditState | null>(null);
   const [lineSaving, setLineSaving] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { t } = usePreferences();
 
   const allCurrentItems = useMemo(() => {
     if (mode === "day")
@@ -512,10 +516,7 @@ export function FinancialControlPage() {
   }
 
   async function markItemPaid(item: FinancialItem) {
-    await updateEntryPaymentStatus(item.id, {
-      status: "PAGO",
-    });
-    await loadData();
+    await markItemsPaid([item]);
   }
 
   async function markItemsPaid(items: FinancialItem[]) {
@@ -523,6 +524,42 @@ export function FinancialControlPage() {
       (item) => item.type.includes("EXPENSE") && item.status !== "PAGO",
     );
     if (!payableItems.length) return;
+
+    const confirmed = await confirm({
+      title: payableItems.length === 1 ? t("confirmPaymentTitle") : t("confirmPaymentsTitle"),
+      description: (
+        <Stack spacing={1.5}>
+          <Typography color="text.secondary">
+            {payableItems.length === 1 ? t("confirmPaymentMessage") : t("confirmPaymentsMessage")}
+          </Typography>
+          <Stack spacing={1}>
+            {payableItems.map((item) => (
+              <Box
+                key={item.id}
+                sx={{
+                  p: 1.25,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.default",
+                }}
+              >
+                <Typography fontWeight={900}>
+                  {item.name ?? item.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t("dueDate")}: {formatDate(item.dueDate ?? item.date)} · {t("value")}: {formatMoney(item.amount)}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Stack>
+      ),
+      confirmLabel: t("confirmPaymentAction"),
+      cancelLabel: t("cancel"),
+      tone: "primary",
+    });
+    if (!confirmed) return;
 
     await Promise.all(
       payableItems.map((item) =>
