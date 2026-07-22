@@ -62,6 +62,7 @@ type YearSpreadsheetProps = {
   onToggleIncomeRows: () => void;
   onToggleExpenseRows: () => void;
   onToggleInvestmentRows: () => void;
+  onToggleCategoryGroups: (expanded: boolean) => void;
   onToggleAllCategoryRows: (expanded: boolean) => void;
   onToggleCategoryDetails: (type: EntryType, category: string) => void;
   onToggleInvestmentCategoryDetails: (category: string) => void;
@@ -96,6 +97,7 @@ export function YearSpreadsheet({
   onToggleIncomeRows,
   onToggleExpenseRows,
   onToggleInvestmentRows,
+  onToggleCategoryGroups,
   onToggleAllCategoryRows,
   onToggleCategoryDetails,
   onToggleInvestmentCategoryDetails,
@@ -131,6 +133,8 @@ export function YearSpreadsheet({
             : "Extra";
   const tableMinWidth =
     stickyCategoryWidth + totalColumnWidth + yearData.months.length * monthColumnMinWidth;
+  const categoryGroupsExpanded =
+    incomeRowsExpanded && expenseRowsExpanded && investmentRowsExpanded;
   const incomeTotalBg = "rgba(63, 141, 202, 0.7)";
   const expenseTotalBg = "rgba(242, 107, 44, 0.7)";
   const savingTotalBg = "rgba(212, 160, 23, 0.7)";
@@ -914,6 +918,29 @@ export function YearSpreadsheet({
           <FormControlLabel
             control={
               <Switch
+                checked={categoryGroupsExpanded}
+                onChange={(event) =>
+                  onToggleCategoryGroups(event.target.checked)
+                }
+              />
+            }
+            label={
+              categoryGroupsExpanded
+                ? t("categoryGroupsExpanded")
+                : t("categoryGroupsCollapsed")
+            }
+            sx={{
+              mr: 0,
+              justifyContent: "space-between",
+              "& .MuiFormControlLabel-label": {
+                fontSize: 14,
+                fontWeight: 700,
+              },
+            }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
                 checked={allCategoryRowsExpanded}
                 onChange={(event) =>
                   onToggleAllCategoryRows(event.target.checked)
@@ -922,8 +949,8 @@ export function YearSpreadsheet({
             }
             label={
               allCategoryRowsExpanded
-                ? t("categoriesExpanded")
-                : t("categoriesCollapsed")
+                ? t("subitemsExpanded")
+                : t("subitemsCollapsed")
             }
             sx={{
               mr: 0,

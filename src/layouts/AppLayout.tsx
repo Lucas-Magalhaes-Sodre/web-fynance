@@ -1,6 +1,7 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import CakeIcon from '@mui/icons-material/Cake';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import FlagIcon from '@mui/icons-material/Flag';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -44,6 +45,7 @@ export function AppLayout() {
     { to: '/app/cards', label: t('menuCards'), icon: <CreditCardIcon /> },
     { to: '/app/economy', label: t('menuSavings'), icon: <SavingsIcon /> },
     { to: '/app/goals', label: t('menuGoals'), icon: <FlagIcon /> },
+    { to: '/app/birthdays', label: t('menuBirthdays'), icon: <CakeIcon /> },
     { to: '/app/profile', label: t('menuProfile'), icon: <PersonIcon /> },
     { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon /> }
   ];

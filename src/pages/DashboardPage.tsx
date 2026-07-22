@@ -36,6 +36,8 @@ import {
   getYearControl,
   getSavingsSummary,
   listFinancialGoals,
+  listFinancialReminders,
+  updateFinancialReminder,
 } from "@/services/financialControl";
 import { FinancialItemForm } from "@/components/organisms/FinancialItemForm";
 import { FinancialGoalCard } from "@/components/organisms/goals/FinancialGoalCard";
@@ -48,6 +50,7 @@ import type {
   FinancialGoal,
   FinancialInsight,
   FinancialItem,
+  FinancialReminder,
   PaymentSummary,
   SavingsSummary,
 } from "@/interfaces/financial";
@@ -75,6 +78,7 @@ export function DashboardPage() {
     totalExpense: 0,
   });
   const [recentItems, setRecentItems] = useState<FinancialItem[]>([]);
+  const [dueReminders, setDueReminders] = useState<FinancialReminder[]>([]);
   const [savingsSummary, setSavingsSummary] = useState<SavingsSummary | null>(
     null,
   );
@@ -101,6 +105,7 @@ export function DashboardPage() {
       nextInsights,
       nextComparison,
       nextYearControl,
+      nextDueReminders,
     ] = await Promise.all([
       getSavingsSummary(month, year),
       getPaymentSummary({ month, year }),
@@ -108,6 +113,7 @@ export function DashboardPage() {
       getFinancialInsights(month, year),
       getFinancialComparison(month, year),
       getYearControl(year),
+      listFinancialReminders({ status: "PENDING", dueOnly: true }),
     ]);
     setTotals(data.totals);
     setAnnualTotals({
@@ -120,6 +126,7 @@ export function DashboardPage() {
     setGoals(nextGoals);
     setInsights(nextInsights);
     setComparison(nextComparison);
+    setDueReminders(nextDueReminders);
   }
 
   useEffect(() => {
@@ -261,6 +268,10 @@ export function DashboardPage() {
     if (label.includes("calendario")) return t("viewCalendar");
     return label;
   };
+  const markReminderAsRead = async (id: string) => {
+    await updateFinancialReminder(id, { status: "READ" });
+    await loadDashboard();
+  };
 
   return (
     <Stack spacing={3.5}>
@@ -388,6 +399,54 @@ export function DashboardPage() {
           />
         </Grid>
       </Grid>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>
+              {t("reminders")}
+            </Typography>
+            <Typography color="text.secondary">
+              {t("dueRemindersText")}
+            </Typography>
+          </Box>
+          {dueReminders.length ? (
+            <Stack spacing={1.25}>
+              {dueReminders.slice(0, 5).map((reminder) => (
+                <Paper
+                  key={reminder.id}
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    border: "1px solid rgba(15,23,42,0.08)",
+                    boxShadow: "none",
+                  }}
+                >
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    justifyContent="space-between"
+                    spacing={1.5}
+                  >
+                    <Box>
+                      <Typography fontWeight={950}>{reminder.title}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(reminder.remindAt)}
+                        {reminder.message ? ` • ${reminder.message}` : ""}
+                      </Typography>
+                    </Box>
+                    <Button size="small" onClick={() => markReminderAsRead(reminder.id)}>
+                      {t("markAsRead")}
+                    </Button>
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          ) : (
+            <Typography color="text.secondary">{t("noDueReminders")}</Typography>
+          )}
+        </Stack>
+      </Paper>
 
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
         <Stack

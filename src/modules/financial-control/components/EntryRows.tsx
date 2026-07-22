@@ -2,6 +2,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ReplayIcon from "@mui/icons-material/Replay";
+import NotificationsIcon from "@mui/icons-material/Notifications";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
@@ -26,6 +27,7 @@ type EntryRowsProps = {
   onDelete: (item: FinancialItem) => void;
   onMarkPaid: (item: FinancialItem) => void;
   onMarkPending: (item: FinancialItem) => void;
+  onManageReminders?: (item: FinancialItem) => void;
 };
 
 export function EntryRows({
@@ -34,6 +36,7 @@ export function EntryRows({
   onDelete,
   onMarkPaid,
   onMarkPending,
+  onManageReminders,
 }: EntryRowsProps) {
   const { language, t } = usePreferences();
   if (!items.length)
@@ -115,6 +118,13 @@ export function EntryRows({
                       onClick={() => onMarkPaid(item)}
                     >
                       <CheckCircleIcon />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+                {item.type.includes("EXPENSE") && onManageReminders ? (
+                  <Tooltip title={t("reminders")}>
+                    <IconButton onClick={() => onManageReminders(item)}>
+                      <NotificationsIcon />
                     </IconButton>
                   </Tooltip>
                 ) : null}

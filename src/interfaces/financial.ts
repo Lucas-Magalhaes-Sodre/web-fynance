@@ -6,6 +6,21 @@ export type RecurrenceType = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
 export type FinancialGoalStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 export type FinancialInsightType = 'POSITIVE' | 'WARNING' | 'INFO' | 'NEGATIVE';
+export type ReminderStatus = 'PENDING' | 'READ' | 'DISMISSED';
+
+export type FinancialReminder = {
+  id: string;
+  userId: string;
+  financialItemId: string;
+  title: string;
+  message?: string | null;
+  remindAt: string;
+  offsetDays?: number | null;
+  status: ReminderStatus;
+  sentAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type FinancialCategory = {
   id: string;
