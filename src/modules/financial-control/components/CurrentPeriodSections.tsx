@@ -16,6 +16,7 @@ type CurrentPeriodSectionsProps = {
   onMarkPaid: (item: FinancialItem) => void;
   onMarkPending: (item: FinancialItem) => void;
   onMarkManyPaid: (items: FinancialItem[]) => void;
+  onManageReminders?: (item: FinancialItem) => void;
 };
 
 export function CurrentPeriodSections({
@@ -26,6 +27,7 @@ export function CurrentPeriodSections({
   onMarkPaid,
   onMarkPending,
   onMarkManyPaid,
+  onManageReminders,
 }: CurrentPeriodSectionsProps) {
   const { t } = usePreferences();
   const incomeItems = items.filter((item) => item.type.includes("INCOME"));
@@ -43,6 +45,7 @@ export function CurrentPeriodSections({
         onDelete={onDeleteItem}
         onMarkPaid={onMarkPaid}
         onMarkPending={onMarkPending}
+        onManageReminders={onManageReminders}
       />
       <Stack
         direction={{ xs: "column", sm: "row" }}
@@ -70,6 +73,7 @@ export function CurrentPeriodSections({
         onDelete={onDeleteItem}
         onMarkPaid={onMarkPaid}
         onMarkPending={onMarkPending}
+        onManageReminders={onManageReminders}
       />
       <Typography variant="h6" fontWeight={900} color={financeColors.saving}>
         {t("savings")}

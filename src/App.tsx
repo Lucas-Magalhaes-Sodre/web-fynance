@@ -6,6 +6,7 @@ import { FinancialControlPage } from './pages/FinancialControlPage';
 import { FinancialCategoriesPage } from './pages/FinancialCategoriesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { FinancialGoalsPage } from './pages/FinancialGoalsPage';
+import { BirthdaysPage } from './pages/BirthdaysPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="economy" element={<EconomyPage />} />
             <Route path="savings" element={<Navigate to="/app/economy" replace />} />
             <Route path="goals" element={<FinancialGoalsPage />} />
+            <Route path="birthdays" element={<BirthdaysPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<FinancialCategoriesPage />} />
             <Route path="categories" element={<Navigate to="/app/settings" replace />} />

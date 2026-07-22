@@ -29,6 +29,7 @@ import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { FinancialEntryForm } from "@/components/organisms/FinancialEntryForm";
+import { FinancialRemindersDialog } from "@/components/organisms/FinancialRemindersDialog";
 import { CurrentPeriodSections } from "@/modules/financial-control/components/CurrentPeriodSections";
 import { FinancialControlFilters } from "@/modules/financial-control/components/FinancialControlFilters";
 import { FinancialControlHero } from "@/modules/financial-control/components/FinancialControlHero";
@@ -152,6 +153,7 @@ export function FinancialControlPage() {
   const [cellSaving, setCellSaving] = useState(false);
   const [lineEdit, setLineEdit] = useState<LineEditState | null>(null);
   const [lineSaving, setLineSaving] = useState(false);
+  const [reminderItem, setReminderItem] = useState<FinancialItem | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { t } = usePreferences();
 
@@ -758,6 +760,16 @@ export function FinancialControlPage() {
     }));
   }
 
+  function toggleCategoryGroups(expanded: boolean) {
+    setIncomeRowsExpanded(expanded);
+    setExpenseRowsExpanded(expanded);
+    setInvestmentRowsExpanded(expanded);
+    if (!expanded) {
+      setAllCategoryRowsExpanded(false);
+      setCategoryRowsExpanded({});
+    }
+  }
+
 
 
   return (
@@ -832,11 +844,14 @@ export function FinancialControlPage() {
           onToggleIncomeRows={() => setIncomeRowsExpanded((expanded) => !expanded)}
           onToggleExpenseRows={() => setExpenseRowsExpanded((expanded) => !expanded)}
           onToggleInvestmentRows={() => setInvestmentRowsExpanded((expanded) => !expanded)}
+          onToggleCategoryGroups={toggleCategoryGroups}
           onToggleAllCategoryRows={(expanded) => {
             setAllCategoryRowsExpanded(expanded);
-            setIncomeRowsExpanded(expanded);
-            setExpenseRowsExpanded(expanded);
-            setInvestmentRowsExpanded(expanded);
+            if (expanded) {
+              setIncomeRowsExpanded(true);
+              setExpenseRowsExpanded(true);
+              setInvestmentRowsExpanded(true);
+            }
             setCategoryRowsExpanded({});
           }}
           onToggleCategoryDetails={toggleCategoryDetails}
@@ -868,6 +883,7 @@ export function FinancialControlPage() {
           onMarkPaid={markItemPaid}
           onMarkPending={markItemPending}
           onMarkManyPaid={markItemsPaid}
+          onManageReminders={setReminderItem}
         />
       ) : null}
 
@@ -879,6 +895,11 @@ export function FinancialControlPage() {
         categories={categories}
         onClose={() => setFormOpen(false)}
         onSubmit={saveEntry}
+      />
+      <FinancialRemindersDialog
+        item={reminderItem}
+        open={Boolean(reminderItem)}
+        onClose={() => setReminderItem(null)}
       />
       <SavingMovementDialog
         open={savingFormOpen}

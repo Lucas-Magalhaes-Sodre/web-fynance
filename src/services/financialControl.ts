@@ -14,6 +14,7 @@ import type {
   GoalSavingsPage,
   FinancialInsight,
   FinancialItem,
+  FinancialReminder,
   MonthControl,
   PaymentStatus,
   PaymentSummary,
@@ -129,6 +130,14 @@ export type CreditCardPurchasePayload = {
   amount: number;
   purchaseDate: string;
   installments: number;
+};
+
+export type FinancialReminderPayload = {
+  financialItemId: string;
+  title: string;
+  message?: string | null;
+  remindAt: string;
+  offsetDays?: number | null;
 };
 
 export async function getYearControl(year: number) {
@@ -249,6 +258,41 @@ export async function deleteCategoryLine(payload: {
 }) {
   const { data } = await api.delete('/financial-items/category', { data: payload });
   return data;
+}
+
+export async function listFinancialItems(params?: {
+  type?: EntryType;
+  status?: PaymentStatus;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const { data } = await api.get<{ items: FinancialItem[] }>('/financial-items', { params });
+  return data.items;
+}
+
+export async function listFinancialReminders(params?: {
+  financialItemId?: string;
+  status?: 'PENDING' | 'READ' | 'DISMISSED';
+  from?: string;
+  to?: string;
+  dueOnly?: boolean;
+}) {
+  const { data } = await api.get<{ reminders: FinancialReminder[] }>('/financial-reminders', { params });
+  return data.reminders;
+}
+
+export async function createFinancialReminder(payload: FinancialReminderPayload) {
+  const { data } = await api.post<{ reminder: FinancialReminder }>('/financial-reminders', payload);
+  return data.reminder;
+}
+
+export async function updateFinancialReminder(id: string, payload: Partial<FinancialReminderPayload> & { status?: 'PENDING' | 'READ' | 'DISMISSED' }) {
+  const { data } = await api.put<{ reminder: FinancialReminder }>(`/financial-reminders/${id}`, payload);
+  return data.reminder;
+}
+
+export async function deleteFinancialReminder(id: string) {
+  await api.delete(`/financial-reminders/${id}`);
 }
 
 export async function listFinancialCategories(params?: { type?: FinancialCategoryType }) {

@@ -16,6 +16,7 @@ const categoryKeys: Record<string, TranslationKey> = {
   transporte: 'catTransport',
   'cartao de credito': 'catCreditCards',
   'cartoes de credito': 'catCreditCards',
+  aniversarios: 'catBirthdays',
   saude: 'catHealth',
   educacao: 'catEducation',
   assinaturas: 'catSubscriptions',
