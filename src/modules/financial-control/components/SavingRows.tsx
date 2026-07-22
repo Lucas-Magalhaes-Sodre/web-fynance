@@ -6,6 +6,8 @@ import TableRow from "@mui/material/TableRow";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import type { Saving } from "@/interfaces/financial";
 import { financeColors, formatDate, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName } from "@/i18n/display";
 import * as S from "./styles";
 
 type SavingRowsProps = {
@@ -13,9 +15,10 @@ type SavingRowsProps = {
 };
 
 export function SavingRows({ items }: SavingRowsProps) {
+  const { language, t } = usePreferences();
   if (!items.length)
     return (
-      <EmptyState message="Nenhuma economia neste periodo." />
+      <EmptyState message={t("noSavingThisPeriod")} />
     );
 
   return (
@@ -23,18 +26,18 @@ export function SavingRows({ items }: SavingRowsProps) {
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Economia</TableCell>
-            <TableCell>Categoria</TableCell>
-            <TableCell>Data</TableCell>
-            <TableCell>Descricao</TableCell>
-            <TableCell align="right">Valor</TableCell>
+            <TableCell>{t("singleSaving")}</TableCell>
+            <TableCell>{t("category")}</TableCell>
+            <TableCell>{t("date")}</TableCell>
+            <TableCell>{t("description")}</TableCell>
+            <TableCell align="right">{t("value")}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.id} hover>
               <TableCell>{item.title}</TableCell>
-              <TableCell>{item.category}</TableCell>
+              <TableCell>{translateCategoryName(item.category, language)}</TableCell>
               <TableCell>{formatDate(item.date)}</TableCell>
               <TableCell>{item.description || "-"}</TableCell>
               <TableCell

@@ -10,6 +10,8 @@ import {
   AppDialog,
   AppDialogStyles as S,
 } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 export type CategoryFormState = {
   name: string;
@@ -44,8 +46,9 @@ export function CategoryFormDialog({
   onTypeChange,
   lockIdentity = false,
 }: CategoryFormDialogProps) {
+  const { t } = usePreferences();
   const formId = mode === "create" ? "category-create-form" : "category-edit-form";
-  const actionLabel = mode === "create" ? "Adicionar" : "Salvar";
+  const actionLabel = mode === "create" ? t("add") : t("save");
   const Icon = mode === "create" ? AddIcon : SaveIcon;
 
   function updateForm(nextForm: Partial<CategoryFormState>) {
@@ -58,26 +61,28 @@ export function CategoryFormDialog({
       onClose={onClose}
       eyebrow={
         mode === "create"
-          ? "Nova configuracao"
+          ? t("newSetting")
           : form.type === "INCOME"
-            ? "Receita"
+            ? t("income")
             : form.type === "INVESTMENT"
-              ? "Economia"
-              : "Despesa"
+              ? t("savings")
+              : t("expense")
       }
-      title={mode === "create" ? "Adicionar categoria" : "Editar categoria"}
+      title={mode === "create" ? t("addCategory") : t("editCategory")}
       actions={
         <>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <LoadingActionButton
             type="submit"
             form={formId}
             variant="contained"
             startIcon={<Icon />}
-            disabled={saving || !form.name.trim() || !isValidColor || duplicate}
+            disabled={!form.name.trim() || !isValidColor || duplicate}
+            loading={saving}
+            loadingLabel={t("saving")}
           >
-            {saving ? "Salvando..." : actionLabel}
-          </Button>
+            {actionLabel}
+          </LoadingActionButton>
         </>
       }
     >
@@ -89,7 +94,7 @@ export function CategoryFormDialog({
       >
         <TextField
           select
-          label="Tipo"
+          label={t("recordType")}
           value={form.type}
           disabled={lockIdentity}
           onChange={(event) => {
@@ -98,29 +103,29 @@ export function CategoryFormDialog({
             else updateForm({ type });
           }}
         >
-          <MenuItem value="EXPENSE">Despesa</MenuItem>
-          <MenuItem value="INCOME">Receita</MenuItem>
-          <MenuItem value="INVESTMENT">Economia</MenuItem>
+          <MenuItem value="EXPENSE">{t("expense")}</MenuItem>
+          <MenuItem value="INCOME">{t("income")}</MenuItem>
+          <MenuItem value="INVESTMENT">{t("savings")}</MenuItem>
         </TextField>
         <TextField
           autoFocus
-          label="Nome da categoria"
+          label={t("categoryName")}
           required
           value={form.name}
           disabled={lockIdentity}
           error={duplicate}
           helperText={
             lockIdentity
-              ? "Categoria obrigatoria: somente a cor pode ser alterada."
+              ? t("mandatoryCategoryColorOnly")
               : duplicate
-              ? "Ja existe uma categoria com este nome para este tipo."
+              ? t("duplicateCategory")
               : " "
           }
           onChange={(event) => updateForm({ name: event.target.value })}
         />
         <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <S.ColorTextField
-            label="Cor"
+            label={t("color")}
             type="color"
             value={isValidColor ? form.color : "#64748B"}
             onChange={(event) =>
@@ -128,7 +133,7 @@ export function CategoryFormDialog({
             }
           />
           <TextField
-            label="Hexadecimal"
+            label={t("hex")}
             value={form.color}
             error={Boolean(form.color) && !isValidColor}
             helperText={!isValidColor ? "Use #RRGGBB" : " "}

@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { WeekControl } from "@/interfaces/financial";
 import { financeColors, formatDate, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { amountColor } from "./helpers";
 import * as S from "./styles";
 
@@ -13,6 +14,8 @@ type WeekOverviewProps = {
 };
 
 export function WeekOverview({ weekData }: WeekOverviewProps) {
+  const { t } = usePreferences();
+
   return (
     <Grid container spacing={2}>
       {weekData.days.map((day) => (
@@ -45,8 +48,8 @@ export function WeekOverview({ weekData }: WeekOverviewProps) {
               />
             </Box>
             <Typography variant="body2" color="text.secondary">
-              Receitas {formatMoney(day.totals.totalIncome)} • Despesas{" "}
-              {formatMoney(day.totals.totalExpense)} • Economias{" "}
+              {t("incomes")} {formatMoney(day.totals.totalIncome)} • {t("expenses")}{" "}
+              {formatMoney(day.totals.totalExpense)} • {t("savings")}{" "}
               {formatMoney(day.totals.totalSavings)}
             </Typography>
           </S.WeekCard>

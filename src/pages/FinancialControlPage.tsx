@@ -1,4 +1,8 @@
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,6 +26,7 @@ import {
   updateEntryValue,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { FinancialEntryForm } from "@/components/organisms/FinancialEntryForm";
 import { CurrentPeriodSections } from "@/modules/financial-control/components/CurrentPeriodSections";
@@ -69,7 +74,7 @@ import type {
   WeekControl,
   YearControl,
 } from "@/interfaces/financial";
-import { currencyToNumber, financeColors, isoDate, weekRange } from "@/utils/format";
+import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate, weekRange } from "@/utils/format";
 
 const initialSavingForm: SavingMovementFormState = {
   action: "REGISTER",
@@ -92,6 +97,22 @@ const initialSavingForm: SavingMovementFormState = {
 };
 
 const current = new Date();
+
+function FinancialControlSkeleton({ mode }: { mode: ViewMode }) {
+  return (
+    <Stack spacing={mode === "year" ? 1.75 : 3}>
+      <Grid container spacing={2}>
+        {[0, 1, 2, 3].map((item) => (
+          <Grid item xs={12} md={3} key={item}>
+            <Skeleton variant="rounded" height={86} />
+          </Grid>
+        ))}
+      </Grid>
+      {mode !== "year" ? <Skeleton variant="rounded" height={260} /> : null}
+      <Skeleton variant="rounded" height={mode === "year" ? 320 : 520} />
+    </Stack>
+  );
+}
 
 export function FinancialControlPage() {
   const navigate = useNavigate();
@@ -132,6 +153,7 @@ export function FinancialControlPage() {
   const [lineEdit, setLineEdit] = useState<LineEditState | null>(null);
   const [lineSaving, setLineSaving] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { t } = usePreferences();
 
   const allCurrentItems = useMemo(() => {
     if (mode === "day")
@@ -276,7 +298,7 @@ export function FinancialControlPage() {
       if (mode === "week")
         setWeekData(await getWeekControl(week.startDate, week.endDate));
     } catch {
-      setError("Nao foi possivel carregar os dados financeiros.");
+      setError("Não foi possível carregar os dados financeiros.");
     } finally {
       setLoading(false);
     }
@@ -399,6 +421,7 @@ export function FinancialControlPage() {
   }
 
   async function saveSavingFlow() {
+    if (savingTransferSaving) return;
     const payload = savingPayload();
     if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount))
       return;
@@ -443,7 +466,7 @@ export function FinancialControlPage() {
 
       if (endCursor < startCursor) {
         throw new Error(
-          "Periodo final da recorrencia anterior ao periodo inicial.",
+          "Período final da recorrência anterior ao período inicial.",
         );
       }
 
@@ -482,8 +505,8 @@ export function FinancialControlPage() {
 
   async function removeItem(item: FinancialItem) {
     const confirmed = await confirm({
-      title: "Excluir lancamento",
-      description: `Deseja excluir "${item.name ?? item.title}"? Esta acao nao pode ser desfeita.`,
+      title: "Excluir lançamento",
+      description: `Deseja excluir "${item.name ?? item.title}"? Esta ação não pode ser desfeita.`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
@@ -493,10 +516,7 @@ export function FinancialControlPage() {
   }
 
   async function markItemPaid(item: FinancialItem) {
-    await updateEntryPaymentStatus(item.id, {
-      status: "PAGO",
-    });
-    await loadData();
+    await markItemsPaid([item]);
   }
 
   async function markItemsPaid(items: FinancialItem[]) {
@@ -504,6 +524,42 @@ export function FinancialControlPage() {
       (item) => item.type.includes("EXPENSE") && item.status !== "PAGO",
     );
     if (!payableItems.length) return;
+
+    const confirmed = await confirm({
+      title: payableItems.length === 1 ? t("confirmPaymentTitle") : t("confirmPaymentsTitle"),
+      description: (
+        <Stack spacing={1.5}>
+          <Typography color="text.secondary">
+            {payableItems.length === 1 ? t("confirmPaymentMessage") : t("confirmPaymentsMessage")}
+          </Typography>
+          <Stack spacing={1}>
+            {payableItems.map((item) => (
+              <Box
+                key={item.id}
+                sx={{
+                  p: 1.25,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.default",
+                }}
+              >
+                <Typography fontWeight={900}>
+                  {item.name ?? item.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t("dueDate")}: {formatDate(item.dueDate ?? item.date)} · {t("value")}: {formatMoney(item.amount)}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Stack>
+      ),
+      confirmLabel: t("confirmPaymentAction"),
+      cancelLabel: t("cancel"),
+      tone: "primary",
+    });
+    if (!confirmed) return;
 
     await Promise.all(
       payableItems.map((item) =>
@@ -728,16 +784,22 @@ export function FinancialControlPage() {
         onWeekChange={setWeek}
       />
 
-      <PeriodSummaryCards
-        totalIncome={selectedTotals?.totalIncome ?? 0}
-        totalExpense={selectedTotals?.totalExpense ?? 0}
-        totalSavings={selectedTotals?.totalSavings ?? 0}
-        balance={selectedTotals?.balance ?? 0}
-      />
+      {loading ? (
+        <FinancialControlSkeleton mode={mode} />
+      ) : (
+        <>
+          <PeriodSummaryCards
+            totalIncome={selectedTotals?.totalIncome ?? 0}
+            totalExpense={selectedTotals?.totalExpense ?? 0}
+            totalSavings={selectedTotals?.totalSavings ?? 0}
+            balance={selectedTotals?.balance ?? 0}
+          />
 
-      {mode !== "year" && selectedTotals ? (
-        <FinancialSummaryChart totals={selectedTotals} />
-      ) : null}
+          {mode !== "year" && selectedTotals ? (
+            <FinancialSummaryChart totals={selectedTotals} />
+          ) : null}
+        </>
+      )}
 
       {!loading && !error && mode === "month" && calendarData ? (
         <MonthCalendarView
@@ -752,9 +814,6 @@ export function FinancialControlPage() {
         />
       ) : null}
 
-      {loading ? (
-        <EmptyState message="Carregando dados financeiros..." />
-      ) : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error && mode === "year" && yearData ? (

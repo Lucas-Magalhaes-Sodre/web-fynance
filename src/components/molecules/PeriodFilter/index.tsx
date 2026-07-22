@@ -2,7 +2,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import { months } from "@/utils/format";
+import { monthsByLanguage } from "@/i18n/display";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type PeriodFilterProps = {
   month: number;
@@ -19,13 +20,16 @@ export function PeriodFilter({
   onMonthChange,
   onYearChange,
 }: PeriodFilterProps) {
+  const { language, t } = usePreferences();
+  const months = monthsByLanguage[language];
+
   return (
     <Paper className="soft-card" sx={{ p: 2, borderRadius: 4 }}>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
         <TextField
           select
           size="small"
-          label="Mes"
+          label={t("month")}
           value={month}
           onChange={(event) => onMonthChange(Number(event.target.value))}
           sx={{ minWidth: 180 }}
@@ -39,7 +43,7 @@ export function PeriodFilter({
         <TextField
           select
           size="small"
-          label="Ano"
+          label={t("year")}
           value={year}
           onChange={(event) => onYearChange(Number(event.target.value))}
           sx={{ minWidth: 140 }}

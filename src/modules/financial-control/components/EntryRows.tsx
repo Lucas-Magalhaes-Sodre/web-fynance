@@ -14,7 +14,9 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import type { FinancialItem } from "@/interfaces/financial";
-import { financeColors, formatDate, formatMoney, typeLabels } from "@/utils/format";
+import { financeColors, formatDate, formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName, typeLabel } from "@/i18n/display";
 import { itemDateLabel } from "./helpers";
 import * as S from "./styles";
 
@@ -33,28 +35,29 @@ export function EntryRows({
   onMarkPaid,
   onMarkPending,
 }: EntryRowsProps) {
+  const { language, t } = usePreferences();
   if (!items.length)
-    return <EmptyState message="Nada cadastrado para este periodo." />;
+    return <EmptyState message={t("nothingThisPeriod")} />;
 
   return (
     <S.TableCard className="soft-card">
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Nome</TableCell>
-            <TableCell>Categoria</TableCell>
-            <TableCell>Data da movimentacao</TableCell>
-            <TableCell>Situacao</TableCell>
-            <TableCell>Tipo</TableCell>
-            <TableCell align="right">Valor</TableCell>
-            <TableCell align="right">Acoes</TableCell>
+            <TableCell>{t("name")}</TableCell>
+            <TableCell>{t("category")}</TableCell>
+            <TableCell>{t("movementDate")}</TableCell>
+            <TableCell>{t("situation")}</TableCell>
+            <TableCell>{t("type")}</TableCell>
+            <TableCell align="right">{t("value")}</TableCell>
+            <TableCell align="right">{t("actions")}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.id} hover>
               <TableCell>{item.name ?? item.title}</TableCell>
-              <TableCell>{item.category}</TableCell>
+              <TableCell>{translateCategoryName(item.category, language)}</TableCell>
               <TableCell>
                 <Typography
                   variant="caption"
@@ -80,14 +83,14 @@ export function EntryRows({
                       }
                     />
                     <Typography variant="caption" color="text.secondary">
-                      Vencimento: {formatDate(item.dueDate)}
+                      {t("dueDate")}: {formatDate(item.dueDate)}
                     </Typography>
                   </Stack>
                 ) : (
-                  "Recebido"
+                  t("received")
                 )}
               </TableCell>
-              <TableCell>{typeLabels[item.type]}</TableCell>
+              <TableCell>{typeLabel(item.type, language)}</TableCell>
               <TableCell
                 align="right"
                 sx={{

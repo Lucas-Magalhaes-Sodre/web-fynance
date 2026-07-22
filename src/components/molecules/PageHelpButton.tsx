@@ -6,6 +6,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { ReactNode, useState } from "react";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type PageHelpButtonProps = {
   title: string;
@@ -14,6 +15,7 @@ type PageHelpButtonProps = {
 };
 
 export function PageHelpButton({ title, label, children }: PageHelpButtonProps) {
+  const { t } = usePreferences();
   const [open, setOpen] = useState(false);
   const trigger = label ? (
     <Button
@@ -24,12 +26,12 @@ export function PageHelpButton({ title, label, children }: PageHelpButtonProps) 
       {label}
     </Button>
   ) : (
-    <Tooltip title="Ajuda">
+    <Tooltip title={t("help")}>
       <IconButton
         size="small"
         onClick={() => setOpen(true)}
         sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
-        aria-label="Ajuda"
+        aria-label={t("help")}
       >
         <HelpOutlineIcon fontSize="small" />
       </IconButton>
@@ -43,7 +45,7 @@ export function PageHelpButton({ title, label, children }: PageHelpButtonProps) 
         open={open}
         onClose={() => setOpen(false)}
         title={title}
-        actions={<Button onClick={() => setOpen(false)}>Entendi</Button>}
+        actions={<Button onClick={() => setOpen(false)}>{t("understand")}</Button>}
         maxWidth="md"
       >
         <Stack spacing={2}>

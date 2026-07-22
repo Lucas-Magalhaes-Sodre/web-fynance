@@ -6,18 +6,18 @@ Este modulo concentra a UI e os helpers especificos da feature de controle finan
 
 - `components`: componentes da feature e estilos locais.
 - `hooks`: hooks da feature quando alguma orquestracao se tornar reutilizavel.
-- `services`: adaptadores especificos da feature quando os servicos globais nao forem suficientes.
-- `utils`: utilitarios usados apenas por esta feature.
+- `services`: adaptadores específicos da feature quando os serviços globais não forem suficientes.
+- `utils`: utilitários usados apenas por esta feature.
 - `validations`: schemas Yup e regras de validacao de formularios.
 
-A pagina `src/pages/FinancialControlPage.tsx` deve permanecer como orquestradora:
+A página `src/pages/FinancialControlPage.tsx` deve permanecer como orquestradora:
 
 - carregar dados
 - manter estado de tela
 - conectar callbacks
 - renderizar os componentes do modulo
 
-UI especifica da feature deve ficar neste modulo. Componentes so devem ir para `src/components` quando forem compartilhados por mais de uma feature.
+UI específica da feature deve ficar neste módulo. Componentes só devem ir para `src/components` quando forem compartilhados por mais de uma feature.
 
 ## English
 

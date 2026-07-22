@@ -9,6 +9,8 @@ import Typography from "@mui/material/Typography";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import type { SavingsOverviewCategory } from "@/interfaces/financial";
 import { formatMoney } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName } from "@/i18n/display";
 
 type EconomyCategoryBoxesProps = {
   categories: SavingsOverviewCategory[];
@@ -17,15 +19,16 @@ type EconomyCategoryBoxesProps = {
 };
 
 export function EconomyCategoryBoxes({ categories, onEditItem, onDetailsItem }: EconomyCategoryBoxesProps) {
+  const { language, t } = usePreferences();
   return (
     <Stack spacing={2}>
       <Typography variant="h5" fontWeight={950}>
-        Caixinhas por categoria
+        {t("savingsBoxesByCategory")}
       </Typography>
       <Grid container spacing={2}>
         {!categories.length ? (
           <Grid item xs={12}>
-            <EmptyState message="Nenhuma caixinha com saldo ate hoje." />
+            <EmptyState message={t("noSavingsBox")} />
           </Grid>
         ) : null}
         {categories.map((category) => (
@@ -41,9 +44,9 @@ export function EconomyCategoryBoxes({ categories, onEditItem, onDetailsItem }: 
             >
               <Stack spacing={2}>
                 <Box minWidth={0}>
-                  <Tooltip title={category.name}>
+                  <Tooltip title={translateCategoryName(category.name, language)}>
                     <Typography fontWeight={950} noWrap color={category.color}>
-                      {category.name}
+                      {translateCategoryName(category.name, language)}
                     </Typography>
                   </Tooltip>
                   <Typography variant="h5" fontWeight={950}>
@@ -78,7 +81,7 @@ export function EconomyCategoryBoxes({ categories, onEditItem, onDetailsItem }: 
                         </Tooltip>
                         {item.hasYield ? (
                           <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                            {Number(item.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% ao mes
+                            {Number(item.yieldRateMonthly ?? 0).toLocaleString("pt-BR")}% {t("perMonthSuffix")}
                           </Typography>
                         ) : null}
                       </Box>
@@ -87,7 +90,7 @@ export function EconomyCategoryBoxes({ categories, onEditItem, onDetailsItem }: 
                           {formatMoney(item.currentSavedBalance)}
                         </Typography>
                         <Button size="small" onClick={() => onDetailsItem?.(category.name, item.name, item.savingIds)} sx={{ px: 0 }}>
-                          Detalhes
+                          {t("details")}
                         </Button>
                       </Box>
                     </Box>

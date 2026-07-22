@@ -7,10 +7,13 @@ import Typography from '@mui/material/Typography';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { PasswordField } from '@/components/molecules/PasswordField';
+import { PreferenceControls } from '@/components/molecules/PreferenceControls';
 
 export function LoginPage() {
   const { signIn } = useAuth();
+  const { t } = usePreferences();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,21 +26,24 @@ export function LoginPage() {
       await signIn(email, password);
       navigate('/app');
     } catch {
-      setError('E-mail ou senha invalidos.');
+      setError(t('loginError'));
     }
   }
 
   return (
     <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <Paper sx={{ p: 4, width: '100%', border: '1px solid #E5E7EB', boxShadow: 'none' }}>
+      <Paper sx={{ p: 4, width: '100%', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
         <Stack component="form" spacing={2.5} onSubmit={handleSubmit}>
-          <Typography variant="h4" fontWeight={900}>Entrar</Typography>
-          <TextField label="E-mail" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+          <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+            <Typography variant="h4" fontWeight={900}>{t('loginTitle')}</Typography>
+            <PreferenceControls />
+          </Stack>
+          <TextField label={t('email')} type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
           <PasswordField value={password} onChange={setPassword} />
           {error && <Typography color="error">{error}</Typography>}
-          <Button type="submit" variant="contained" size="large">Acessar</Button>
-          <Button component={Link} to="/forgot-password">Esqueci minha senha</Button>
-          <Typography textAlign="center">Nao tem conta? <Link to="/register">Cadastre-se</Link></Typography>
+          <Button type="submit" variant="contained" size="large">{t('loginAction')}</Button>
+          <Button component={Link} to="/forgot-password">{t('forgotPassword')}</Button>
+          <Typography textAlign="center">{t('noAccount')} <Link to="/register">{t('registerLink')}</Link></Typography>
         </Stack>
       </Paper>
     </Container>

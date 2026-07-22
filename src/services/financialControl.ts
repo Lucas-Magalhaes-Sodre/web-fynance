@@ -11,6 +11,7 @@ import type {
   FinancialComparison,
   FinancialGoal,
   FinancialGoalStatus,
+  GoalSavingsPage,
   FinancialInsight,
   FinancialItem,
   MonthControl,
@@ -359,6 +360,11 @@ export async function updateFinancialGoal(id: string, payload: Partial<Financial
 
 export async function deleteFinancialGoal(id: string) {
   await api.delete(`/financial-goals/${id}`);
+}
+
+export async function listFinancialGoalSavings(id: string, params?: { page?: number; limit?: number }) {
+  const { data } = await api.get<GoalSavingsPage>(`/financial-goals/${id}/savings`, { params });
+  return data;
 }
 
 export async function getFinancialInsights(month: number, year: number) {

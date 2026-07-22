@@ -14,7 +14,7 @@ export const Header = styled(DialogTitle)`
 `;
 
 export const Eyebrow = styled(Typography)`
-  color: rgba(15, 23, 42, 0.6);
+  color: var(--mr-muted);
   font-weight: 900;
 `;
 
@@ -44,9 +44,9 @@ export const FormStack = styled(Stack)`
 
 export const PreviewPanel = styled(Stack)`
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--mr-line);
   border-radius: 12px;
-  background-color: #f8fafc;
+  background-color: var(--mr-card-soft);
 `;
 
 export const IconBadge = styled(Box)<{
@@ -71,6 +71,12 @@ export const HighlightPanel = styled(Paper)<{
   border-radius: 12px;
   background-color: ${({ $panelBackground }) => $panelBackground ?? "#f8fafc"};
   box-shadow: none;
+  color: var(--mr-ink);
+
+  :root[data-theme='dark'] & {
+    border-color: color-mix(in srgb, ${({ $panelBorderColor }) => $panelBorderColor ?? "rgba(148,163,184,0.24)"} 55%, var(--mr-line));
+    background-color: color-mix(in srgb, ${({ $panelBackground }) => $panelBackground ?? "var(--mr-card-soft)"} 14%, var(--mr-card-solid));
+  }
 `;
 
 export const ColorFieldStack = styled(Stack)`

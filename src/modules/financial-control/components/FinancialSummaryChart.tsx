@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { balanceColor, financeColors, formatMoney } from "@/utils/format";
 import type { PeriodTotals } from "@/interfaces/financial";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import * as S from "./styles";
 
 type FinancialSummaryChartProps = {
@@ -20,32 +21,34 @@ type FinancialSummaryChartProps = {
 };
 
 export function FinancialSummaryChart({ totals }: FinancialSummaryChartProps) {
+  const { t } = usePreferences();
+
   return (
     <S.SectionCard className="soft-card">
       <Box component="h2" fontSize={20} fontWeight={900} mb={1}>
-        Resumo visual
+        {t("visualSummary")}
       </Box>
       <Box height={220}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={[
               {
-                name: "Receitas",
+                name: t("incomes"),
                 valor: totals.totalIncome,
                 fill: financeColors.income,
               },
               {
-                name: "Despesas",
+                name: t("expenses"),
                 valor: totals.totalExpense,
                 fill: financeColors.expense,
               },
               {
-                name: "Economias",
+                name: t("savings"),
                 valor: totals.totalSavings,
                 fill: financeColors.saving,
               },
               {
-                name: "Saldo disponivel",
+                name: t("availableBalance"),
                 valor: totals.balance,
                 fill: balanceColor(totals.balance),
               },

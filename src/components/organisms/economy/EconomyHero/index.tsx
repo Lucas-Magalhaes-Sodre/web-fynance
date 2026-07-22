@@ -9,6 +9,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { financeColors } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type EconomyHeroProps = {
   onCreate: () => void;
@@ -18,6 +19,7 @@ type EconomyHeroProps = {
 };
 
 export function EconomyHero({ onCreate, onWithdraw, onOpenFuture, onOpenCalculator }: EconomyHeroProps) {
+  const { t } = usePreferences();
   return (
     <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
       <Stack
@@ -29,26 +31,25 @@ export function EconomyHero({ onCreate, onWithdraw, onOpenFuture, onOpenCalculat
           <Stack direction="row" alignItems="center" spacing={1} mb={1}>
             <SavingsIcon sx={{ color: financeColors.saving }} />
             <Typography color="primary" fontWeight={900}>
-              Economias
+              {t("menuSavings")}
             </Typography>
-            <PageHelpButton title="Como funciona Economias?">
+            <PageHelpButton title={t("savingsHelpTitle")}>
               <Typography color="text.secondary">
-                Economias são valores guardados em reservas, caixinhas, cofrinhos, poupança, renda fixa ou outros investimentos.
+                {t("savingsHelpText1")}
               </Typography>
               <Typography color="text.secondary">
-                Você pode registrar uma economia avulsa, criar economias recorrentes, sacar valores guardados e vincular economias a metas financeiras.
+                {t("savingsHelpText2")}
               </Typography>
               <Typography color="text.secondary">
-                Quando uma economia tem rendimento cadastrado, o sistema usa essa taxa para projetar o saldo e simular o crescimento ao longo do tempo.
+                {t("savingsHelpText3")}
               </Typography>
             </PageHelpButton>
           </Stack>
           <Typography variant="h3" fontWeight={950} letterSpacing={0}>
-            Minhas economias
+            {t("mySavings")}
           </Typography>
           <Typography color="text.secondary" fontSize={17}>
-            Cadastre poupanca, caixinhas, cofrinho, renda fixa, investimentos e
-            outras reservas em um só lugar.
+            {t("savingsSubtitle")}
           </Typography>
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignSelf={{ xs: "stretch", md: "center" }}>
@@ -58,7 +59,7 @@ export function EconomyHero({ onCreate, onWithdraw, onOpenFuture, onOpenCalculat
             onClick={onCreate}
             sx={{ minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Adicionar economia
+            {t("addSaving")}
           </Button>
           <Button
             startIcon={<PaymentsIcon />}
@@ -67,7 +68,7 @@ export function EconomyHero({ onCreate, onWithdraw, onOpenFuture, onOpenCalculat
             onClick={onWithdraw}
             sx={{ minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Sacar economia
+            {t("withdrawSaving")}
           </Button>
           <Button
             startIcon={<TrendingUpIcon />}
@@ -75,7 +76,7 @@ export function EconomyHero({ onCreate, onWithdraw, onOpenFuture, onOpenCalculat
             onClick={onOpenCalculator}
             sx={{ minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Calculadora
+            {t("calculator")}
           </Button>
           <Button
             startIcon={<TrendingUpIcon />}
@@ -83,7 +84,7 @@ export function EconomyHero({ onCreate, onWithdraw, onOpenFuture, onOpenCalculat
             onClick={onOpenFuture}
             sx={{ minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Ver economias futuras
+            {t("futureSavingsButton")}
           </Button>
         </Stack>
       </Stack>

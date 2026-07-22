@@ -41,6 +41,7 @@ import { FinancialItemForm } from "@/components/organisms/FinancialItemForm";
 import { FinancialGoalCard } from "@/components/organisms/goals/FinancialGoalCard";
 import { StatCard } from "@/components/molecules/StatCard";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import type {
   DashboardTotals,
   FinancialComparison,
@@ -54,11 +55,20 @@ import {
   financeColors,
   formatDate,
   formatMoney,
-  months,
-  typeLabels,
 } from "@/utils/format";
+import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
+
+function formatCompactMoney(value: number) {
+  if (Math.abs(value) >= 1000) {
+    return `R$ ${(value / 1000).toLocaleString("pt-BR", {
+      maximumFractionDigits: 1,
+    })}k`;
+  }
+  return formatMoney(value);
+}
 
 export function DashboardPage() {
+  const { language, t } = usePreferences();
   const [totals, setTotals] = useState<DashboardTotals | null>(null);
   const [annualTotals, setAnnualTotals] = useState({
     totalIncome: 0,
@@ -118,22 +128,22 @@ export function DashboardPage() {
 
   const financialFlowData = [
     {
-      name: "Receitas",
+      name: t("incomes"),
       value: totals?.totalIncomes ?? 0,
       color: financeColors.income,
     },
     {
-      name: "Despesas",
+      name: t("expenses"),
       value: totals?.totalExpenses ?? 0,
       color: financeColors.expense,
     },
     {
-      name: "Economias",
+      name: t("savings"),
       value: totals?.totalSavings ?? 0,
       color: financeColors.saving,
     },
     {
-      name: (totals?.finalBalance ?? 0) >= 0 ? "Saldo disponivel" : "Deficit",
+      name: (totals?.finalBalance ?? 0) >= 0 ? t("availableBalance") : t("deficit"),
       value: Math.abs(totals?.finalBalance ?? 0),
       color:
         (totals?.finalBalance ?? 0) >= 0
@@ -143,25 +153,25 @@ export function DashboardPage() {
   ].filter((item) => item.value > 0);
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonthName = months[today.getMonth()];
+  const currentMonthName = monthsByLanguage[language][today.getMonth()];
   const currentMonthFlowData = [
     {
-      name: "Receitas",
+      name: t("incomes"),
       value: savingsSummary?.monthlyIncome ?? 0,
       color: financeColors.income,
     },
     {
-      name: "Despesas",
+      name: t("expenses"),
       value: savingsSummary?.monthlyExpense ?? 0,
       color: financeColors.expense,
     },
     {
-      name: "Economias",
+      name: t("savings"),
       value: savingsSummary?.monthlyRegisteredSavings ?? 0,
       color: financeColors.saving,
     },
     {
-      name: "Saldo apos sugestao",
+      name: t("availableBalance"),
       value: savingsSummary?.monthlyBalance ?? 0,
       color:
         (savingsSummary?.monthlyBalance ?? 0) >= 0
@@ -202,6 +212,55 @@ export function DashboardPage() {
       />
     );
   };
+  const translateInsight = (insight: FinancialInsight) => {
+    if (insight.title.includes("Saldo disponivel positivo")) {
+      return { title: t("insightPositiveBalanceTitle"), description: t("insightPositiveBalanceDescription") };
+    }
+    if (insight.title.includes("Saldo disponivel negativo")) {
+      return { title: t("insightNegativeBalanceTitle"), description: t("insightNegativeBalanceDescription") };
+    }
+    if (insight.title.includes("Comparacao de despesas")) {
+      return {
+        title: t("insightExpenseComparisonTitle"),
+        description: t("insightExpenseComparisonDescription").replace("{percentage}", String(Number(insight.value ?? 0).toFixed(1)))
+      };
+    }
+    if (insight.title.includes("Economias registradas")) {
+      return {
+        title: t("insightSavingsRegisteredTitle"),
+        description: Number(insight.value ?? 0) > 0 ? t("insightSavingsRegisteredPositive") : t("insightSavingsRegisteredEmpty")
+      };
+    }
+    if (insight.title.includes("Contas atrasadas")) {
+      return {
+        title: t("insightOverdueBillsTitle"),
+        description: Number(insight.value ?? 0) > 0
+          ? t("insightOverdueBillsNegative").replace("{count}", String(insight.value ?? 0))
+          : t("insightOverdueBillsPositive")
+      };
+    }
+    if (insight.title.includes("Pendencias proximas")) {
+      return {
+        title: t("insightUpcomingTitle"),
+        description: t("insightUpcomingDescription").replace("{count}", String(insight.value ?? 0))
+      };
+    }
+    if (insight.title.includes("Maior categoria de gasto")) {
+      const category = insight.description.split("foi ")[1]?.replace(".", "") ?? "";
+      return {
+        title: t("insightTopExpenseTitle"),
+        description: t("insightTopExpenseDescription").replace("{category}", translateCategoryName(category, language))
+      };
+    }
+    return { title: insight.title, description: insight.description };
+  };
+  const translateActionLabel = (label?: string) => {
+    if (!label) return "";
+    if (label.includes("economias")) return t("viewSavings");
+    if (label.includes("controle")) return t("viewControl");
+    if (label.includes("calendario")) return t("viewCalendar");
+    return label;
+  };
 
   return (
     <Stack spacing={3.5}>
@@ -236,15 +295,14 @@ export function DashboardPage() {
             <Stack direction="row" spacing={1} alignItems="center" mb={1}>
               <Sparkles size={18} color="#0F766E" />
               <Typography color="primary" fontWeight={900}>
-                Painel inteligente
+                {t("dashboardEyebrow")}
               </Typography>
             </Stack>
             <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
-              Dashboard
+              {t("menuDashboard")}
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
-              Resumo elegante das receitas, despesas, pagamentos e saldo da sua
-              conta pessoal, familiar ou empresarial.
+              {t("dashboardSubtitle")}
             </Typography>
           </div>
         </Stack>
@@ -253,42 +311,42 @@ export function DashboardPage() {
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
           <StatCard
-            label={`Total de receitas ${currentYear}`}
+            label={`${t("annualIncomeTotal")} ${currentYear}`}
             value={annualTotals.totalIncome}
             tone="income"
           />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label={`Total de despesas ${currentYear}`}
+            label={`${t("annualExpenseTotal")} ${currentYear}`}
             value={annualTotals.totalExpense}
             tone="expense"
           />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Economias"
+            label={t("savings")}
             value={totals?.totalSavings ?? 0}
             tone="saving"
           />
         </Grid>
         {/* <Grid item xs={12} md={4}>
           <StatCard
-            label="Saldo disponivel"
+            label="Saldo disponível"
             value={totals?.finalBalance ?? 0}
             tone="balance"
           />
         </Grid> */}
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Economias no mes"
+            label={t("monthlySavings")}
             value={savingsSummary?.monthlyRegisteredSavings ?? 0}
             tone="saving"
           />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Sugestao para guardar no mes - clique"
+            label={t("monthlySavingSuggestion")}
             value={savingsSummary?.suggestedSavings ?? 0}
             tone="saving"
             onClick={() => setSuggestionOpen(true)}
@@ -296,14 +354,14 @@ export function DashboardPage() {
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Economias atuais"
+            label={t("currentSavings")}
             value={savingsSummary?.currentSavings ?? 0}
             tone="saving"
           />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Economias futuras"
+            label={t("futureSavings")}
             value={savingsSummary?.futureSavings ?? 0}
             tone="saving"
           />
@@ -317,14 +375,14 @@ export function DashboardPage() {
         </Grid>*/}
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Total contas pendentes"
+            label={t("pendingBillsTotal")}
             value={paymentSummary?.pendingTotal ?? 0}
             tone="neutral"
           />
         </Grid>
         <Grid item xs={12} md={4}>
           <StatCard
-            label="Total contas atrasadas"
+            label={t("overdueBillsTotal")}
             value={paymentSummary?.overdueTotal ?? 0}
             tone="expense"
           />
@@ -340,17 +398,16 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Pulso financeiro anual
+              {t("annualFinancialPulse")}
             </Typography>
             <Typography color="text.secondary">
-              Saldo mensal com eixo central em zero. Verde acima, vermelho
-              abaixo e preto no zero.
+              {t("annualFinancialPulseText")}
             </Typography>
           </Box>
         </Stack>
         <Box height={300}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={pulseData}>
+            <LineChart data={pulseData} margin={{ top: 10, right: 24, left: 24, bottom: 8 }}>
               <defs>
                 <linearGradient
                   id="pulseBalanceStroke"
@@ -384,10 +441,14 @@ export function DashboardPage() {
                 axisLine={false}
                 tickLine={false}
                 domain={[pulseDomainMin, pulseDomainMax]}
-                tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+                width={84}
+                tickMargin={8}
+                tick={{ fontSize: 12 }}
+                tickCount={5}
+                tickFormatter={(value) => formatCompactMoney(Number(value))}
               />
               <Tooltip
-                formatter={(value) => formatMoney(Number(value))}
+                formatter={(value) => [formatMoney(Number(value)), t("balance")]}
                 contentStyle={{ borderRadius: 16, border: "1px solid #E2E8F0" }}
               />
               <ReferenceLine
@@ -402,7 +463,7 @@ export function DashboardPage() {
                 strokeWidth={4}
                 dot={renderPulseDot}
                 connectNulls={false}
-                name="Saldo"
+                name={t("balance")}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -418,23 +479,23 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Fluxo financeiro
+              {t("financialFlow")}
             </Typography>
             <Typography color="text.secondary">
-              Receitas, despesas, economias e saldo em uma leitura rapida.
+              {t("financialFlowText")}
             </Typography>
           </Box>
         </Stack>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <Typography fontWeight={900} mb={1}>
-              Visao anual
+              {t("annualView")}
             </Typography>
             <Box height={260}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Tooltip
-                    formatter={(value) => formatMoney(Number(value))}
+                    formatter={(value) => [formatMoney(Number(value)), t("value")]}
                     contentStyle={{
                       borderRadius: 16,
                       border: "1px solid #E2E8F0",
@@ -446,7 +507,7 @@ export function DashboardPage() {
                         ? financialFlowData
                         : [
                             {
-                              name: "Sem dados",
+                              name: t("noData"),
                               value: 1,
                               color: financeColors.neutralSoft,
                             },
@@ -475,11 +536,11 @@ export function DashboardPage() {
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography fontWeight={900} mb={1}>
-              Mes atual: {currentMonthName}
+              {t("currentMonth")}: {currentMonthName}
             </Typography>
             <Box height={260}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={currentMonthFlowData}>
+                <BarChart data={currentMonthFlowData} margin={{ top: 10, right: 12, left: 12, bottom: 0 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="rgba(15,23,42,0.08)"
@@ -488,10 +549,13 @@ export function DashboardPage() {
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+                    width={72}
+                    tickMargin={8}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => formatCompactMoney(Number(value))}
                   />
                   <Tooltip
-                    formatter={(value) => formatMoney(Number(value))}
+                    formatter={(value) => [formatMoney(Number(value)), t("value")]}
                     contentStyle={{
                       borderRadius: 16,
                       border: "1px solid #E2E8F0",
@@ -518,10 +582,10 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Contas do mes
+              {t("monthBills")}
             </Typography>
             <Typography color="text.secondary">
-              Pagamentos separados por situacao.
+              {t("monthBillsText")}
             </Typography>
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -531,7 +595,7 @@ export function DashboardPage() {
                 color="text.secondary"
                 fontWeight={800}
               >
-                Pagas
+                {t("paid")}
               </Typography>
               <Typography fontWeight={950} color={financeColors.positive}>
                 {paymentSummary?.paidCount ?? 0}
@@ -543,7 +607,7 @@ export function DashboardPage() {
                 color="text.secondary"
                 fontWeight={800}
               >
-                Pendentes
+                {t("pending")}
               </Typography>
               <Typography fontWeight={950} color={financeColors.neutral}>
                 {paymentSummary?.pendingCount ?? 0}
@@ -555,7 +619,7 @@ export function DashboardPage() {
                 color="text.secondary"
                 fontWeight={800}
               >
-                Atrasadas
+                {t("overdue")}
               </Typography>
               <Typography fontWeight={950} color={financeColors.negative}>
                 {paymentSummary?.overdueCount ?? 0}
@@ -567,7 +631,7 @@ export function DashboardPage() {
                 color="text.secondary"
                 fontWeight={800}
               >
-                Canceladas
+                {t("canceled")}
               </Typography>
               <Typography fontWeight={950} color={financeColors.neutral}>
                 {paymentSummary?.canceledCount ?? 0}
@@ -586,27 +650,27 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Comparativo mensal
+              {t("monthlyComparison")}
             </Typography>
             <Typography color="text.secondary">
-              Variações do mês atual em relação ao mês anterior.
+              {t("monthlyComparisonText")}
             </Typography>
           </Box>
         </Stack>
         <Grid container spacing={2}>
           {[
             {
-              label: "Receitas",
+              label: t("incomes"),
               variation: comparison?.incomeVariation,
               tone: financeColors.income,
             },
             {
-              label: "Despesas",
+              label: t("expenses"),
               variation: comparison?.expenseVariation,
               tone: financeColors.expense,
             },
             {
-              label: "Saldo",
+              label: t("balance"),
               variation: comparison?.balanceVariation,
               tone:
                 (comparison?.balanceVariation.value ?? 0) >= 0
@@ -614,7 +678,7 @@ export function DashboardPage() {
                   : financeColors.negative,
             },
             {
-              label: "Economias",
+              label: t("savings"),
               variation: comparison?.savingsVariation,
               tone: financeColors.saving,
             },
@@ -660,15 +724,16 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Insights financeiros
+              {t("financialInsights")}
             </Typography>
             <Typography color="text.secondary">
-              Alertas automaticos gerados pelos seus lancamentos.
+              {t("financialInsightsText")}
             </Typography>
           </Box>
         </Stack>
         <Grid container spacing={2}>
           {insights.slice(0, 6).map((insight) => {
+            const translatedInsight = translateInsight(insight);
             const color =
               insight.type === "POSITIVE"
                 ? financeColors.positive
@@ -696,10 +761,10 @@ export function DashboardPage() {
                 >
                   <Stack spacing={1}>
                     <Typography fontWeight={950} color={color}>
-                      {insight.title}
+                      {translatedInsight.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {insight.description}
+                      {translatedInsight.description}
                     </Typography>
                     {insight.actionLabel && insight.actionTarget ? (
                       <Button
@@ -708,7 +773,7 @@ export function DashboardPage() {
                         size="small"
                         sx={{ alignSelf: "flex-start", px: 0, fontWeight: 900 }}
                       >
-                        {insight.actionLabel}
+                        {translateActionLabel(insight.actionLabel)}
                       </Button>
                     ) : null}
                   </Stack>
@@ -728,14 +793,14 @@ export function DashboardPage() {
         >
           <Box>
             <Typography variant="h6" fontWeight={900}>
-              Metas em andamento
+              {t("activeGoals")}
             </Typography>
             <Typography color="text.secondary">
-              Principais objetivos conectados as suas economias.
+              {t("activeGoalsText")}
             </Typography>
           </Box>
           <Typography fontWeight={950} color={financeColors.saving}>
-            {goals.length} ativa(s)
+            {goals.length} {t("activeCount")}
           </Typography>
         </Stack>
         <Stack
@@ -753,7 +818,7 @@ export function DashboardPage() {
           ))}
           {!goals.length ? (
             <Typography color="text.secondary">
-              Nenhuma meta ativa cadastrada.
+              {t("noActiveGoals")}
             </Typography>
           ) : null}
         </Stack>
@@ -764,7 +829,7 @@ export function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
       >
         <Typography variant="h6" fontWeight={900} mb={1.25}>
-          Últimas movimentações
+          {t("latestTransactions")}
         </Typography>
         <Paper
           className="soft-card"
@@ -773,17 +838,17 @@ export function DashboardPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Registro</TableCell>
-                <TableCell>Categoria</TableCell>
-                <TableCell>Data da movimentacao</TableCell>
-                <TableCell align="right">Valor</TableCell>
+                <TableCell>{t("record")}</TableCell>
+                <TableCell>{t("category")}</TableCell>
+                <TableCell>{t("movementDate")}</TableCell>
+                <TableCell align="right">{t("value")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {recentItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{item.title}</TableCell>
-                  <TableCell>{typeLabels[item.type]}</TableCell>
+                  <TableCell>{translateCategoryName(item.category, language)}</TableCell>
                   <TableCell>
                     <Typography
                       variant="caption"
@@ -791,8 +856,8 @@ export function DashboardPage() {
                       display="block"
                     >
                       {item.type.includes("INCOME")
-                        ? "Data do recebimento"
-                        : "Data da saida"}
+                        ? t("receiptDate")
+                        : t("outflowDate")}
                     </Typography>
                     {formatDate(item.date)}
                   </TableCell>
@@ -829,32 +894,28 @@ export function DashboardPage() {
       <AppDialog
         open={suggestionOpen}
         onClose={() => setSuggestionOpen(false)}
-        title="Sugestao para guardar no mes"
+        title={t("monthlySavingSuggestionTitle")}
         titleAccent={financeColors.saving}
         actions={
-          <Button onClick={() => setSuggestionOpen(false)}>Entendi</Button>
+          <Button onClick={() => setSuggestionOpen(false)}>{t("understand")}</Button>
         }
       >
         <Stack spacing={1.5}>
           <Typography color="text.secondary">
-            Esta sugestao e mensal e usa os valores cadastrados para{" "}
-            {currentMonthName}: receitas menos despesas e menos economias ja
-            registradas no mes.
+            {t("monthlySavingSuggestionText")}
           </Typography>
           <Typography fontWeight={900}>
-            Receitas: {formatMoney(savingsSummary?.monthlyIncome ?? 0)}
+            {t("incomes")}: {formatMoney(savingsSummary?.monthlyIncome ?? 0)}
           </Typography>
           <Typography fontWeight={900}>
-            Despesas: {formatMoney(savingsSummary?.monthlyExpense ?? 0)}
+            {t("expenses")}: {formatMoney(savingsSummary?.monthlyExpense ?? 0)}
           </Typography>
           <Typography fontWeight={900}>
-            Economias ja registradas:{" "}
+            {t("registeredSavings")}:{" "}
             {formatMoney(savingsSummary?.monthlyRegisteredSavings ?? 0)}
           </Typography>
           <Typography color="text.secondary">
-            Quando sobra saldo positivo, o sistema sugere guardar esse saldo
-            restante. Se o saldo do mes ja esta zerado ou negativo, a sugestao
-            fica em R$ 0,00.
+            {t("monthlySavingSuggestionFooter")}
           </Typography>
         </Stack>
       </AppDialog>

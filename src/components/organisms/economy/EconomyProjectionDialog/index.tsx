@@ -18,6 +18,8 @@ import { AppDialog } from "@/components/molecules/AppDialog";
 import type { SavingsProjection } from "@/interfaces/financial";
 import { getSavingsProjection } from "@/services/financialControl";
 import { financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { translateCategoryName } from "@/i18n/display";
 
 type EconomyProjectionDialogProps = {
   open: boolean;
@@ -31,6 +33,7 @@ function defaultFutureDate() {
 }
 
 export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDialogProps) {
+  const { language, t } = usePreferences();
   const [targetDate, setTargetDate] = useState(defaultFutureDate);
   const [projection, setProjection] = useState<SavingsProjection | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +50,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
     setError("");
     getSavingsProjection(targetDate)
       .then(setProjection)
-      .catch(() => setError("Nao foi possivel simular o saldo futuro."))
+      .catch(() => setError(t("futureSimulationError")))
       .finally(() => setLoading(false));
   }, [isInvalidDate, open, targetDate]);
 
@@ -55,22 +58,22 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
     <AppDialog
       open={open}
       onClose={onClose}
-      title="Simular saldo futuro"
+      title={t("futureBalanceSimulation")}
       titleAccent={financeColors.saving}
       maxWidth="md"
-      actions={<Button onClick={onClose}>Fechar</Button>}
+      actions={<Button onClick={onClose}>{t("close")}</Button>}
     >
       <Stack spacing={2}>
         <Typography color="text.secondary">
-          Escolha uma data para ver quanto voce tera economizado se seguir o planejamento registrado no sistema.
+          {t("futureBalanceSimulationText")}
         </Typography>
         <TextField
-          label="Selecionar data futura"
+          label={t("selectFutureDate")}
           type="date"
           InputLabelProps={{ shrink: true }}
           value={targetDate}
           error={isInvalidDate}
-          helperText={isInvalidDate ? "A data precisa ser futura." : " "}
+          helperText={isInvalidDate ? t("dateMustBeFuture") : " "}
           onChange={(event) => setTargetDate(event.target.value)}
         />
 
@@ -81,13 +84,13 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
           <>
             <Paper sx={{ p: 2.5, borderRadius: 3, boxShadow: "none", border: "1px solid rgba(15,23,42,0.08)" }}>
               <Typography color="text.secondary" fontWeight={900}>
-                Saldo previsto em {formatDate(projection.targetDate)}
+                {t("expectedBalanceOn")} {formatDate(projection.targetDate)}
               </Typography>
               <Typography variant="h4" fontWeight={950} color={financeColors.saving}>
                 {formatMoney(projection.projectedBalance)}
               </Typography>
               <Typography color="text.secondary">
-                Saldo atual: {formatMoney(projection.currentSavedBalance)}
+                {t("currentBalance")}: {formatMoney(projection.currentSavedBalance)}
               </Typography>
             </Paper>
             <Divider />
@@ -95,11 +98,11 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
             <Table sx={{ minWidth: 720 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Subitem</TableCell>
-                  <TableCell>Data prevista</TableCell>
-                  <TableCell align="right">Valor</TableCell>
+                  <TableCell>{t("type")}</TableCell>
+                  <TableCell>{t("category")}</TableCell>
+                  <TableCell>{t("subitem")}</TableCell>
+                  <TableCell>{t("expectedDate")}</TableCell>
+                  <TableCell align="right">{t("value")}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -110,7 +113,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
                       <TableCell>
                         <Chip
                           size="small"
-                          label={isWithdraw ? "Saida" : "Entrada"}
+                          label={isWithdraw ? t("outflow") : t("entry")}
                           sx={{
                             fontWeight: 900,
                             color: isWithdraw ? financeColors.negative : financeColors.positive,
@@ -118,7 +121,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
                           }}
                         />
                       </TableCell>
-                      <TableCell>{item.categoryName}</TableCell>
+                      <TableCell>{translateCategoryName(item.categoryName, language)}</TableCell>
                       <TableCell>{item.subItemName}</TableCell>
                       <TableCell>{formatDate(item.movementDate)}</TableCell>
                       <TableCell align="right" sx={{ color: isWithdraw ? financeColors.negative : financeColors.positive, fontWeight: 950 }}>
@@ -130,7 +133,7 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
                 {!projection.items.length ? (
                   <TableRow>
                     <TableCell colSpan={5}>
-                      <EmptyState message="Nenhuma movimentacao futura ate esta data." />
+                      <EmptyState message={t("noFutureMovementUntilDate")} />
                     </TableCell>
                   </TableRow>
                 ) : null}

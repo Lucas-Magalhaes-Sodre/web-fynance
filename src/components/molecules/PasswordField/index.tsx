@@ -4,6 +4,7 @@ import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 interface PasswordFieldProps {
   value: string;
@@ -17,10 +18,11 @@ export function PasswordField({
   helperText,
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const { t } = usePreferences();
 
   return (
     <TextField
-      label="Senha"
+      label={t("password")}
       type={visible ? "text" : "password"}
       required
       value={value}
@@ -30,7 +32,7 @@ export function PasswordField({
         endAdornment: (
           <InputAdornment position="end">
             <IconButton
-              aria-label={visible ? "Ocultar senha" : "Exibir senha"}
+              aria-label={visible ? t("hidePassword") : t("showPassword")}
               edge="end"
               onClick={() => setVisible((current) => !current)}
             >

@@ -21,6 +21,7 @@ import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Table from "@mui/material/Table";
@@ -38,6 +39,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import {
@@ -51,7 +53,9 @@ import {
   type CreditCardPurchasePayload,
 } from "@/services/financialControl";
 import type { CreditCard, CreditCardPurchase } from "@/interfaces/financial";
-import { financeColors, formatDate, formatMoney, isoDate, months } from "@/utils/format";
+import { currencyToNumber, digitsToCurrency, financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { monthsByLanguage } from "@/i18n/display";
 
 const current = new Date();
 const currentMonth = current.getMonth() + 1;
@@ -84,7 +88,7 @@ const emptyPurchaseForm: PurchaseForm = {
 };
 
 function cardPayload(form: CardForm): CreditCardPayload {
-  const limit = form.creditLimit.trim() ? Number(form.creditLimit) : null;
+  const limit = form.creditLimit.trim() ? currencyToNumber(form.creditLimit) : null;
   return {
     name: form.name.trim(),
     dueDay: Number(form.dueDay),
@@ -95,7 +99,7 @@ function cardPayload(form: CardForm): CreditCardPayload {
 
 function purchasePayload(form: PurchaseForm, cardId: string): CreditCardPurchasePayload {
   const installments = Math.max(1, Number(form.installments));
-  const amount = Number(form.amount);
+  const amount = currencyToNumber(form.amount);
   return {
     cardId,
     title: form.title.trim(),
@@ -106,9 +110,14 @@ function purchasePayload(form: PurchaseForm, cardId: string): CreditCardPurchase
   };
 }
 
-function usageText(card: CreditCard) {
-  if (!card.creditLimit) return "Sem limite informado";
+function usageText(card: CreditCard, noLimitLabel: string) {
+  if (!card.creditLimit) return noLimitLabel;
   return `${formatMoney(card.usedAmount)} de ${formatMoney(card.creditLimit)}`;
+}
+
+function usageTextForAmount(card: CreditCard, amount: number, noLimitLabel: string) {
+  if (!card.creditLimit) return noLimitLabel;
+  return `${formatMoney(amount)} de ${formatMoney(card.creditLimit)}`;
 }
 
 function isValidHexColor(value: string) {
@@ -116,6 +125,8 @@ function isValidHexColor(value: string) {
 }
 
 export function CreditCardsPage() {
+  const { language, t } = usePreferences();
+  const months = monthsByLanguage[language];
   const [searchParams, setSearchParams] = useSearchParams();
   const cardFilter = searchParams.get("card") ?? "";
   const [cards, setCards] = useState<CreditCard[]>([]);
@@ -183,7 +194,7 @@ export function CreditCardsPage() {
         setSearchParams({ card: overview.cards[0].name });
       }
     } catch {
-      setError("Nao foi possivel carregar os cartoes.");
+      setError("Não foi possível carregar os cartões.");
     } finally {
       setLoading(false);
     }
@@ -215,7 +226,7 @@ export function CreditCardsPage() {
     setCardForm({
       name: card.name,
       dueDay: String(card.dueDay),
-      creditLimit: card.creditLimit ? String(card.creditLimit) : "",
+      creditLimit: card.creditLimit ? formatMoney(card.creditLimit) : "",
       color: card.color,
     });
     setCardModalOpen(true);
@@ -236,6 +247,7 @@ export function CreditCardsPage() {
 
   async function saveCard(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     const payload = cardPayload(cardForm);
     if (!payload.name || payload.dueDay < 1 || payload.dueDay > 31 || !isValidHexColor(cardForm.color)) return;
     setSaving(true);
@@ -253,10 +265,10 @@ export function CreditCardsPage() {
 
   async function toggleCardActive(card: CreditCard) {
     const confirmed = await confirm({
-      title: card.isActive ? "Inativar cartao" : "Reativar cartao",
+      title: card.isActive ? "Inativar cartão" : "Reativar cartão",
       description: card.isActive
-        ? `"${card.name}" saira da lista principal, mas todo o historico sera mantido.`
-        : `"${card.name}" voltara para a lista principal de cartoes.`,
+        ? `"${card.name}" saira da lista principal, mas todo o histórico sera mantido.`
+        : `"${card.name}" voltara para a lista principal de cartões.`,
       confirmLabel: card.isActive ? "Inativar" : "Reativar",
       tone: card.isActive ? "danger" : "primary",
     });
@@ -267,6 +279,7 @@ export function CreditCardsPage() {
 
   async function savePurchase(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!selectedCard) return;
     const payload = purchasePayload(purchaseForm, selectedCard.id);
     if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount)) return;
@@ -294,7 +307,7 @@ export function CreditCardsPage() {
 
     const confirmed = await confirm({
       title: "Excluir compra",
-      description: `Deseja excluir "${purchase.title}" do detalhamento deste cartao?`,
+      description: `Deseja excluir "${purchase.title}" do detalhamento deste cartão?`,
       confirmLabel: "Excluir",
       tone: "danger",
     });
@@ -304,6 +317,7 @@ export function CreditCardsPage() {
   }
 
   async function confirmPurchaseDelete() {
+    if (saving) return;
     if (!deletingPurchase) return;
     setSaving(true);
     try {
@@ -326,7 +340,7 @@ export function CreditCardsPage() {
     setPurchaseForm({
       title: purchase.title,
       description: purchase.description ?? "",
-      amount: String(purchase.amount),
+      amount: formatMoney(purchase.amount),
       amountMode: "TOTAL",
       purchaseDate: purchase.purchaseDate.slice(0, 10),
       installments: String(purchase.installments),
@@ -341,39 +355,47 @@ export function CreditCardsPage() {
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <CreditCardIcon sx={{ color: financeColors.expense }} />
               <Typography variant="h3" fontWeight={950} letterSpacing="-0.04em">
-                Cartoes
+                {t("menuCards")}
               </Typography>
-              <PageHelpButton title="Como funciona Cartões?">
+              <PageHelpButton title={t("cardsHelpTitle")}>
                 <Typography color="text.secondary">
-                  A área de Cartões ajuda a controlar limite, uso mensal, vencimento e compras parceladas de cada cartão.
+                  {t("cardsHelpText1")}
                 </Typography>
                 <Typography color="text.secondary">
-                  Cadastre um cartão com limite e dia de vencimento. Depois, registre compras detalhadas informando valor, data e número de parcelas.
+                  {t("cardsHelpText2")}
                 </Typography>
                 <Typography color="text.secondary">
-                  O sistema distribui as parcelas por mês e conecta o valor ao controle financeiro, facilitando a leitura das despesas do cartão.
+                  {t("cardsHelpText3")}
                 </Typography>
               </PageHelpButton>
             </Stack>
             <Typography color="text.secondary" fontSize={17}>
-              Acompanhe limite, uso mensal e compras detalhadas por cartao.
+              {t("cardsSubtitle")}
             </Typography>
           </Box>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateCard} sx={{ alignSelf: { xs: "stretch", md: "center" } }}>
-            Adicionar cartao
+            {t("addCard")}
           </Button>
         </Stack>
       </Paper>
 
-      {loading ? <EmptyState message="Carregando cartoes..." /> : null}
+      {loading ? (
+        <Grid container spacing={2}>
+          {[0, 1, 2].map((item) => (
+            <Grid item xs={12} md={6} xl={4} key={item}>
+              <Skeleton variant="rounded" height={220} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error ? (
         <Stack spacing={2}>
           <Paper className="soft-card" sx={{ px: 2, borderRadius: 3 }}>
             <Tabs value={cardTab} onChange={(_, value) => setCardTab(value)}>
-              <Tab value="ACTIVE" label={`Ativos (${cards.filter((card) => card.isActive).length})`} />
-              <Tab value="INACTIVE" label={`Inativos (${cards.filter((card) => !card.isActive).length})`} />
+              <Tab value="ACTIVE" label={`${t("active")} (${cards.filter((card) => card.isActive).length})`} />
+              <Tab value="INACTIVE" label={`${t("inactive")} (${cards.filter((card) => !card.isActive).length})`} />
             </Tabs>
           </Paper>
           <Grid container spacing={2}>
@@ -407,20 +429,20 @@ export function CreditCardsPage() {
                       <Typography variant="h6" fontWeight={950} noWrap>
                         {card.name}
                       </Typography>
-                      <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>Vence dia {card.dueDay}</Typography>
+                      <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>{t("dueDay")} {card.dueDay}</Typography>
                     </Box>
                     <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="Editar">
+                      <Tooltip title={t("edit")}>
                         <IconButton size="small" onClick={() => startCardEdit(card)} sx={{ color: "white", bgcolor: "rgba(255,255,255,0.12)" }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Detalhes">
+                      <Tooltip title={t("details")}>
                         <IconButton size="small" onClick={() => openDetails(card)} sx={{ color: "white", bgcolor: "rgba(255,255,255,0.12)" }}>
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={card.isActive ? "Inativar" : "Reativar"}>
+                      <Tooltip title={card.isActive ? t("deactivate") : t("reactivate")}>
                         <IconButton size="small" onClick={() => toggleCardActive(card)} sx={{ color: "white", bgcolor: "rgba(255,255,255,0.12)" }}>
                           {card.isActive ? <VisibilityOffIcon fontSize="small" /> : <RestoreIcon fontSize="small" />}
                         </IconButton>
@@ -434,8 +456,8 @@ export function CreditCardsPage() {
                       <Typography fontWeight={950}>{formatMoney(card.statementAmount)}</Typography>
                     </Stack>
                     <Stack direction="row" justifyContent="space-between" spacing={1}>
-                      <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>Limite usado</Typography>
-                      <Typography fontWeight={850}>{usageText(card)}</Typography>
+                      <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>{t("usedLimit")}</Typography>
+                      <Typography fontWeight={850}>{usageText(card, t("noLimit"))}</Typography>
                     </Stack>
                     <LinearProgress
                       variant="determinate"
@@ -451,7 +473,7 @@ export function CreditCardsPage() {
                   </Box>
 
                   <Stack direction="row" justifyContent="space-between" spacing={1}>
-                    <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>Total no ano</Typography>
+                    <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>{t("annualTotal")}</Typography>
                     <Typography fontWeight={900}>{formatMoney(card.yearStatementAmount)}</Typography>
                   </Stack>
                 </Stack>
@@ -460,7 +482,7 @@ export function CreditCardsPage() {
           ))}
           {!visibleCards.length ? (
             <Grid item xs={12}>
-              <EmptyState message={cardTab === "ACTIVE" ? "Nenhum cartao ativo cadastrado." : "Nenhum cartao inativo."} />
+              <EmptyState message={cardTab === "ACTIVE" ? t("noActiveCard") : t("noInactiveCard")} />
             </Grid>
           ) : null}
           </Grid>
@@ -470,24 +492,29 @@ export function CreditCardsPage() {
       <AppDialog
         open={cardModalOpen}
         onClose={resetCardForm}
-        title={editingCard ? "Editar cartao" : "Adicionar cartao"}
-        eyebrow="Cartao de credito"
+        title={editingCard ? t("editCard") : t("addCard")}
+        eyebrow={t("creditCard")}
         actions={
           <>
-            <Button onClick={resetCardForm}>Cancelar</Button>
-            <Button type="submit" form="credit-card-form" variant="contained" disabled={saving}>
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
+            <Button onClick={resetCardForm}>{t("cancel")}</Button>
+            <LoadingActionButton type="submit" form="credit-card-form" variant="contained" loading={saving} loadingLabel={t("saving")}>
+              {t("save")}
+            </LoadingActionButton>
           </>
         }
       >
         <Stack component="form" id="credit-card-form" spacing={2} onSubmit={saveCard}>
-          <TextField label="Nome ou apelido" value={cardForm.name} onChange={(event) => setCardForm({ ...cardForm, name: event.target.value })} required />
-          <TextField label="Vencimento mensal" type="number" value={cardForm.dueDay} onChange={(event) => setCardForm({ ...cardForm, dueDay: event.target.value })} inputProps={{ min: 1, max: 31 }} required />
-          <TextField label="Limite do cartao" type="number" value={cardForm.creditLimit} onChange={(event) => setCardForm({ ...cardForm, creditLimit: event.target.value })} inputProps={{ min: 0, step: 0.01 }} helperText="Opcional" />
+          <TextField label={t("cardName")} value={cardForm.name} onChange={(event) => setCardForm({ ...cardForm, name: event.target.value })} required />
+          <TextField label={t("monthlyDue")} type="number" value={cardForm.dueDay} onChange={(event) => setCardForm({ ...cardForm, dueDay: event.target.value })} inputProps={{ min: 1, max: 31 }} required />
+          <TextField
+            label={t("cardLimit")}
+            value={cardForm.creditLimit}
+            onChange={(event) => setCardForm({ ...cardForm, creditLimit: digitsToCurrency(event.target.value) })}
+            helperText={t("optional")}
+          />
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <TextField
-              label="Cor do cartao"
+              label={t("cardColor")}
               type="color"
               value={cardForm.color}
               onChange={(event) => setCardForm({ ...cardForm, color: event.target.value.toUpperCase() })}
@@ -495,7 +522,7 @@ export function CreditCardsPage() {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Hexadecimal"
+              label={t("hex")}
               value={cardForm.color}
               error={Boolean(cardForm.color) && !isValidHexColor(cardForm.color)}
               helperText={Boolean(cardForm.color) && !isValidHexColor(cardForm.color) ? "Use #RRGGBB" : " "}
@@ -517,21 +544,21 @@ export function CreditCardsPage() {
           <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
             <Box minWidth={0}>
               <Typography variant="h5" fontWeight={950} noWrap>
-                {selectedCard?.name ?? "Detalhes do cartao"}
+                {selectedCard?.name ?? t("cardDetails")}
               </Typography>
               <Typography color="text.secondary">
-                {selectedCard ? `Vencimento dia ${selectedCard.dueDay} · ${usageText(selectedCard)}` : ""}
+                {selectedCard ? `${t("dueDay")} ${selectedCard.dueDay} · ${usageTextForAmount(selectedCard, selectedMonthSummary?.statementAmount ?? selectedCard.usedAmount, t("noLimit"))}` : ""}
               </Typography>
             </Box>
             <Stack direction="row" spacing={1} alignItems="center">
-              <TextField select size="small" label="Mes" value={selectedDetailMonth} onChange={(event) => setSelectedDetailMonth(Number(event.target.value))}>
+              <TextField select size="small" label={t("month")} value={selectedDetailMonth} onChange={(event) => setSelectedDetailMonth(Number(event.target.value))}>
                 {months.map((label, index) => (
                   <MenuItem key={label} value={index + 1}>
                     {label}
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label="Ano" value={detailYear} onChange={(event) => setDetailYear(Number(event.target.value))}>
+              <TextField select size="small" label={t("year")} value={detailYear} onChange={(event) => setDetailYear(Number(event.target.value))}>
                 {yearOptions.map((option) => (
                   <MenuItem key={option} value={option}>
                     {option}
@@ -550,7 +577,7 @@ export function CreditCardsPage() {
               <Grid item xs={12}>
                 <Paper sx={{ p: 2, borderRadius: 2 }}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.5} mb={1.5}>
-                    <Typography fontWeight={950}>Comparativo mensal</Typography>
+                    <Typography fontWeight={950}>{t("monthlyComparisonShort")}</Typography>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       <IconButton size="small" onClick={() => setDetailYear((value) => value - 1)}>
                         <ChevronLeftIcon fontSize="small" />
@@ -638,7 +665,7 @@ export function CreditCardsPage() {
                 <Stack spacing={2}>
                   <Paper sx={{ p: 2, borderRadius: 2 }}>
                     <Typography fontWeight={950} mb={1.5}>
-                      {editingPurchase ? "Editar despesa" : "Adicionar despesa detalhada"}
+                      {editingPurchase ? t("editExpense") : t("addDetailedExpense")}
                     </Typography>
                     <Grid component="form" id="credit-card-purchase-form" container spacing={1.5} onSubmit={savePurchase}>
                       <Grid item xs={12}>
@@ -648,39 +675,37 @@ export function CreditCardsPage() {
                           value={purchaseForm.amountMode}
                           onChange={(_, value) => value && setPurchaseForm({ ...purchaseForm, amountMode: value })}
                         >
-                          <ToggleButton value="TOTAL">Sei o valor total</ToggleButton>
-                          <ToggleButton value="INSTALLMENT">Sei o valor da parcela</ToggleButton>
+                          <ToggleButton value="TOTAL">{t("knowTotalValue")}</ToggleButton>
+                          <ToggleButton value="INSTALLMENT">{t("knowInstallmentValue")}</ToggleButton>
                         </ToggleButtonGroup>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <TextField fullWidth label="Nome da despesa" value={purchaseForm.title} onChange={(event) => setPurchaseForm({ ...purchaseForm, title: event.target.value })} required />
+                        <TextField fullWidth label={t("expenseName")} value={purchaseForm.title} onChange={(event) => setPurchaseForm({ ...purchaseForm, title: event.target.value })} required />
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
-                          label={purchaseForm.amountMode === "TOTAL" ? "Valor total" : "Valor da parcela"}
-                          type="number"
+                          label={purchaseForm.amountMode === "TOTAL" ? t("totalValue") : t("installmentValue")}
                           value={purchaseForm.amount}
-                          onChange={(event) => setPurchaseForm({ ...purchaseForm, amount: event.target.value })}
-                          inputProps={{ min: 0, step: 0.01 }}
+                          onChange={(event) => setPurchaseForm({ ...purchaseForm, amount: digitsToCurrency(event.target.value) })}
                           required
                         />
                       </Grid>
                       <Grid item xs={6}>
-                        <TextField fullWidth label="Parcelas" type="number" value={purchaseForm.installments} onChange={(event) => setPurchaseForm({ ...purchaseForm, installments: event.target.value })} inputProps={{ min: 1, max: 240 }} required />
+                        <TextField fullWidth label={t("installments")} type="number" value={purchaseForm.installments} onChange={(event) => setPurchaseForm({ ...purchaseForm, installments: event.target.value })} inputProps={{ min: 1, max: 240 }} required />
                       </Grid>
                       <Grid item xs={6}>
-                        <TextField fullWidth label="Data" type="date" value={purchaseForm.purchaseDate} onChange={(event) => setPurchaseForm({ ...purchaseForm, purchaseDate: event.target.value })} InputLabelProps={{ shrink: true }} required />
+                        <TextField fullWidth label={t("date")} type="date" value={purchaseForm.purchaseDate} onChange={(event) => setPurchaseForm({ ...purchaseForm, purchaseDate: event.target.value })} InputLabelProps={{ shrink: true }} required />
                       </Grid>
                       <Grid item xs={12}>
-                        <TextField fullWidth label="Observacao" value={purchaseForm.description} onChange={(event) => setPurchaseForm({ ...purchaseForm, description: event.target.value })} />
+                        <TextField fullWidth label={t("note")} value={purchaseForm.description} onChange={(event) => setPurchaseForm({ ...purchaseForm, description: event.target.value })} />
                       </Grid>
                       <Grid item xs={12}>
                         <Stack direction="row" spacing={1}>
-                          <Button type="submit" variant="contained" disabled={saving}>
-                            {editingPurchase ? "Salvar despesa" : "Adicionar despesa"}
-                          </Button>
-                          {editingPurchase ? <Button onClick={resetPurchaseForm}>Cancelar</Button> : null}
+                          <LoadingActionButton type="submit" variant="contained" loading={saving} loadingLabel={t("saving")}>
+                            {editingPurchase ? t("saveExpense") : t("addExpense")}
+                          </LoadingActionButton>
+                          {editingPurchase ? <Button onClick={resetPurchaseForm}>{t("cancel")}</Button> : null}
                         </Stack>
                       </Grid>
                     </Grid>
@@ -694,21 +719,21 @@ export function CreditCardsPage() {
                   <Box p={2} pb={0}>
                     <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" spacing={1}>
                       <Typography fontWeight={950} textTransform="capitalize">
-                        Despesas de {months[selectedDetailMonth - 1]} de {detailYear}
+                        {t("expensesOf")} {months[selectedDetailMonth - 1]} {detailYear}
                       </Typography>
                       <Typography color="text.secondary">
-                        Total {formatMoney(selectedMonthSummary?.statementAmount ?? 0)}
+                        {t("total")} {formatMoney(selectedMonthSummary?.statementAmount ?? 0)}
                       </Typography>
                     </Stack>
                   </Box>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Despesa</TableCell>
-                        <TableCell>Data</TableCell>
-                        <TableCell>Parcela</TableCell>
-                        <TableCell align="right">Valor no mes</TableCell>
-                        <TableCell align="right">Acoes</TableCell>
+                        <TableCell>{t("expense")}</TableCell>
+                        <TableCell>{t("date")}</TableCell>
+                        <TableCell>{t("installment")}</TableCell>
+                        <TableCell align="right">{t("monthValue")}</TableCell>
+                        <TableCell align="right">{t("actions")}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -747,7 +772,7 @@ export function CreditCardsPage() {
                       {!selectedMonthSummary || (!selectedMonthSummary.purchases.length && selectedMonthSummary.otherAmount <= 0) ? (
                         <TableRow>
                           <TableCell colSpan={5} sx={{ color: "text.secondary", fontStyle: "italic" }}>
-                            Nenhuma despesa detalhada neste mes.
+                            {t("noDetailedExpense")}
                           </TableCell>
                         </TableRow>
                       ) : null}
@@ -757,11 +782,11 @@ export function CreditCardsPage() {
               </Grid>
             </Grid>
           ) : (
-            <EmptyState message="Selecione um cartao para ver os detalhes." />
+            <EmptyState message={t("selectCardDetails")} />
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDetails}>Fechar</Button>
+          <Button onClick={closeDetails}>{t("close")}</Button>
         </DialogActions>
       </Dialog>
       <AppDialog
@@ -770,8 +795,8 @@ export function CreditCardsPage() {
           setDeletingPurchase(null);
           setDeleteAllInstallments(false);
         }}
-        title="Excluir despesa"
-        eyebrow="Cartao de credito"
+        title={t("deleteExpense")}
+        eyebrow={t("creditCard")}
         actions={
           <>
             <Button
@@ -780,17 +805,17 @@ export function CreditCardsPage() {
                 setDeleteAllInstallments(false);
               }}
             >
-              Cancelar
+              {t("cancel")}
             </Button>
-            <Button color="error" variant="contained" onClick={confirmPurchaseDelete} disabled={saving}>
-              Excluir
-            </Button>
+            <LoadingActionButton color="error" variant="contained" onClick={confirmPurchaseDelete} loading={saving} loadingLabel={t("deleting")}>
+              {t("delete")}
+            </LoadingActionButton>
           </>
         }
       >
         <Stack spacing={1.5}>
           <Typography color="text.secondary">
-            Deseja excluir "{deletingPurchase?.title}" deste mes?
+            Deseja excluir "{deletingPurchase?.title}" deste mês?
           </Typography>
           <FormControlLabel
             control={
@@ -799,7 +824,7 @@ export function CreditCardsPage() {
                 onChange={(event) => setDeleteAllInstallments(event.target.checked)}
               />
             }
-            label="Excluir tambem dos demais meses"
+            label={t("deleteOtherMonths")}
           />
         </Stack>
       </AppDialog>

@@ -10,11 +10,42 @@
   --mr-muted: #64748b;
   --mr-line: rgba(15, 23, 42, 0.1);
   --mr-card: rgba(255, 255, 255, 0.82);
+  --mr-card-solid: #ffffff;
+  --mr-card-soft: rgba(255, 255, 255, 0.92);
+  --mr-field: rgba(255, 255, 255, 0.78);
+  --mr-page-bg: #f8fafc;
+  --mr-main-bg: radial-gradient(circle at 18% 0%, rgba(45,212,191,0.12), transparent 28rem), radial-gradient(circle at 90% 10%, rgba(96,165,250,0.1), transparent 28rem), #f8fafc;
+  --mr-premium-bg: linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)), #f8fafc;
+  --mr-drawer-bg: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));
+  --mr-hover-ink: #0f172a;
   --mr-green: #0f766e;
   --mr-blue: #2563eb;
   --mr-red: #dc2626;
   --mr-amber: #d97706;
   --mr-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  --mr-soft-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --mr-ink: #e5eef8;
+  --mr-muted: #a8b4c6;
+  --mr-line: rgba(148, 163, 184, 0.22);
+  --mr-card: rgba(15, 27, 45, 0.86);
+  --mr-card-solid: #0f1b2d;
+  --mr-card-soft: rgba(20, 34, 55, 0.88);
+  --mr-field: rgba(15, 27, 45, 0.78);
+  --mr-page-bg: #07111f;
+  --mr-main-bg: radial-gradient(circle at 18% 0%, rgba(45,212,191,0.14), transparent 28rem), radial-gradient(circle at 90% 10%, rgba(96,165,250,0.11), transparent 28rem), #07111f;
+  --mr-premium-bg: linear-gradient(135deg, rgba(13, 36, 48, 0.92), rgba(10, 24, 44, 0.96) 48%, rgba(42, 32, 12, 0.64)), #07111f;
+  --mr-drawer-bg: linear-gradient(180deg, rgba(15,27,45,0.96), rgba(7,17,31,0.94));
+  --mr-hover-ink: #f8fafc;
+  --mr-green: #2dd4bf;
+  --mr-blue: #60a5fa;
+  --mr-red: #f87171;
+  --mr-amber: #fbbf24;
+  --mr-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  --mr-soft-shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
 }
 
 html {
@@ -23,10 +54,7 @@ html {
 
 body {
   font-family: Inter, Roboto, Arial, sans-serif;
-  background:
-    radial-gradient(circle at 16% 6%, rgba(45, 212, 191, 0.18), transparent 28rem),
-    radial-gradient(circle at 86% 10%, rgba(96, 165, 250, 0.16), transparent 32rem),
-    #f7faf9;
+  background: var(--mr-main-bg);
 }
 
 @keyframes mr-float {
@@ -43,9 +71,7 @@ body {
 .premium-page {
   min-height: 100vh;
   color: var(--mr-ink);
-  background:
-    linear-gradient(135deg, rgba(236, 253, 245, 0.78), rgba(239, 246, 255, 0.88) 46%, rgba(255, 251, 235, 0.54)),
-    #f8fafc;
+  background: var(--mr-premium-bg);
 }
 
 .premium-gradient {
@@ -56,15 +82,15 @@ body {
 
 .glass-card {
   background: var(--mr-card);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--mr-line);
   box-shadow: var(--mr-shadow);
   backdrop-filter: blur(18px);
 }
 
 .soft-card {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--mr-card-soft);
   border: 1px solid var(--mr-line);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--mr-soft-shadow);
 }
 
 .premium-button {
@@ -79,8 +105,8 @@ body {
 }
 
 .financial-table-modern th {
-  background: rgba(248, 250, 252, 0.96);
-  color: #334155;
+  background: color-mix(in srgb, var(--mr-card-solid) 88%, transparent);
+  color: var(--mr-muted);
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -91,6 +117,38 @@ body {
   border-color: rgba(15, 23, 42, 0.08);
 }
 
+:root[data-theme='dark'] .financial-table-modern td,
+:root[data-theme='dark'] .financial-table-modern th {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+:root[data-theme='dark'] .financial-table-modern th {
+  background: color-mix(in srgb, var(--mr-card-solid) 92%, transparent);
+  color: #d7e2f0;
+}
+
+.recharts-default-tooltip {
+  background: var(--mr-card-solid) !important;
+  border-color: var(--mr-line) !important;
+  color: var(--mr-ink) !important;
+  box-shadow: var(--mr-soft-shadow);
+}
+
+.recharts-tooltip-label,
+.recharts-tooltip-item,
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-value {
+  color: var(--mr-ink) !important;
+}
+
+:root[data-theme='dark'] .recharts-cartesian-axis-tick text {
+  fill: #a8b4c6;
+}
+
+:root[data-theme='dark'] .recharts-cartesian-grid line {
+  stroke: rgba(148, 163, 184, 0.16);
+}
+
 .premium-scrollbar::-webkit-scrollbar {
   height: 10px;
   width: 10px;
@@ -99,4 +157,8 @@ body {
 .premium-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(15, 23, 42, 0.18);
   border-radius: 999px;
+}
+
+:root[data-theme='dark'] .premium-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(226, 232, 240, 0.22);
 }

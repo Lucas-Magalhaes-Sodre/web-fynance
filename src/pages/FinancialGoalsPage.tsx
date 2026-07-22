@@ -9,6 +9,7 @@ import IconButton from '@mui/material/IconButton';
 import LinearProgress from '@mui/material/LinearProgress';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -17,7 +18,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
   createFinancialGoal,
   deleteFinancialGoal,
-  listSavings,
+  listFinancialGoalSavings,
   listFinancialGoals,
   updateFinancialGoal,
   type FinancialGoalPayload
@@ -32,8 +33,9 @@ import { FinancialGoalCard } from '@/components/organisms/goals/FinancialGoalCar
 import { StatCard } from '@/components/molecules/StatCard';
 import { AppDialog } from '@/components/molecules/AppDialog';
 import { PageHelpButton } from '@/components/molecules/PageHelpButton';
-import type { FinancialGoal, FinancialGoalStatus, Saving } from '@/interfaces/financial';
-import { currencyToNumber, financeColors, formatMoney, isoDate } from '@/utils/format';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import type { FinancialGoal, FinancialGoalStatus, GoalSavingsPage } from '@/interfaces/financial';
+import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate } from '@/utils/format';
 
 const initialForm: GoalFormState = {
   title: '',
@@ -69,10 +71,14 @@ function toPayload(form: GoalFormState): FinancialGoalPayload {
 }
 
 export function FinancialGoalsPage() {
+  const { t } = usePreferences();
   const [status, setStatus] = useState<FinancialGoalStatus | 'ALL'>('ACTIVE');
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
-  const [savings, setSavings] = useState<Saving[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savingGoal, setSavingGoal] = useState(false);
+  const [deletingGoalId, setDeletingGoalId] = useState('');
+  const [goalSavingsPage, setGoalSavingsPage] = useState<GoalSavingsPage | null>(null);
+  const [goalSavingsLoading, setGoalSavingsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
@@ -103,9 +109,8 @@ export function FinancialGoalsPage() {
     try {
       const nextGoals = await listFinancialGoals(status === 'ALL' ? undefined : { status });
       setGoals(nextGoals);
-      setSavings(await listSavings());
     } catch {
-      setError('Nao foi possivel carregar suas metas.');
+      setError('Não foi possível carregar suas metas.');
     } finally {
       setLoading(false);
     }
@@ -140,56 +145,109 @@ export function FinancialGoalsPage() {
     setFormOpen(true);
   }
 
+  async function openDetails(goal: FinancialGoal, page = 1) {
+    setDetailGoal(goal);
+    setGoalSavingsLoading(true);
+    try {
+      setGoalSavingsPage(await listFinancialGoalSavings(goal.id, { page, limit: 5 }));
+    } finally {
+      setGoalSavingsLoading(false);
+    }
+  }
+
+  async function changeGoalSavingsPage(page: number) {
+    if (!detailGoal || goalSavingsLoading) return;
+    setGoalSavingsLoading(true);
+    try {
+      setGoalSavingsPage(await listFinancialGoalSavings(detailGoal.id, { page, limit: goalSavingsPage?.limit ?? 5 }));
+    } finally {
+      setGoalSavingsLoading(false);
+    }
+  }
+
   async function saveGoal() {
+    if (savingGoal) return;
     const payload = toPayload(form);
     if (!payload.title || payload.targetAmount <= 0 || Number.isNaN(payload.targetAmount)) return;
 
-    if (editingGoal) await updateFinancialGoal(editingGoal.id, payload);
-    else await createFinancialGoal(payload);
+    setSavingGoal(true);
+    try {
+      if (editingGoal) await updateFinancialGoal(editingGoal.id, payload);
+      else await createFinancialGoal(payload);
 
-    setFormOpen(false);
-    await loadGoals();
+      setFormOpen(false);
+      await loadGoals();
+    } finally {
+      setSavingGoal(false);
+    }
   }
 
   async function removeGoal(goal: FinancialGoal) {
     const confirmed = await confirm({
       title: 'Excluir meta',
-      description: `Deseja excluir a meta "${goal.title}"? Esta acao nao pode ser desfeita.`,
+      description: `Deseja excluir a meta "${goal.title}"? Esta acao não pode ser desfeita.`,
       confirmLabel: 'Excluir',
       tone: 'danger'
     });
     if (!confirmed) return;
-    await deleteFinancialGoal(goal.id);
-    await loadGoals();
+    setDeletingGoalId(goal.id);
+    try {
+      await deleteFinancialGoal(goal.id);
+      await loadGoals();
+    } finally {
+      setDeletingGoalId('');
+    }
+  }
+
+  function GoalsSkeleton() {
+    return (
+      <Stack spacing={2}>
+        <Grid container spacing={2} className="goals-aligned-grid">
+          {[0, 1, 2].map((item) => (
+            <Grid item xs={12} md={4} key={item}>
+              <Skeleton variant="rounded" height={86} />
+            </Grid>
+          ))}
+        </Grid>
+        <Skeleton variant="rounded" height={126} />
+        <Grid container spacing={2} className="goals-aligned-grid">
+          {[0, 1, 2].map((item) => (
+            <Grid item xs={12} md={6} lg={4} key={item}>
+              <Skeleton variant="rounded" height={360} />
+            </Grid>
+          ))}
+        </Grid>
+      </Stack>
+    );
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ '& .goals-aligned-grid': { mx: 0, width: '100%' } }}>
       <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} mb={1}>
               <FlagIcon sx={{ color: financeColors.saving }} />
               <Typography color="primary" fontWeight={900}>
-                Metas financeiras
+                {t('goalsEyebrow')}
               </Typography>
-              <PageHelpButton title="Como funcionam as Metas?">
+              <PageHelpButton title={t('goalsHelpTitle')}>
                 <Typography color="text.secondary">
-                  Metas financeiras representam objetivos que você quer alcançar, como reserva de emergência, viagem, casa, curso ou investimento.
+                  {t('goalsHelpText1')}
                 </Typography>
                 <Typography color="text.secondary">
-                  Informe o valor alvo, o prazo e, se quiser, fotos e uma cor para identificar a meta. O sistema mostra quanto falta e quanto seria necessário guardar por dia, mês e ano.
+                  {t('goalsHelpText2')}
                 </Typography>
                 <Typography color="text.secondary">
-                  Economias podem ser vinculadas a uma meta. Quando essas economias têm rendimento cadastrado, o progresso da meta considera o valor projetado dessas economias.
+                  {t('goalsHelpText3')}
                 </Typography>
               </PageHelpButton>
             </Stack>
             <Typography variant="h3" fontWeight={950} letterSpacing={0}>
-              Objetivos em progresso
+              {t('goalsTitle')}
             </Typography>
             <Typography color="text.secondary" fontSize={17}>
-              Planeje reservas, viagens, investimentos e acompanhe quanto falta.
+              {t('goalsSubtitle')}
             </Typography>
           </Box>
           <Button
@@ -198,7 +256,7 @@ export function FinancialGoalsPage() {
             onClick={openCreate}
             sx={{ alignSelf: { xs: 'stretch', md: 'center' }, minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
-            Nova meta
+            {t('newGoal')}
           </Button>
         </Stack>
       </Paper>
@@ -207,77 +265,89 @@ export function FinancialGoalsPage() {
         <TextField
           select
           size="small"
-          label="Status"
+          label={t('status')}
           value={status}
           onChange={(event) => setStatus(event.target.value as FinancialGoalStatus | 'ALL')}
           sx={{ minWidth: 180 }}
         >
-          <MenuItem value="ACTIVE">Ativas</MenuItem>
-          <MenuItem value="COMPLETED">Concluidas</MenuItem>
-          <MenuItem value="CANCELED">Canceladas</MenuItem>
-          <MenuItem value="ALL">Todas</MenuItem>
+          <MenuItem value="ACTIVE">{t('active')}</MenuItem>
+          <MenuItem value="COMPLETED">{t('completed')}</MenuItem>
+          <MenuItem value="CANCELED">{t('canceled')}</MenuItem>
+          <MenuItem value="ALL">{t('all')}</MenuItem>
         </TextField>
       </Paper>
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={4}>
-          <StatCard label="Valor das metas" value={totals.targetAmount} tone="saving" />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StatCard label="Progresso acumulado" value={totals.currentAmount} tone="saving" />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StatCard label="Valor restante" value={totals.remainingAmount} tone="expense" />
-        </Grid>
-      </Grid>
-
-      {closestGoal ? (
-        <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
-          <Typography variant="h6" fontWeight={900}>
-            Meta mais proxima de concluir
-          </Typography>
-          <Typography color="text.secondary" mb={2}>
-            {closestGoal.title} esta em {closestGoal.progressPercent.toFixed(0)}% de progresso.
-          </Typography>
-          <LinearProgress
-            variant="determinate"
-            value={closestGoal.progressPercent}
-            sx={{ height: 10, borderRadius: 999 }}
-          />
-        </Paper>
-      ) : null}
-
-      {loading ? <EmptyState message="Carregando metas..." /> : null}
+      {loading ? <GoalsSkeleton /> : null}
       {error ? <EmptyState message={error} /> : null}
 
       {!loading && !error ? (
-        <Grid container spacing={2}>
-          {goals.map((goal) => (
-            <Grid item xs={12} md={6} lg={4} key={goal.id}>
-              <FinancialGoalCard
-                goal={goal}
-                onDetails={setDetailGoal}
-                actions={
-                  <>
-                    <IconButton onClick={() => openEdit(goal)} aria-label="Editar meta">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton color="error" onClick={() => removeGoal(goal)} aria-label="Excluir meta">
-                      <DeleteIcon />
-                    </IconButton>
-                  </>
-                }
-              />
+        <>
+          <Grid container spacing={2} className="goals-aligned-grid">
+            <Grid item xs={12} md={4}>
+              <StatCard label={t('totalGoalValue')} value={totals.targetAmount} tone="saving" />
             </Grid>
-          ))}
-          {!goals.length ? (
-            <Grid item xs={12}>
-              <EmptyState message="Nenhuma meta financeira encontrada." />
+            <Grid item xs={12} md={4}>
+              <StatCard label={t('accumulatedProgress')} value={totals.currentAmount} tone="saving" />
             </Grid>
-          ) : null}
-        </Grid>
-      ) : null}
+            <Grid item xs={12} md={4}>
+              <StatCard label={t('remainingValue')} value={totals.remainingAmount} tone="expense" />
+            </Grid>
+          </Grid>
 
+          {closestGoal ? (
+            <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+              <Typography variant="h6" fontWeight={900}>
+                {t('closestGoal')}
+              </Typography>
+              <Typography color="text.secondary" mb={2}>
+                {closestGoal.title} - {closestGoal.progressPercent.toFixed(0)}% {t('progress')}.
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={closestGoal.progressPercent}
+                sx={{
+                  height: 10,
+                  borderRadius: 999,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(148,163,184,0.18)'
+                      : 'rgba(15,23,42,0.10)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 999,
+                    bgcolor: 'primary.main',
+                  },
+                }}
+              />
+            </Paper>
+          ) : null}
+
+          <Grid container spacing={2} className="goals-aligned-grid">
+            {goals.map((goal) => (
+              <Grid item xs={12} md={6} lg={4} key={goal.id}>
+                <FinancialGoalCard
+                  goal={goal}
+                  onDetails={(goal) => openDetails(goal)}
+                  actions={
+                    <>
+                      <IconButton onClick={() => openEdit(goal)} aria-label="Editar meta" disabled={deletingGoalId === goal.id}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => removeGoal(goal)} aria-label="Excluir meta" disabled={deletingGoalId === goal.id}>
+                        {deletingGoalId === goal.id ? <Skeleton variant="circular" width={24} height={24} /> : <DeleteIcon />}
+                      </IconButton>
+                    </>
+                  }
+                />
+              </Grid>
+            ))}
+            {!goals.length ? (
+              <Grid item xs={12}>
+                <EmptyState message={t('noGoal')} />
+              </Grid>
+            ) : null}
+          </Grid>
+        </>
+      ) : null}
       <FinancialGoalFormDialog
         open={formOpen}
         editing={Boolean(editingGoal)}
@@ -285,26 +355,27 @@ export function FinancialGoalsPage() {
         onClose={() => setFormOpen(false)}
         onSave={saveGoal}
         onFormChange={setForm}
+        saving={savingGoal}
       />
       <AppDialog
         open={Boolean(detailGoal)}
         onClose={() => setDetailGoal(null)}
-        title={detailGoal?.title ?? 'Detalhes da meta'}
+        title={detailGoal?.title ?? t('goalDetails')}
         titleAccent={detailGoal?.color ?? financeColors.saving}
         maxWidth="md"
-        actions={<Button onClick={() => setDetailGoal(null)}>Fechar</Button>}
+        actions={<Button onClick={() => setDetailGoal(null)}>{t('close')}</Button>}
       >
         {detailGoal ? (
           <Stack spacing={2}>
-            <Typography color="text.secondary">{detailGoal.description || 'Sem descricao cadastrada.'}</Typography>
+            <Typography color="text.secondary">{detailGoal.description || t('noDescription')}</Typography>
             <Grid container spacing={2}>
               {[
-                ['Valor alvo', detailGoal.targetAmount],
-                ['Valor atual projetado', detailGoal.currentAmount],
-                ['Valor restante', detailGoal.remainingAmount],
-                ['Guardar por dia', detailGoal.requiredDailySavings ?? 0],
-                ['Guardar por mes', detailGoal.requiredMonthlySavings ?? 0],
-                ['Guardar por ano', (detailGoal.requiredMonthlySavings ?? 0) * 12],
+                [t('targetValue'), detailGoal.targetAmount],
+                [t('valueInProgress'), detailGoal.currentAmount],
+                [t('remainingValue'), detailGoal.remainingAmount],
+                [t('saveDaily'), detailGoal.requiredDailySavings ?? 0],
+                [t('saveMonthly'), detailGoal.requiredMonthlySavings ?? 0],
+                [t('saveYearly'), (detailGoal.requiredMonthlySavings ?? 0) * 12],
               ].map(([label, value]) => (
                 <Grid item xs={12} sm={6} md={4} key={String(label)}>
                   <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 'none', border: `1px solid ${(detailGoal.color ?? financeColors.saving)}33` }}>
@@ -314,26 +385,48 @@ export function FinancialGoalsPage() {
                 </Grid>
               ))}
             </Grid>
-            <Typography fontWeight={950}>Economias vinculadas</Typography>
+            <Typography fontWeight={950}>{t('linkedSavings')}</Typography>
             <Stack spacing={1}>
-              {savings.filter((saving) => saving.goalId === detailGoal.id).map((saving) => (
+              {goalSavingsLoading ? (
+                <>
+                  <Skeleton variant="rounded" height={70} />
+                  <Skeleton variant="rounded" height={70} />
+                  <Skeleton variant="rounded" height={70} />
+                </>
+              ) : null}
+              {!goalSavingsLoading && goalSavingsPage?.items.map((saving) => (
                 <Paper key={saving.id} sx={{ p: 1.5, borderRadius: 2.5, boxShadow: 'none', border: `1px solid ${(saving.color ?? detailGoal.color)}44` }}>
                   <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1}>
                     <Box>
                       <Typography fontWeight={950}>{saving.title}</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Guardado: {formatMoney(saving.amount)}
-                        {saving.hasYield ? ` • Rendimento: ${Number(saving.yieldRateMonthly ?? 0).toLocaleString('pt-BR')}% ao mes` : ''}
+                        {saving.countsAsSaved ? t('saved') : t('scheduled')}: {formatMoney(saving.amount)}
+                        {' • '}
+                        {t('date')}: {formatDate(saving.date)}
+                        {saving.hasYield ? ` • ${t('yield')}: ${Number(saving.yieldRateMonthly ?? 0).toLocaleString('pt-BR')}%` : ''}
                       </Typography>
                     </Box>
                     <Button component={RouterLink} to={`/app/economy?saving=${saving.id}`} size="small">
-                      Ir para economia
+                      {t('goToSaving')}
                     </Button>
                   </Stack>
                 </Paper>
               ))}
-              {!savings.some((saving) => saving.goalId === detailGoal.id) ? (
-                <Typography color="text.secondary">Nenhuma economia vinculada a esta meta.</Typography>
+              {!goalSavingsLoading && !goalSavingsPage?.items.length ? (
+                <Typography color="text.secondary">{t('noLinkedSaving')}</Typography>
+              ) : null}
+              {!goalSavingsLoading && goalSavingsPage && goalSavingsPage.totalPages > 1 ? (
+                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                  <Button size="small" disabled={!goalSavingsPage.hasPreviousPage} onClick={() => changeGoalSavingsPage(goalSavingsPage.page - 1)}>
+                    {t('previous')}
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" fontWeight={800}>
+                    {t('page')} {goalSavingsPage.page} / {goalSavingsPage.totalPages} • {goalSavingsPage.total} {t('records')}
+                  </Typography>
+                  <Button size="small" disabled={!goalSavingsPage.hasNextPage} onClick={() => changeGoalSavingsPage(goalSavingsPage.page + 1)}>
+                    {t('next')}
+                  </Button>
+                </Stack>
               ) : null}
             </Stack>
           </Stack>

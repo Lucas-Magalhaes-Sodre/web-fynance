@@ -9,7 +9,9 @@ import Typography from "@mui/material/Typography";
 import { ChangeEvent } from "react";
 import type { FinancialGoalStatus } from "@/interfaces/financial";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { digitsToCurrency } from "@/utils/format";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 export type GoalFormState = {
   title: string;
@@ -33,6 +35,7 @@ type FinancialGoalFormDialogProps = {
   onClose: () => void;
   onSave: () => void;
   onFormChange: (form: GoalFormState) => void;
+  saving?: boolean;
 };
 
 export function FinancialGoalFormDialog({
@@ -42,7 +45,10 @@ export function FinancialGoalFormDialog({
   onClose,
   onSave,
   onFormChange,
+  saving = false,
 }: FinancialGoalFormDialogProps) {
+  const { t } = usePreferences();
+
   function updateForm(nextForm: Partial<GoalFormState>) {
     onFormChange({ ...form, ...nextForm });
   }
@@ -66,31 +72,31 @@ export function FinancialGoalFormDialog({
     <AppDialog
       open={open}
       onClose={onClose}
-      title={editing ? "Editar meta" : "Nova meta financeira"}
+      title={editing ? t("edit") : t("newGoal")}
       actions={
         <>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button variant="contained" onClick={onSave}>
-            Salvar
-          </Button>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <LoadingActionButton variant="contained" onClick={onSave} loading={saving} loadingLabel={t("saving")}>
+            {t("save")}
+          </LoadingActionButton>
         </>
       }
     >
       <S.FormStack spacing={2}>
         <TextField
-          label="Titulo"
+          label={t("title")}
           value={form.title}
           onChange={(event) => updateForm({ title: event.target.value })}
           fullWidth
         />
         <TextField
-          label="Valor alvo"
+          label={t("targetValue")}
           value={form.targetAmount}
           onChange={(event) => updateForm({ targetAmount: digitsToCurrency(event.target.value) })}
           fullWidth
         />
         <TextField
-          label="Valor atual"
+          label={t("currentValue")}
           value={form.currentAmount}
           onChange={(event) => updateForm({ currentAmount: digitsToCurrency(event.target.value) })}
           fullWidth
@@ -98,7 +104,7 @@ export function FinancialGoalFormDialog({
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <TextField
-              label="Inicio"
+              label={t("start")}
               type="date"
               value={form.startDate}
               onChange={(event) => updateForm({ startDate: event.target.value })}
@@ -109,7 +115,7 @@ export function FinancialGoalFormDialog({
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
-              label="Prazo"
+              label={t("deadline")}
               type="date"
               value={form.targetDate}
               onChange={(event) => updateForm({ targetDate: event.target.value })}
@@ -121,19 +127,19 @@ export function FinancialGoalFormDialog({
         </Grid>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
-            label="Cor da meta"
+            label={t("goalColor")}
             type="color"
             value={form.color}
             onChange={(event) => updateForm({ color: event.target.value.toUpperCase() })}
             sx={{ width: { xs: "100%", sm: 160 } }}
           />
           <Button variant="outlined" component="label" sx={{ minHeight: 56 }}>
-            Adicionar fotos ({form.imageUrls.length}/3)
+            {t("addPhotos")} ({form.imageUrls.length}/3)
             <input hidden accept="image/*" type="file" multiple onChange={updatePhotos} />
           </Button>
           {form.imageUrls.length ? (
             <Button color="error" onClick={() => updateForm({ imageUrl: "", imageUrls: [] })}>
-              Remover fotos
+              {t("removePhotos")}
             </Button>
           ) : null}
         </Stack>
@@ -159,7 +165,7 @@ export function FinancialGoalFormDialog({
                   }}
                   sx={{ mt: 0.5, px: 0 }}
                 >
-                  Remover
+                  {t("remove")}
                 </Button>
               </Box>
             ))}
@@ -173,9 +179,9 @@ export function FinancialGoalFormDialog({
             <S.SplitFormControlLabel
               label={
                 <Box display="flex">
-                  <Typography fontWeight={900}>Rendimento composto: </Typography>
+                  <Typography fontWeight={900}>{t("compoundYield")}: </Typography>
                   <Typography fontWeight={900} ml={1} color={form.hasYield ? "success" : "text.secondary"}>
-                    {form.hasYield ? "sim" : "não"}
+                    {form.hasYield ? t("yes") : t("no")}
                   </Typography>
                 </Box>
               }
@@ -194,31 +200,31 @@ export function FinancialGoalFormDialog({
             />
             {form.hasYield ? (
               <TextField
-                label="Rendimento mensal (%)"
+                label={`${t("monthlyYield")} (%)`}
                 type="number"
                 inputProps={{ min: 0, step: "0.01" }}
                 value={form.yieldRateMonthly}
                 onChange={(event) => updateForm({ yieldRateMonthly: event.target.value })}
-                helperText="Ex.: 1 para 1% ao mes."
+                helperText="Ex.: 1 para 1% ao mês."
               />
             ) : null}
           </Stack>
         </S.HighlightPanel>
         <TextField
           select
-          label="Status"
+          label={t("status")}
           value={form.status}
           onChange={(event) =>
             updateForm({ status: event.target.value as FinancialGoalStatus })
           }
           fullWidth
         >
-          <MenuItem value="ACTIVE">Ativa</MenuItem>
-          <MenuItem value="COMPLETED">Concluida</MenuItem>
-          <MenuItem value="CANCELED">Cancelada</MenuItem>
+          <MenuItem value="ACTIVE">{t("active")}</MenuItem>
+          <MenuItem value="COMPLETED">{t("completed")}</MenuItem>
+          <MenuItem value="CANCELED">{t("canceled")}</MenuItem>
         </TextField>
         <TextField
-          label="Descricao"
+          label={t("description")}
           value={form.description}
           onChange={(event) => updateForm({ description: event.target.value })}
           fullWidth

@@ -15,6 +15,9 @@ import type {
 } from "@/interfaces/financial";
 import { currencyToNumber, digitsToCurrency, financeColors, formatMoney } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
 
 export type SavingAction = "REGISTER" | SavingTransferDirection;
 
@@ -97,6 +100,24 @@ export function SavingMovementDialog({
   onSave,
   onFormChange,
 }: SavingMovementDialogProps) {
+  const { language, t } = usePreferences();
+  const recurrenceLabelItems: Record<Exclude<RecurrenceType, "NONE">, string> = {
+    DAILY: t("daily"),
+    WEEKLY: t("weekly"),
+    MONTHLY: t("monthly"),
+    YEARLY: t("yearly"),
+  };
+  const weekDayItems = [
+    { value: 1, label: t("monday") },
+    { value: 2, label: t("tuesday") },
+    { value: 3, label: t("wednesday") },
+    { value: 4, label: t("thursday") },
+    { value: 5, label: t("friday") },
+    { value: 6, label: t("saturday") },
+    { value: 7, label: t("sunday") },
+  ];
+  const monthItems = monthsByLanguage[language].map((label, index) => ({ value: index + 1, label }));
+
   function updateForm(nextForm: Partial<SavingMovementFormState>) {
     onFormChange({ ...form, ...nextForm });
   }
@@ -159,16 +180,15 @@ export function SavingMovementDialog({
     <AppDialog
       open={open}
       onClose={onClose}
-      eyebrow="Economias"
-      title={isWithdraw ? "💸 Sacar economia" : "Adicionar economia"}
+      eyebrow={t("savings")}
+      title={isWithdraw ? t("withdrawSavingTitle") : t("addSaving")}
       titleAccent={isWithdraw ? financeColors.negative : financeColors.saving}
       actions={
         <>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <LoadingActionButton
             variant="contained"
             disabled={
-              saving ||
               !form.title.trim() ||
               !form.category.trim() ||
               currencyToNumber(form.amount) <= 0 ||
@@ -177,22 +197,24 @@ export function SavingMovementDialog({
             }
             onClick={onSave}
             color={isWithdraw ? "error" : "warning"}
+            loading={saving}
+            loadingLabel={t("saving")}
           >
-            {saving ? "Salvando..." : isWithdraw ? "Confirmar saque" : "Salvar"}
-          </Button>
+            {isWithdraw ? t("confirmWithdraw") : t("save")}
+          </LoadingActionButton>
         </>
       }
     >
       <S.FormStack spacing={2}>
         <Typography color="text.secondary">
           {isWithdraw
-            ? "Escolha de onde deseja retirar o valor. O dinheiro sacado sera removido das suas economias e lancado como receita no mes atual."
-            : "Cadastre valores guardados ou aplicados, como poupanca, caixinhas, cofrinho, renda fixa, investimentos e outras reservas."}
+            ? t("withdrawSavingText")
+            : t("addSavingText")}
         </Typography>
 
         <TextField
           select
-          label="Categoria"
+          label={t("category")}
           required
           value={form.category}
           onChange={(event) => {
@@ -208,17 +230,17 @@ export function SavingMovementDialog({
           {isWithdraw
             ? withdrawCategories.map((category) => (
                 <MenuItem key={category} value={category}>
-                  {category}
+                  {translateCategoryName(category, language)}
                 </MenuItem>
               ))
             : investmentCategories.map((category) => (
                 <MenuItem key={category.id} value={category.name}>
-                  {category.name}
+                  {translateCategoryName(category.name, language)}
                 </MenuItem>
               ))}
-          {!isWithdraw && !investmentCategories.length ? <MenuItem value="Outros">Outros</MenuItem> : null}
+          {!isWithdraw && !investmentCategories.length ? <MenuItem value="Outros">{translateCategoryName("Outros", language)}</MenuItem> : null}
           {!isWithdraw && form.category && !investmentCategories.some((category) => category.name === form.category) ? (
-            <MenuItem value={form.category}>{form.category}</MenuItem>
+            <MenuItem value={form.category}>{translateCategoryName(form.category, language)}</MenuItem>
           ) : null}
         </TextField>
 
@@ -226,7 +248,7 @@ export function SavingMovementDialog({
           <TextField
             select
             autoFocus
-            label="Subitem da categoria"
+            label={t("subitemCategory")}
             required
             value={form.title}
             onChange={(event) => updateForm({ title: event.target.value })}
@@ -241,7 +263,7 @@ export function SavingMovementDialog({
         ) : (
           <TextField
             autoFocus
-            label="Nome da economia"
+            label={t("savingName")}
             required
             value={form.title}
             onChange={(event) => updateForm({ title: event.target.value })}
@@ -249,7 +271,7 @@ export function SavingMovementDialog({
         )}
 
         <TextField
-          label={isWithdraw ? "Valor a sacar" : "Valor"}
+          label={isWithdraw ? t("amountToWithdraw") : t("value")}
           required
           value={form.amount}
           onChange={(event) => updateForm({ amount: digitsToCurrency(event.target.value) })}
@@ -258,7 +280,7 @@ export function SavingMovementDialog({
         {isWithdraw ? (
           <>
             <TextField
-              label="Data"
+              label={t("date")}
               type="date"
               required
               InputLabelProps={{ shrink: true }}
@@ -267,7 +289,7 @@ export function SavingMovementDialog({
               sx={{ "& input": { py: 1.65 } }}
             />
             <TextField
-              label="Descricao opcional"
+              label={t("optionalNote")}
               multiline
               minRows={2}
               value={form.description}
@@ -278,15 +300,15 @@ export function SavingMovementDialog({
               $panelBackground={financeColors.negativeSoft}
             >
               <Stack spacing={1.25}>
-                <Typography fontWeight={950}>Preview</Typography>
+                <Typography fontWeight={950}>{t("preview")}</Typography>
                 <Divider />
-                <Typography>Saldo disponivel: {formatMoney(selectedWithdrawBalance)}</Typography>
-                <Typography>Valor solicitado: {formatMoney(requestedAmount)}</Typography>
+                <Typography>{t("availableBalance")}: {formatMoney(selectedWithdrawBalance)}</Typography>
+                <Typography>{t("requestedAmount")}: {formatMoney(requestedAmount)}</Typography>
                 <Typography color={balanceAfterWithdraw < 0 ? financeColors.negative : "text.primary"}>
-                  Saldo apos saque: {formatMoney(Math.max(balanceAfterWithdraw, 0))}
+                  {t("balanceAfterWithdraw")}: {formatMoney(Math.max(balanceAfterWithdraw, 0))}
                 </Typography>
                 <Typography color={financeColors.income} fontWeight={900}>
-                  Receita criada no mes atual: {formatMoney(requestedAmount)}
+                  {t("incomeCreatedCurrentMonth")}: {formatMoney(requestedAmount)}
                 </Typography>
               </Stack>
             </S.HighlightPanel>
@@ -301,9 +323,9 @@ export function SavingMovementDialog({
                 <S.SplitFormControlLabel
                   label={
                     <Box display="flex">
-                      <Typography fontWeight={900}>Recorrente: </Typography>
+                      <Typography fontWeight={900}>{t("recurring")}: </Typography>
                       <Typography fontWeight={900} ml={1} color={form.isFixed ? "success" : "error"}>
-                        {form.isFixed ? "sim" : "não"}
+                        {form.isFixed ? t("yes") : t("no")}
                       </Typography>
                     </Box>
                   }
@@ -321,11 +343,11 @@ export function SavingMovementDialog({
                   <>
                     <TextField
                       select
-                      label="Recorrencia"
+                      label={t("recurrence")}
                       value={form.recurrenceType === "NONE" ? "MONTHLY" : form.recurrenceType}
                       onChange={(event) => updateRecurrenceType(event.target.value as RecurrenceType)}
                     >
-                      {Object.entries(recurrenceLabels).map(([value, label]) => (
+                      {Object.entries(recurrenceLabelItems).map(([value, label]) => (
                         <MenuItem key={value} value={value}>
                           {label}
                         </MenuItem>
@@ -335,12 +357,12 @@ export function SavingMovementDialog({
                     {form.recurrenceType === "WEEKLY" ? (
                       <TextField
                         select
-                        label="Dia da semana da economia"
+                        label={t("savingWeekDay")}
                         required
                         value={form.dueDay}
                         onChange={(event) => updateForm({ dueDay: event.target.value })}
                       >
-                        {weekDays.map((day) => (
+                        {weekDayItems.map((day) => (
                           <MenuItem key={day.value} value={day.value}>
                             {day.label}
                           </MenuItem>
@@ -352,30 +374,30 @@ export function SavingMovementDialog({
                       <>
                         <TextField
                           select
-                          label="Dia do mes da economia"
+                        label={t("savingMonthDay")}
                           required
                           value={form.dueDay}
                           onChange={(event) => updateForm({ dueDay: event.target.value })}
                         >
                           {monthDays.map((day) => (
                             <MenuItem key={day} value={day}>
-                              Dia {day}
+                              {t("dayNumber").replace("{day}", String(day))}
                             </MenuItem>
                           ))}
                         </TextField>
 
                         <Typography variant="caption" color="text.secondary" fontWeight={900}>
-                          Quando comeca:
+                          {t("whenStarts")}
                         </Typography>
                         <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
                           <TextField
                             select
-                            label="Mes inicial"
+                            label={t("startMonth")}
                             value={form.recurrenceStartMonth}
                             onChange={(event) => updateForm({ recurrenceStartMonth: event.target.value })}
                             fullWidth
                           >
-                            {monthOptions.map((monthItem) => (
+                            {monthItems.map((monthItem) => (
                               <MenuItem key={monthItem.value} value={monthItem.value}>
                                 {monthItem.label}
                               </MenuItem>
@@ -383,7 +405,7 @@ export function SavingMovementDialog({
                           </TextField>
                           <TextField
                             select
-                            label="Ano inicial"
+                            label={t("startYear")}
                             value={form.recurrenceStartYear}
                             onChange={(event) => updateForm({ recurrenceStartYear: event.target.value })}
                             fullWidth
@@ -397,18 +419,18 @@ export function SavingMovementDialog({
                         </S.ColorFieldStack>
 
                         <Typography variant="caption" color="text.secondary" fontWeight={900}>
-                          Quando termina:
+                          {t("whenEnds")}
                         </Typography>
                         <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
                           <TextField
                             select
-                            label="Mes final"
+                            label={t("endMonth")}
                             value={form.recurrenceEndMonth}
                             onChange={(event) => updateForm({ recurrenceEndMonth: event.target.value })}
                             error={invalidCustomRecurrenceRange}
                             fullWidth
                           >
-                            {monthOptions.map((monthItem) => (
+                            {monthItems.map((monthItem) => (
                               <MenuItem key={monthItem.value} value={monthItem.value}>
                                 {monthItem.label}
                               </MenuItem>
@@ -416,11 +438,11 @@ export function SavingMovementDialog({
                           </TextField>
                           <TextField
                             select
-                            label="Ano final"
+                            label={t("endYear")}
                             value={form.recurrenceEndYear}
                             onChange={(event) => updateForm({ recurrenceEndYear: event.target.value })}
                             error={invalidCustomRecurrenceRange}
-                            helperText={invalidCustomRecurrenceRange ? "O fim precisa ser depois do inicio." : " "}
+                            helperText={invalidCustomRecurrenceRange ? t("endAfterStart") : " "}
                             fullWidth
                           >
                             {yearOptions.map((year) => (
@@ -435,7 +457,7 @@ export function SavingMovementDialog({
 
                     {form.recurrenceType === "YEARLY" ? (
                       <TextField
-                        label="Data anual da economia"
+                        label={t("annualSavingDate")}
                         type="date"
                         required
                         InputLabelProps={{ shrink: true }}
@@ -447,7 +469,7 @@ export function SavingMovementDialog({
                   </>
                 ) : (
                   <TextField
-                    label="Data da economia"
+                    label={t("savingDate")}
                     type="date"
                     required
                     InputLabelProps={{ shrink: true }}
@@ -460,7 +482,7 @@ export function SavingMovementDialog({
             </S.HighlightPanel>
             <TextField
               select
-              label="Meta vinculada"
+              label={t("linkedGoal")}
               value={form.goalId}
               onChange={(event) => {
                 const goal = goals.find((item) => item.id === event.target.value);
@@ -473,7 +495,7 @@ export function SavingMovementDialog({
                 });
               }}
             >
-              <MenuItem value="">Sem meta</MenuItem>
+              <MenuItem value="">{t("noGoalShort")}</MenuItem>
               {goals.map((goal) => (
                 <MenuItem key={goal.id} value={goal.id}>
                   {goal.title}
@@ -488,9 +510,9 @@ export function SavingMovementDialog({
                 <S.SplitFormControlLabel
                   label={
                     <Box display="flex">
-                      <Typography fontWeight={900}>Rendimento composto: </Typography>
+                      <Typography fontWeight={900}>{t("compoundYield")}: </Typography>
                       <Typography fontWeight={900} ml={1} color={form.hasYield ? "success" : "text.secondary"}>
-                        {form.hasYield ? "sim" : "não"}
+                        {form.hasYield ? t("yes") : t("no")}
                       </Typography>
                     </Box>
                   }
@@ -512,18 +534,18 @@ export function SavingMovementDialog({
                 />
                 {form.hasYield ? (
                   <TextField
-                    label="Rendimento mensal (%)"
+                    label={`${t("monthlyYield")} (%)`}
                     type="number"
                     inputProps={{ min: 0, step: "0.01" }}
                     value={form.yieldRateMonthly}
                     onChange={(event) => updateForm({ yieldRateMonthly: event.target.value })}
-                    helperText={selectedGoal?.hasYield ? "A taxa da meta foi preenchida automaticamente, mas voce pode ajustar." : "Ex.: 1 para 1% ao mes."}
+                    helperText={selectedGoal?.hasYield ? t("goalRateAutoFilled") : t("yieldExample")}
                   />
                 ) : null}
               </Stack>
             </S.HighlightPanel>
             <TextField
-              label="Observacao opcional"
+              label={t("optionalNote")}
               multiline
               minRows={2}
               value={form.description}

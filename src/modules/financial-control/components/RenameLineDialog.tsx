@@ -4,6 +4,7 @@ import Typography from "@mui/material/Typography";
 import type { EntryType } from "@/interfaces/financial";
 import { financeColors } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 
 export type LineEditState = {
   category: string;
@@ -43,17 +44,18 @@ export function RenameLineDialog({
       actions={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button
+          <LoadingActionButton
             variant="contained"
             disabled={
-              saving ||
               !lineEdit?.value.trim() ||
               lineEdit.value.trim() === lineEdit.name
             }
             onClick={onSave}
+            loading={saving}
+            loadingLabel="Salvando..."
           >
-            {saving ? "Salvando..." : "Salvar nome"}
-          </Button>
+            Salvar nome
+          </LoadingActionButton>
         </>
       }
     >
@@ -80,7 +82,7 @@ export function RenameLineDialog({
               lineEdit ? { ...lineEdit, value: event.target.value } : lineEdit,
             )
           }
-          helperText={`A alteracao vale para todos os lancamentos deste item em ${year}.`}
+          helperText={`A alteracao vale para todos os lançamentos deste item em ${year}.`}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
