@@ -7,6 +7,19 @@ export type PaymentStatus = 'PENDENTE' | 'PAGO' | 'ATRASADO' | 'CANCELADO';
 export type FinancialGoalStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 export type FinancialInsightType = 'POSITIVE' | 'WARNING' | 'INFO' | 'NEGATIVE';
 export type ReminderStatus = 'PENDING' | 'READ' | 'DISMISSED';
+export type UserRole = 'USER' | 'ADMIN';
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'BLOCKED' | 'MANUAL';
+export type PaymentProvider = 'NONE' | 'MERCADO_PAGO' | 'STRIPE';
+export type SubscriptionPlan = 'FREE' | 'MONTHLY' | 'YEARLY' | 'LIFETIME';
+
+export type AccessInfo = {
+  canAccess: boolean;
+  isAdmin: boolean;
+  hasManualAccess: boolean;
+  hasTrialAccess: boolean;
+  hasPaidAccess: boolean;
+  reason: string | null;
+};
 
 export type FinancialReminder = {
   id: string;
@@ -45,6 +58,18 @@ export type User = {
   lgpdConsentVersion?: string | null;
   marketingConsent?: boolean;
   dataDeletionRequestedAt?: string | null;
+  role?: UserRole;
+  subscriptionStatus?: SubscriptionStatus;
+  trialEndsAt?: string | null;
+  manualAccessUntil?: string | null;
+  accessBlockedAt?: string | null;
+  paymentProvider?: PaymentProvider;
+  providerCustomerId?: string | null;
+  providerSubscriptionId?: string | null;
+  subscriptionPlan?: SubscriptionPlan;
+  subscriptionCurrentPeriodEnd?: string | null;
+  lastPaymentAt?: string | null;
+  access?: AccessInfo;
   createdAt: string;
   updatedAt: string;
 };

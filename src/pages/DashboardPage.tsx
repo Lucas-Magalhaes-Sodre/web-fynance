@@ -57,6 +57,7 @@ import type {
 import {
   financeColors,
   formatDate,
+  formatDateTime,
   formatMoney,
 } from "@/utils/format";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
@@ -431,7 +432,7 @@ export function DashboardPage() {
                     <Box>
                       <Typography fontWeight={950}>{reminder.title}</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {formatDate(reminder.remindAt)}
+                        {formatDateTime(reminder.remindAt)}
                         {reminder.message ? ` • ${reminder.message}` : ""}
                       </Typography>
                     </Box>

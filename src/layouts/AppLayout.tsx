@@ -1,4 +1,5 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CakeIcon from '@mui/icons-material/Cake';
@@ -28,6 +29,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { PreferenceControls } from '@/components/molecules/PreferenceControls';
+import { WebReminderNotifier } from '@/components/organisms/WebReminderNotifier';
 
 const drawerWidth = 260;
 const collapsedDrawerWidth = 76;
@@ -47,7 +49,10 @@ export function AppLayout() {
     { to: '/app/goals', label: t('menuGoals'), icon: <FlagIcon /> },
     { to: '/app/birthdays', label: t('menuBirthdays'), icon: <CakeIcon /> },
     { to: '/app/profile', label: t('menuProfile'), icon: <PersonIcon /> },
-    { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon /> }
+    { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon /> },
+    ...(user?.role === 'ADMIN'
+      ? [{ to: '/app/admin/subscriptions', label: 'Admin', icon: <AdminPanelSettingsIcon /> }]
+      : [])
   ];
 
   function toggleMenu() {
@@ -169,6 +174,7 @@ export function AppLayout() {
           </Box>
         </Box>
       </Dialog>
+      <WebReminderNotifier />
     </Box>
   );
 }

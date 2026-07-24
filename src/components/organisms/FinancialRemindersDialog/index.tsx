@@ -22,7 +22,7 @@ import {
   deleteFinancialReminder,
   listFinancialReminders,
 } from "@/services/financialControl";
-import { formatDate } from "@/utils/format";
+import { formatDateTime } from "@/utils/format";
 
 type FinancialRemindersDialogProps = {
   item: FinancialItem | null;
@@ -157,7 +157,7 @@ export function FinancialRemindersDialog({ item, open, onClose }: FinancialRemin
                       </Typography>
                     </Stack>
                     <Typography color="text.secondary" variant="body2">
-                      {formatDate(reminder.remindAt)}
+                      {formatDateTime(reminder.remindAt)}
                     </Typography>
                     {reminder.message ? (
                       <Typography color="text.secondary" variant="body2">

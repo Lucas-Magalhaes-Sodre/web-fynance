@@ -1,6 +1,7 @@
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import Container from '@mui/material/Container';
+import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
@@ -12,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { PasswordField } from '@/components/molecules/PasswordField';
 import { PreferenceControls } from '@/components/molecules/PreferenceControls';
+import { GoogleSignInButton } from '@/components/molecules/GoogleSignInButton';
 
 export function RegisterPage() {
   const { signUp } = useAuth();
@@ -63,6 +65,8 @@ export function RegisterPage() {
           </Typography>
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large" disabled={!lgpdAccepted}>{t('registerAction')}</Button>
+          <Divider>ou</Divider>
+          <GoogleSignInButton onSuccess={() => navigate('/app')} />
           <Typography textAlign="center">{t('hasAccount')} <Link to="/login">{t('loginTitle')}</Link></Typography>
         </Stack>
       </Paper>
