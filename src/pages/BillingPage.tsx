@@ -5,54 +5,61 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { createCheckout, getBillingPublicSettings, getBillingStatus, type BillingStatus } from '@/services/billing';
-import { formatDate } from '@/utils/format';
-
-const plans = [
-  {
-    plan: 'MONTHLY' as const,
-    title: 'Plano mensal',
-    price: 'R$ 24,90',
-    description: 'Ideal para começar e validar a rotina financeira.'
-  },
-  {
-    plan: 'YEARLY' as const,
-    title: 'Plano anual',
-    price: 'R$ 238,90',
-    description: 'Melhor custo para usar o sistema o ano inteiro.'
-  }
-];
+import { createCheckout, getBillingPublicSettings, getBillingStatus, listBillingPlans, validateBillingCoupon, type BillingPlan, type BillingStatus, type CouponValidationResult } from '@/services/billing';
+import { formatDate, formatMoney } from '@/utils/format';
 
 export function BillingPage() {
   const { refreshUser } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [plans, setPlans] = useState<BillingPlan[]>([]);
+  const [couponByPlan, setCouponByPlan] = useState<Record<string, string>>({});
+  const [validatedCouponByPlan, setValidatedCouponByPlan] = useState<Record<string, CouponValidationResult | undefined>>({});
+  const [couponLoadingPlan, setCouponLoadingPlan] = useState<string | null>(null);
   const [defaultTrialDays, setDefaultTrialDays] = useState<number | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   async function load() {
-    const [billingResult, settingsResult] = await Promise.all([getBillingStatus(), getBillingPublicSettings()]);
+    const [billingResult, settingsResult, plansResult] = await Promise.all([getBillingStatus(), getBillingPublicSettings(), listBillingPlans()]);
     setBilling(billingResult);
     setDefaultTrialDays(settingsResult.defaultTrialDays);
+    setPlans(plansResult);
   }
 
   useEffect(() => {
     load();
   }, []);
 
-  async function subscribe(plan: 'MONTHLY' | 'YEARLY') {
-    setLoadingPlan(plan);
+  async function subscribe(planId: string) {
+    setLoadingPlan(planId);
     setError('');
     try {
-      const checkout = await createCheckout({ provider: 'MERCADO_PAGO', plan });
+      const checkout = await createCheckout({ provider: 'MERCADO_PAGO', planId, couponCode: validatedCouponByPlan[planId]?.code });
       window.location.href = checkout.url;
     } catch (error: any) {
       setError(error.response?.data?.message ?? 'Não foi possível iniciar o pagamento.');
     } finally {
       setLoadingPlan(null);
+    }
+  }
+
+  async function applyCoupon(planId: string) {
+    const couponCode = couponByPlan[planId]?.trim();
+    if (!couponCode) return;
+    setCouponLoadingPlan(planId);
+    setError('');
+    try {
+      const coupon = await validateBillingCoupon({ planId, couponCode });
+      setValidatedCouponByPlan((current) => ({ ...current, [planId]: coupon }));
+    } catch (error: any) {
+      setValidatedCouponByPlan((current) => ({ ...current, [planId]: undefined }));
+      setError(error.response?.data?.message ?? 'Cupom inválido para este plano.');
+    } finally {
+      setCouponLoadingPlan(null);
     }
   }
 
@@ -64,7 +71,7 @@ export function BillingPage() {
           <Typography color="primary" fontWeight={900}>Assinatura</Typography>
         </Stack>
         <Typography variant="h3" fontWeight={950} letterSpacing={0}>
-          Continue usando o Minha Receita
+          Continue usando o Deluket Finance
         </Typography>
         <Typography color="text.secondary" fontSize={17}>
           Assine para manter acesso ao dashboard, controle financeiro, cartões, economias, metas e lembretes.
@@ -77,13 +84,16 @@ export function BillingPage() {
           <Box>
             <Typography fontWeight={950}>Status atual</Typography>
             <Typography color="text.secondary">
-              {billing?.subscriptionStatus ?? '-'} · Plano {billing?.subscriptionPlan ?? '-'}
+              {billing?.planNameSnapshot ?? billing?.subscriptionPlan ?? '-'}
+              {billing?.planPriceSnapshot ? ` · ${formatMoney(billing.planPriceSnapshot)}` : ''}
             </Typography>
           </Box>
           <Box>
             <Typography fontWeight={950}>Teste grátis</Typography>
             <Typography color="text.secondary">
-              {billing?.trialEndsAt ? formatDate(billing.trialEndsAt) : 'Sem teste ativo'}
+              {billing?.subscriptionCurrentPeriodEnd
+                ? `Vence em ${formatDate(billing.subscriptionCurrentPeriodEnd)}`
+                : billing?.trialEndsAt ? `Teste até ${formatDate(billing.trialEndsAt)}` : 'Sem teste ativo'}
             </Typography>
           </Box>
           <Button onClick={async () => { await load(); await refreshUser(); }}>
@@ -100,23 +110,55 @@ export function BillingPage() {
 
       <Grid container spacing={2}>
         {plans.map((item) => (
-          <Grid item xs={12} md={6} key={item.plan}>
+          <Grid item xs={12} md={plans.length === 1 ? 12 : 6} key={item.id}>
             <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, height: '100%' }}>
               <Stack spacing={2} height="100%">
                 <Stack direction="row" spacing={1} alignItems="center">
                   <PixIcon color="primary" />
-                  <Typography variant="h5" fontWeight={950}>{item.title}</Typography>
+                  <Typography variant="h5" fontWeight={950}>{item.name}</Typography>
                 </Stack>
-                <Typography variant="h3" fontWeight={950}>{item.price}</Typography>
+                <Typography variant="h3" fontWeight={950}>{formatMoney(item.price)}</Typography>
+                <Typography color="text.secondary">
+                  {item.durationMonths === 1 ? 'por mês' : `a cada ${item.durationMonths} meses`}
+                </Typography>
+                {validatedCouponByPlan[item.id] ? (
+                  <Paper sx={{ p: 1.5, borderRadius: 3, bgcolor: 'success.light', color: 'success.contrastText', boxShadow: 'none' }}>
+                    <Typography fontWeight={900}>
+                      Cupom {validatedCouponByPlan[item.id]?.code} aplicado
+                    </Typography>
+                    <Typography>
+                      Desconto de {formatMoney(validatedCouponByPlan[item.id]?.discountAmount ?? 0)}. Total: {formatMoney(validatedCouponByPlan[item.id]?.finalPrice ?? item.price)}
+                    </Typography>
+                  </Paper>
+                ) : null}
                 <Typography color="text.secondary">{item.description}</Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <TextField
+                    size="small"
+                    label="Cupom de desconto"
+                    value={couponByPlan[item.id] ?? ''}
+                    onChange={(event) => {
+                      setCouponByPlan((current) => ({ ...current, [item.id]: event.target.value.toUpperCase() }));
+                      setValidatedCouponByPlan((current) => ({ ...current, [item.id]: undefined }));
+                    }}
+                    fullWidth
+                  />
+                  <Button
+                    variant="outlined"
+                    disabled={couponLoadingPlan === item.id || !couponByPlan[item.id]?.trim()}
+                    onClick={() => applyCoupon(item.id)}
+                  >
+                    {couponLoadingPlan === item.id ? 'Aplicando...' : 'Aplicar'}
+                  </Button>
+                </Stack>
                 <Box flex={1} />
                 <Button
                   variant="contained"
                   size="large"
                   disabled={Boolean(loadingPlan)}
-                  onClick={() => subscribe(item.plan)}
+                  onClick={() => subscribe(item.id)}
                 >
-                  {loadingPlan === item.plan ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
+                  {loadingPlan === item.id ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
                 </Button>
               </Stack>
             </Paper>

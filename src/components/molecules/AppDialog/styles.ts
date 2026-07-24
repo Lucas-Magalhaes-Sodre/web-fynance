@@ -29,7 +29,11 @@ export const Heading = styled(Typography)`
 `;
 
 export const Content = styled(DialogContent)`
-  padding-top: 8px;
+  padding-top: 18px;
+
+  && {
+    overflow: visible;
+  }
 `;
 
 export const Actions = styled(DialogActions)`
