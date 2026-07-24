@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
+import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
+import { BillingPage } from './pages/BillingPage';
 import { CreditCardsPage } from './pages/CreditCardsPage';
 import { FinancialControlPage } from './pages/FinancialControlPage';
 import { FinancialCategoriesPage } from './pages/FinancialCategoriesPage';
@@ -26,6 +28,8 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="admin/subscriptions" element={<AdminSubscriptionsPage />} />
             <Route path="control" element={<FinancialControlPage />} />
             <Route path="cards" element={<CreditCardsPage />} />
             <Route path="categories" element={<FinancialCategoriesPage />} />

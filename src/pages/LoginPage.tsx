@@ -1,5 +1,6 @@
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -10,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { PasswordField } from '@/components/molecules/PasswordField';
 import { PreferenceControls } from '@/components/molecules/PreferenceControls';
+import { GoogleSignInButton } from '@/components/molecules/GoogleSignInButton';
 
 export function LoginPage() {
   const { signIn } = useAuth();
@@ -42,6 +44,8 @@ export function LoginPage() {
           <PasswordField value={password} onChange={setPassword} />
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large">{t('loginAction')}</Button>
+          <Divider>ou</Divider>
+          <GoogleSignInButton onSuccess={() => navigate('/app')} />
           <Button component={Link} to="/forgot-password">{t('forgotPassword')}</Button>
           <Typography textAlign="center">{t('noAccount')} <Link to="/register">{t('registerLink')}</Link></Typography>
         </Stack>
