@@ -11,6 +11,7 @@ export type UserRole = 'USER' | 'ADMIN';
 export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'BLOCKED' | 'MANUAL';
 export type PaymentProvider = 'NONE' | 'MERCADO_PAGO' | 'STRIPE';
 export type SubscriptionPlan = 'FREE' | 'MONTHLY' | 'YEARLY' | 'LIFETIME';
+export type CouponDiscountType = 'PERCENT' | 'FIXED';
 
 export type AccessInfo = {
   canAccess: boolean;
@@ -67,6 +68,12 @@ export type User = {
   providerCustomerId?: string | null;
   providerSubscriptionId?: string | null;
   subscriptionPlan?: SubscriptionPlan;
+  billingPlanId?: string | null;
+  planNameSnapshot?: string | null;
+  planPriceSnapshot?: number | null;
+  planDurationMonthsSnapshot?: number | null;
+  couponCodeSnapshot?: string | null;
+  couponDiscountSnapshot?: number | null;
   subscriptionCurrentPeriodEnd?: string | null;
   lastPaymentAt?: string | null;
   access?: AccessInfo;

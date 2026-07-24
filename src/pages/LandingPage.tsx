@@ -6,6 +6,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -22,6 +23,8 @@ import {
 import { Link } from "react-router-dom";
 import { PreferenceControls } from "@/components/molecules/PreferenceControls";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import { listBillingPlans, type BillingPlan } from "@/services/billing";
+import { formatMoney } from "@/utils/format";
 
 const MotionBox = motion(Box);
 const MotionPaper = motion(Paper);
@@ -206,6 +209,7 @@ function MiniDashboard() {
 
 export function LandingPage() {
   const { themeMode, t } = usePreferences();
+  const [plans, setPlans] = useState<BillingPlan[]>([]);
   const { scrollY } = useScroll();
   const navBg = useTransform(
     scrollY,
@@ -229,6 +233,17 @@ export function LandingPage() {
     [t('featureDashboardTitle'), t('featureDashboardText'), BarChart3],
     [t('featurePrivacyTitle'), t('featurePrivacyText'), Smartphone]
   ] as const;
+
+  useEffect(() => {
+    listBillingPlans().then(setPlans).catch(() => setPlans([]));
+  }, []);
+
+  const visiblePlans = plans.length
+    ? plans
+    : [
+        { id: 'monthly', name: t('monthly'), description: t('monthlyDescription'), price: 24.9, durationMonths: 1, currency: 'BRL', active: true, sortOrder: 10, createdAt: '', updatedAt: '' },
+        { id: 'yearly', name: t('yearly'), description: t('yearlyDescription'), price: 238.9, durationMonths: 12, currency: 'BRL', active: true, sortOrder: 20, createdAt: '', updatedAt: '' }
+      ];
 
   return (
     <Box className="premium-page" sx={{ overflow: "hidden" }}>
@@ -819,66 +834,50 @@ export function LandingPage() {
             </Box>
 
             <Grid container spacing={2.5}>
-              <Grid item xs={12} md={6}>
+              {visiblePlans.map((plan, index) => (
+              <Grid item xs={12} md={visiblePlans.length === 1 ? 12 : 6} key={plan.id}>
                 <Paper
                   sx={{
                     p: 3,
                     borderRadius: 5,
                     height: "100%",
-                    boxShadow: "none",
-                    border: "1px solid #E2E8F0",
-                  }}
-                >
-                  <Typography fontWeight={950} color="primary">{t('monthly')}</Typography>
-                  <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
-                    R$ 24,90
-                  </Typography>
-                  <Typography color="text.secondary">{t('perMonth')}</Typography>
-                  <Typography mt={2} color="text.secondary" lineHeight={1.7}>
-                    {t('monthlyDescription')}
-                  </Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Paper
-                  sx={{
-                    p: 3,
-                    borderRadius: 5,
-                    height: "100%",
-                    boxShadow: "0 22px 60px rgba(15,118,110,0.16)",
-                    border: "2px solid #0F766E",
+                    boxShadow: index === 1 ? "0 22px 60px rgba(15,118,110,0.16)" : "none",
+                    border: index === 1 ? "2px solid #0F766E" : "1px solid #E2E8F0",
                     position: "relative",
                     overflow: "hidden",
                   }}
                 >
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 18,
-                      right: 18,
-                      borderRadius: 999,
-                      bgcolor: "#ECFDF5",
-                      color: "#047857",
-                      px: 1.5,
-                      py: 0.5,
-                      fontSize: 12,
-                      fontWeight: 950,
-                    }}
-                  >
-                    {t('bestChoice')}
-                  </Box>
-                  <Typography fontWeight={950} color="primary">{t('yearly')}</Typography>
+                  {index === 1 ? (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 18,
+                        right: 18,
+                        borderRadius: 999,
+                        bgcolor: "#ECFDF5",
+                        color: "#047857",
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: 12,
+                        fontWeight: 950,
+                      }}
+                    >
+                      {t('bestChoice')}
+                    </Box>
+                  ) : null}
+                  <Typography fontWeight={950} color="primary">{plan.name}</Typography>
                   <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
-                    R$ 238,90
+                    {formatMoney(plan.price)}
                   </Typography>
                   <Typography color="text.secondary">
-                    {t('annualEquivalent')}
+                    {plan.durationMonths === 1 ? t('perMonth') : `a cada ${plan.durationMonths} meses`}
                   </Typography>
                   <Typography mt={2} color="text.secondary" lineHeight={1.7}>
-                    {t('yearlyDescription')}
+                    {plan.description}
                   </Typography>
                 </Paper>
               </Grid>
+              ))}
             </Grid>
 
             <Grid container spacing={1.5}>

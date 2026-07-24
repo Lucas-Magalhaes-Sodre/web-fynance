@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { SubscriptionPlan, SubscriptionStatus, User, UserRole } from '@/interfaces/financial';
+import type { CouponDiscountType, SubscriptionPlan, SubscriptionStatus, User, UserRole } from '@/interfaces/financial';
 
 export type BillingStatus = Pick<
   User,
@@ -14,12 +14,64 @@ export type BillingStatus = Pick<
   | 'providerCustomerId'
   | 'providerSubscriptionId'
   | 'subscriptionPlan'
+  | 'billingPlanId'
+  | 'planNameSnapshot'
+  | 'planPriceSnapshot'
+  | 'planDurationMonthsSnapshot'
+  | 'couponCodeSnapshot'
+  | 'couponDiscountSnapshot'
   | 'subscriptionCurrentPeriodEnd'
   | 'lastPaymentAt'
   | 'access'
 >;
 
 export type AdminSubscriptionUser = User;
+
+export type PaginationInfo = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type BillingPlan = {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  currency: string;
+  durationMonths: number;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BillingCoupon = {
+  id: string;
+  code: string;
+  description?: string | null;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  active: boolean;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  usageLimit?: number | null;
+  usedCount: number;
+  billingPlanId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CouponValidationResult = {
+  code: string;
+  description?: string | null;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  originalPrice: number;
+  discountAmount: number;
+  finalPrice: number;
+};
 
 export type AdminBillingOverview = {
   usersTotal: number;
@@ -46,14 +98,26 @@ export async function getBillingPublicSettings() {
   return data.settings;
 }
 
-export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRIPE'; plan: 'MONTHLY' | 'YEARLY' }) {
-  const { data } = await api.post<{ checkout: { provider: string; plan: string; url: string } }>('/billing/checkout', payload);
+export async function listBillingPlans() {
+  const { data } = await api.get<{ plans: BillingPlan[] }>('/billing/plans');
+  return data.plans;
+}
+
+export async function validateBillingCoupon(payload: { planId: string; couponCode: string }) {
+  const { data } = await api.post<{ coupon: CouponValidationResult }>('/billing/coupons/validate', payload);
+  return data.coupon;
+}
+
+export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRIPE'; planId: string; couponCode?: string }) {
+  const { data } = await api.post<{ checkout: { provider: string; planId: string; planName: string; url: string } }>('/billing/checkout', payload);
   return data.checkout;
 }
 
-export async function listAdminSubscriptionUsers() {
-  const { data } = await api.get<{ users: AdminSubscriptionUser[] }>('/admin/subscriptions/users');
-  return data.users;
+export async function listAdminSubscriptionUsers(params: { page?: number; pageSize?: number } = {}) {
+  const { data } = await api.get<{ users: AdminSubscriptionUser[]; pagination: PaginationInfo }>('/admin/subscriptions/users', {
+    params
+  });
+  return data;
 }
 
 export async function updateAdminSubscriptionUser(
@@ -90,4 +154,49 @@ export async function getAdminSettings() {
 export async function updateAdminSettings(payload: AdminSettings) {
   const { data } = await api.put<{ settings: AdminSettings }>('/admin/settings', payload);
   return data.settings;
+}
+
+export async function listAdminBillingPlans() {
+  const { data } = await api.get<{ plans: BillingPlan[] }>('/admin/subscriptions/plans');
+  return data.plans;
+}
+
+export async function createAdminBillingPlan(payload: Omit<BillingPlan, 'id' | 'createdAt' | 'updatedAt'>) {
+  const { data } = await api.post<{ plan: BillingPlan }>('/admin/subscriptions/plans', payload);
+  return data.plan;
+}
+
+export async function updateAdminBillingPlan(planId: string, payload: Omit<BillingPlan, 'id' | 'createdAt' | 'updatedAt'>) {
+  const { data } = await api.put<{ plan: BillingPlan }>(`/admin/subscriptions/plans/${planId}`, payload);
+  return data.plan;
+}
+
+export async function deactivateAdminBillingPlan(planId: string) {
+  const { data } = await api.delete<{ plan: BillingPlan }>(`/admin/subscriptions/plans/${planId}`);
+  return data.plan;
+}
+
+export async function reorderAdminBillingPlans(planIds: string[]) {
+  const { data } = await api.put<{ plans: BillingPlan[] }>('/admin/subscriptions/plans/order', { planIds });
+  return data.plans;
+}
+
+export async function listAdminBillingCoupons() {
+  const { data } = await api.get<{ coupons: BillingCoupon[] }>('/admin/subscriptions/coupons');
+  return data.coupons;
+}
+
+export async function createAdminBillingCoupon(payload: Omit<BillingCoupon, 'id' | 'createdAt' | 'updatedAt' | 'usedCount'>) {
+  const { data } = await api.post<{ coupon: BillingCoupon }>('/admin/subscriptions/coupons', payload);
+  return data.coupon;
+}
+
+export async function updateAdminBillingCoupon(couponId: string, payload: Omit<BillingCoupon, 'id' | 'createdAt' | 'updatedAt' | 'usedCount'>) {
+  const { data } = await api.put<{ coupon: BillingCoupon }>(`/admin/subscriptions/coupons/${couponId}`, payload);
+  return data.coupon;
+}
+
+export async function deactivateAdminBillingCoupon(couponId: string) {
+  const { data } = await api.delete<{ coupon: BillingCoupon }>(`/admin/subscriptions/coupons/${couponId}`);
+  return data.coupon;
 }

@@ -20,6 +20,7 @@ import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { AppDialog } from "@/components/molecules/AppDialog";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import { formatDate, formatMoney } from "@/utils/format";
 
 export function ProfilePage() {
   const { user, refreshUser, signOut } = useAuth();
@@ -91,7 +92,7 @@ export function ProfilePage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `minha-receita-dados-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `deluket-finance-dados-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -159,6 +160,30 @@ export function ProfilePage() {
               {t("saveProfile")}
             </LoadingActionButton>
           </Box>
+        </Stack>
+      </Paper>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
+        <Stack spacing={1.2}>
+          <Typography variant="h5" fontWeight={950}>Meu plano</Typography>
+          <Typography color="text.secondary">
+            Plano: <strong>{user?.planNameSnapshot ?? "Teste grátis / sem plano pago"}</strong>
+          </Typography>
+          <Typography color="text.secondary">
+            Valor: <strong>{user?.planPriceSnapshot ? formatMoney(user.planPriceSnapshot) : "-"}</strong>
+          </Typography>
+          {user?.couponCodeSnapshot ? (
+            <Typography color="text.secondary">
+              Cupom: <strong>{user.couponCodeSnapshot}</strong>
+              {user.couponDiscountSnapshot ? ` · desconto de ${formatMoney(user.couponDiscountSnapshot)}` : ""}
+            </Typography>
+          ) : null}
+          <Typography color="text.secondary">
+            Duração: <strong>{user?.planDurationMonthsSnapshot ? `${user.planDurationMonthsSnapshot} mês(es)` : "-"}</strong>
+          </Typography>
+          <Typography color="text.secondary">
+            Vencimento: <strong>{user?.subscriptionCurrentPeriodEnd ? formatDate(user.subscriptionCurrentPeriodEnd) : user?.trialEndsAt ? `Teste até ${formatDate(user.trialEndsAt)}` : "-"}</strong>
+          </Typography>
         </Stack>
       </Paper>
 

@@ -8,7 +8,7 @@ export const languageNames: Record<AppLanguage, string> = {
 
 export const translations = {
   'pt-BR': {
-    appName: 'Minha Receita',
+    appName: 'Deluket Finance',
     help: 'Ajuda',
     themeLight: 'Tema claro',
     themeDark: 'Tema escuro',
@@ -625,7 +625,7 @@ export const translations = {
     markAsRead: 'Marcar como lido'
   },
   en: {
-    appName: 'Minha Receita',
+    appName: 'Deluket Finance',
     help: 'Help',
     themeLight: 'Light theme',
     themeDark: 'Dark theme',
@@ -1242,7 +1242,7 @@ export const translations = {
     markAsRead: 'Mark as read'
   },
   es: {
-    appName: 'Minha Receita',
+    appName: 'Deluket Finance',
     help: 'Ayuda',
     themeLight: 'Tema claro',
     themeDark: 'Tema oscuro',
