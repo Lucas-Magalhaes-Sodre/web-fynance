@@ -93,6 +93,21 @@ function looseNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function trialEndLabel(date?: string | null) {
+  if (!date) return '-';
+  const end = new Date(date);
+  if (Number.isNaN(end.getTime())) return '-';
+
+  const today = new Date();
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const days = Math.ceil((endOnly.getTime() - todayOnly.getTime()) / 86400000);
+  if (days < 0) return `${formatDate(date)} · encerrado`;
+  if (days === 0) return `${formatDate(date)} · termina hoje`;
+  if (days === 1) return `${formatDate(date)} · amanhã`;
+  return `${formatDate(date)} · em ${days} dias`;
+}
+
 export function AdminSubscriptionsPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminSubscriptionUser[]>([]);
@@ -165,7 +180,7 @@ export function AdminSubscriptionsPage() {
       await grantAdminTrial(userId, Number(daysByUser[userId] || 14));
       await Promise.all([loadUsers(), getAdminBillingOverview().then(setOverview)]);
     } catch {
-      setError('Não foi possível liberar o teste agora.');
+      setError('Não foi possível renovar o teste agora.');
     } finally {
       setSavingId(null);
     }
@@ -573,7 +588,7 @@ export function AdminSubscriptionsPage() {
               <TableCell>Status</TableCell>
               <TableCell>Perfil</TableCell>
               <TableCell>Plano</TableCell>
-              <TableCell>Teste</TableCell>
+              <TableCell>Fim do teste</TableCell>
               <TableCell>Manual até</TableCell>
               <TableCell>Provedor</TableCell>
               <TableCell align="right">Ações</TableCell>
@@ -590,7 +605,7 @@ export function AdminSubscriptionsPage() {
                   <Stack spacing={1}>
                     <Chip
                       size="small"
-                      label={statusLabels[user.subscriptionStatus ?? 'TRIALING']}
+                      label={user.role === 'ADMIN' && user.subscriptionPlan === 'LIFETIME' ? 'Acesso vitalício' : statusLabels[user.subscriptionStatus ?? 'TRIALING']}
                       color={user.access?.canAccess ? 'success' : 'error'}
                       variant="outlined"
                       sx={{ alignSelf: 'flex-start', fontWeight: 900 }}
@@ -630,7 +645,7 @@ export function AdminSubscriptionsPage() {
                     </Typography>
                   ) : null}
                 </TableCell>
-                <TableCell>{user.trialEndsAt ? formatDate(user.trialEndsAt) : '-'}</TableCell>
+                <TableCell>{user.role === 'ADMIN' && user.subscriptionPlan === 'LIFETIME' ? 'Não expira' : trialEndLabel(user.trialEndsAt)}</TableCell>
                 <TableCell>{user.manualAccessUntil ? formatDate(user.manualAccessUntil) : '-'}</TableCell>
                 <TableCell>{providerLabels[user.paymentProvider ?? 'NONE']}</TableCell>
                 <TableCell align="right">
@@ -643,7 +658,7 @@ export function AdminSubscriptionsPage() {
                       sx={{ width: 86 }}
                     />
                     <LoadingActionButton loading={savingId === user.id} disabled={savingId === user.id} onClick={() => grantTrial(user.id)}>
-                      Liberar teste
+                      Renovar teste
                     </LoadingActionButton>
                     <Button
                       color="error"
