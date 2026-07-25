@@ -38,7 +38,15 @@ function loadGoogleScript() {
   });
 }
 
-export function GoogleSignInButton({ onSuccess }: { onSuccess: () => void }) {
+export function GoogleSignInButton({
+  onSuccess,
+  beforeSignIn,
+  legalAccepted = false
+}: {
+  onSuccess: () => void;
+  beforeSignIn?: () => string | null;
+  legalAccepted?: boolean;
+}) {
   const { signInWithGoogle } = useAuth();
   const { t } = usePreferences();
   const buttonRef = useRef<HTMLDivElement | null>(null);
@@ -63,8 +71,13 @@ export function GoogleSignInButton({ onSuccess }: { onSuccess: () => void }) {
           return;
         }
         setError('');
+        const blockedMessage = beforeSignIn?.();
+        if (blockedMessage) {
+          setError(blockedMessage);
+          return;
+        }
         try {
-          await signInWithGoogle(response.credential);
+          await signInWithGoogle(response.credential, legalAccepted);
           onSuccess();
         } catch {
           setError(t('loginError'));
@@ -78,7 +91,7 @@ export function GoogleSignInButton({ onSuccess }: { onSuccess: () => void }) {
       text: 'continue_with',
       locale: 'pt_BR'
     });
-  }, [onSuccess, scriptReady, signInWithGoogle, t]);
+  }, [beforeSignIn, legalAccepted, onSuccess, scriptReady, signInWithGoogle, t]);
 
   if (!GOOGLE_CLIENT_ID) {
     return (

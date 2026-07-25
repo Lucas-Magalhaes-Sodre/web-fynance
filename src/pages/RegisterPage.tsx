@@ -54,7 +54,12 @@ export function RegisterPage() {
           <PasswordField value={password} onChange={setPassword} helperText={t('passwordHelper')} />
           <FormControlLabel
             control={<Checkbox checked={lgpdAccepted} onChange={(event) => setLgpdAccepted(event.target.checked)} required />}
-            label={t('registerLgpdConsent')}
+            label={(
+              <Typography variant="body2">
+                Li e aceito os <Link to="/legal/terms" target="_blank">Termos de Uso</Link> e a{' '}
+                <Link to="/legal/privacy" target="_blank">Política de Privacidade</Link>, incluindo o tratamento dos meus dados para criação da conta e operação do Deluket Finance.
+              </Typography>
+            )}
           />
           <FormControlLabel
             control={<Checkbox checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} />}
@@ -66,7 +71,14 @@ export function RegisterPage() {
           {error && <Typography color="error">{error}</Typography>}
           <Button type="submit" variant="contained" size="large" disabled={!lgpdAccepted}>{t('registerAction')}</Button>
           <Divider>ou</Divider>
-          <GoogleSignInButton onSuccess={() => navigate('/app')} />
+          <GoogleSignInButton
+            legalAccepted={lgpdAccepted}
+            beforeSignIn={() => {
+              if (lgpdAccepted) return null;
+              return t('registerPrivacyError');
+            }}
+            onSuccess={() => navigate('/app')}
+          />
           <Typography textAlign="center">{t('hasAccount')} <Link to="/login">{t('loginTitle')}</Link></Typography>
         </Stack>
       </Paper>

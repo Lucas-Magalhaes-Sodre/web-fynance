@@ -920,6 +920,20 @@ export function LandingPage() {
           </Stack>
         </MotionPaper>
       </Container>
+
+      <Box component="footer" sx={{ borderTop: '1px solid var(--mr-line)', py: 3 }}>
+        <Container maxWidth="lg">
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+            <Typography color="text.secondary" fontWeight={800}>Deluket Finance</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2.5 }}>
+              <Typography component={Link} to="/legal/terms" color="text.secondary" sx={{ textDecoration: 'none', fontWeight: 800 }}>Termos</Typography>
+              <Typography component={Link} to="/legal/privacy" color="text.secondary" sx={{ textDecoration: 'none', fontWeight: 800 }}>Privacidade</Typography>
+              <Typography component={Link} to="/legal/cookies" color="text.secondary" sx={{ textDecoration: 'none', fontWeight: 800 }}>Cookies</Typography>
+              <Typography component={Link} to="/legal/cancellation" color="text.secondary" sx={{ textDecoration: 'none', fontWeight: 800 }}>Cancelamento</Typography>
+            </Stack>
+          </Stack>
+        </Container>
+      </Box>
     </Box>
   );
 }

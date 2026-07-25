@@ -108,7 +108,7 @@ export async function validateBillingCoupon(payload: { planId: string; couponCod
   return data.coupon;
 }
 
-export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRIPE'; planId: string; couponCode?: string }) {
+export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRIPE'; planId: string; couponCode?: string; legalAccepted: true }) {
   const { data } = await api.post<{ checkout: { provider: string; planId: string; planName: string; url: string } }>('/billing/checkout', payload);
   return data.checkout;
 }

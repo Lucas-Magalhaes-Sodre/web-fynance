@@ -57,6 +57,10 @@ export type User = {
   occupation?: string | null;
   lgpdAcceptedAt?: string | null;
   lgpdConsentVersion?: string | null;
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
+  privacyVersion?: string | null;
+  cookiesVersion?: string | null;
   marketingConsent?: boolean;
   dataDeletionRequestedAt?: string | null;
   role?: UserRole;

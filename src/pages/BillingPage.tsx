@@ -2,12 +2,15 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import PixIcon from '@mui/icons-material/Pix';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { createCheckout, getBillingPublicSettings, getBillingStatus, listBillingPlans, validateBillingCoupon, type BillingPlan, type BillingStatus, type CouponValidationResult } from '@/services/billing';
 import { formatDate, formatMoney } from '@/utils/format';
@@ -18,6 +21,7 @@ export function BillingPage() {
   const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [couponByPlan, setCouponByPlan] = useState<Record<string, string>>({});
   const [validatedCouponByPlan, setValidatedCouponByPlan] = useState<Record<string, CouponValidationResult | undefined>>({});
+  const [legalAcceptedByPlan, setLegalAcceptedByPlan] = useState<Record<string, boolean>>({});
   const [couponLoadingPlan, setCouponLoadingPlan] = useState<string | null>(null);
   const [defaultTrialDays, setDefaultTrialDays] = useState<number | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -35,10 +39,19 @@ export function BillingPage() {
   }, []);
 
   async function subscribe(planId: string) {
+    if (!legalAcceptedByPlan[planId]) {
+      setError('Para continuar, aceite os termos e condições do plano escolhido.');
+      return;
+    }
     setLoadingPlan(planId);
     setError('');
     try {
-      const checkout = await createCheckout({ provider: 'MERCADO_PAGO', planId, couponCode: validatedCouponByPlan[planId]?.code });
+      const checkout = await createCheckout({
+        provider: 'MERCADO_PAGO',
+        planId,
+        couponCode: validatedCouponByPlan[planId]?.code,
+        legalAccepted: true
+      });
       window.location.href = checkout.url;
     } catch (error: any) {
       setError(error.response?.data?.message ?? 'Não foi possível iniciar o pagamento.');
@@ -132,6 +145,12 @@ export function BillingPage() {
                   </Paper>
                 ) : null}
                 <Typography color="text.secondary">{item.description}</Typography>
+                <Paper sx={{ p: 1.5, borderRadius: 3, bgcolor: 'action.hover', boxShadow: 'none' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Condições deste plano: {item.name}, {formatMoney(validatedCouponByPlan[item.id]?.finalPrice ?? item.price)}, duração de {item.durationMonths} mês(es)
+                    {validatedCouponByPlan[item.id] ? `, com cupom ${validatedCouponByPlan[item.id]?.code}` : ''}.
+                  </Typography>
+                </Paper>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                   <TextField
                     size="small"
@@ -151,11 +170,26 @@ export function BillingPage() {
                     {couponLoadingPlan === item.id ? 'Aplicando...' : 'Aplicar'}
                   </Button>
                 </Stack>
+                <FormControlLabel
+                  control={(
+                    <Checkbox
+                      checked={Boolean(legalAcceptedByPlan[item.id])}
+                      onChange={(event) => setLegalAcceptedByPlan((current) => ({ ...current, [item.id]: event.target.checked }))}
+                    />
+                  )}
+                  label={(
+                    <Typography variant="body2" color="text.secondary">
+                      Aceito os <Link to="/legal/terms" target="_blank">Termos de Uso</Link>, a{' '}
+                      <Link to="/legal/privacy" target="_blank">Política de Privacidade</Link> e a{' '}
+                      <Link to="/legal/cancellation" target="_blank">Política de Cancelamento</Link> para este plano.
+                    </Typography>
+                  )}
+                />
                 <Box flex={1} />
                 <Button
                   variant="contained"
                   size="large"
-                  disabled={Boolean(loadingPlan)}
+                  disabled={Boolean(loadingPlan) || !legalAcceptedByPlan[item.id]}
                   onClick={() => subscribe(item.id)}
                 >
                   {loadingPlan === item.id ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
