@@ -3,6 +3,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EditIcon from '@mui/icons-material/Edit';
+import PersonOffIcon from '@mui/icons-material/PersonOff';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -30,6 +31,7 @@ import {
   getAdminBillingOverview,
   getAdminSettings,
   grantAdminTrial,
+  anonymizeAdminSubscriptionUser,
   createAdminBillingCoupon,
   createAdminBillingPlan,
   deactivateAdminBillingCoupon,
@@ -108,6 +110,11 @@ function trialEndLabel(date?: string | null) {
   return `${formatDate(date)} · em ${days} dias`;
 }
 
+function currentMonthName() {
+  const name = new Date().toLocaleDateString('pt-BR', { month: 'long' });
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 export function AdminSubscriptionsPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminSubscriptionUser[]>([]);
@@ -126,6 +133,16 @@ export function AdminSubscriptionsPage() {
   const [couponModalOpen, setCouponModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<BillingCoupon | null>(null);
   const [savingCoupon, setSavingCoupon] = useState(false);
+  const [anonymizeUser, setAnonymizeUser] = useState<AdminSubscriptionUser | null>(null);
+  const [anonymizeEmail, setAnonymizeEmail] = useState('');
+  const [anonymizeNote, setAnonymizeNote] = useState('');
+  const [anonymizing, setAnonymizing] = useState(false);
+  const [userFilters, setUserFilters] = useState({
+    search: '',
+    subscriptionStatus: '',
+    role: '',
+    billingPlanId: ''
+  });
   const [draggingPlanId, setDraggingPlanId] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState({
     name: '',
@@ -149,8 +166,15 @@ export function AdminSubscriptionsPage() {
   });
   const [error, setError] = useState('');
 
-  async function loadUsers(page = usersPagination.page, pageSize = usersPagination.pageSize) {
-    const usersResult = await listAdminSubscriptionUsers({ page, pageSize });
+  async function loadUsers(page = usersPagination.page, pageSize = usersPagination.pageSize, filters = userFilters) {
+    const usersResult = await listAdminSubscriptionUsers({
+      page,
+      pageSize,
+      search: filters.search || undefined,
+      subscriptionStatus: (filters.subscriptionStatus || undefined) as SubscriptionStatus | undefined,
+      role: (filters.role || undefined) as UserRole | undefined,
+      billingPlanId: filters.billingPlanId || undefined
+    });
     setUsers(usersResult.users);
     setUsersPagination(usersResult.pagination);
   }
@@ -396,6 +420,40 @@ export function AdminSubscriptionsPage() {
     loadUsers(1, Number(event.target.value));
   }
 
+  function applyUserFilters() {
+    loadUsers(1, usersPagination.pageSize);
+  }
+
+  function clearUserFilters() {
+    const nextFilters = { search: '', subscriptionStatus: '', role: '', billingPlanId: '' };
+    setUserFilters(nextFilters);
+    loadUsers(1, usersPagination.pageSize, nextFilters);
+  }
+
+  function openAnonymizeUser(user: AdminSubscriptionUser) {
+    setAnonymizeUser(user);
+    setAnonymizeEmail('');
+    setAnonymizeNote('');
+  }
+
+  async function confirmAnonymizeUser() {
+    if (!anonymizeUser) return;
+    setError('');
+    setAnonymizing(true);
+    try {
+      await anonymizeAdminSubscriptionUser(anonymizeUser.id, {
+        confirmationEmail: anonymizeEmail.trim(),
+        note: anonymizeNote.trim() || undefined
+      });
+      setAnonymizeUser(null);
+      await Promise.all([loadUsers(), getAdminBillingOverview().then(setOverview)]);
+    } catch (error: any) {
+      setError(error.response?.data?.message ?? 'Não foi possível anonimizar o usuário.');
+    } finally {
+      setAnonymizing(false);
+    }
+  }
+
   return (
     <Stack spacing={3}>
       <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
@@ -416,7 +474,9 @@ export function AdminSubscriptionsPage() {
       <Grid container spacing={2}>
         {[
           ['Faturamento recebido estimado', overview ? formatMoney(overview.realizedRevenueEstimate) : '-'],
+          [`Faturamento ${currentMonthName()}`, overview ? formatMoney(overview.currentMonthRevenue) : '-'],
           ['Receita mensal recorrente', overview ? formatMoney(overview.currentMonthlyRecurringRevenue) : '-'],
+          ['Novos planos no mês', overview ? `${overview.currentMonthNewPaidPlans} · +${formatMoney(overview.currentMonthMonthlyRevenueIncrease)}/mês` : '-'],
           ['Chance em testes gratuitos', overview ? formatMoney(overview.projectedTrialRevenue) : '-'],
           ['Usuários pagantes ativos', overview ? String(overview.activePaidUsers) : '-'],
           ['Em teste grátis', overview ? String(overview.trialUsers) : '-'],
@@ -581,6 +641,59 @@ export function AdminSubscriptionsPage() {
 
       {adminTab === 'USERS' ? (
       <Paper className="soft-card" sx={{ borderRadius: 4, overflow: 'hidden' }}>
+        <Stack spacing={2} sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="h5" fontWeight={950}>Usuários</Typography>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'center' }}>
+            <TextField
+              label="Buscar nome ou e-mail"
+              value={userFilters.search}
+              onChange={(event) => setUserFilters((current) => ({ ...current, search: event.target.value }))}
+              size="small"
+              sx={{ minWidth: { md: 260 } }}
+            />
+            <TextField
+              select
+              label="Status"
+              value={userFilters.subscriptionStatus}
+              onChange={(event) => setUserFilters((current) => ({ ...current, subscriptionStatus: event.target.value }))}
+              size="small"
+              sx={{ minWidth: { md: 180 } }}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {statuses.map((status) => (
+                <MenuItem key={status} value={status}>{statusLabels[status]}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Perfil"
+              value={userFilters.role}
+              onChange={(event) => setUserFilters((current) => ({ ...current, role: event.target.value }))}
+              size="small"
+              sx={{ minWidth: { md: 160 } }}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {roles.map((role) => (
+                <MenuItem key={role} value={role}>{roleLabels[role]}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Plano"
+              value={userFilters.billingPlanId}
+              onChange={(event) => setUserFilters((current) => ({ ...current, billingPlanId: event.target.value }))}
+              size="small"
+              sx={{ minWidth: { md: 190 } }}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {plans.filter((plan) => plan.active).map((plan) => (
+                <MenuItem key={plan.id} value={plan.id}>{plan.name}</MenuItem>
+              ))}
+            </TextField>
+            <Button variant="contained" onClick={applyUserFilters}>Filtrar</Button>
+            <Button variant="outlined" onClick={clearUserFilters}>Limpar</Button>
+          </Stack>
+        </Stack>
         <Table>
           <TableHead>
             <TableRow>
@@ -667,6 +780,13 @@ export function AdminSubscriptionsPage() {
                     >
                       Bloquear
                     </Button>
+                    <IconButton
+                      color="error"
+                      disabled={savingId === user.id || user.id === currentUser?.id}
+                      onClick={() => openAnonymizeUser(user)}
+                    >
+                      <PersonOffIcon />
+                    </IconButton>
                   </Stack>
                 </TableCell>
               </TableRow>
@@ -835,6 +955,57 @@ export function AdminSubscriptionsPage() {
               <MenuItem value="false">Inativo</MenuItem>
             </TextField>
           </Stack>
+        </Stack>
+      </AppDialog>
+
+      <AppDialog
+        open={Boolean(anonymizeUser)}
+        onClose={() => setAnonymizeUser(null)}
+        title="Anonimizar usuário"
+        maxWidth="sm"
+        actions={
+          <>
+            <Button onClick={() => setAnonymizeUser(null)}>Cancelar</Button>
+            <LoadingActionButton
+              color="error"
+              variant="contained"
+              onClick={confirmAnonymizeUser}
+              loading={anonymizing}
+              loadingLabel="Anonimizando..."
+              disabled={!anonymizeUser || anonymizeEmail.trim().toLowerCase() !== anonymizeUser.email.toLowerCase()}
+            >
+              Anonimizar usuário
+            </LoadingActionButton>
+          </>
+        }
+      >
+        <Stack spacing={2}>
+          <Typography color="text.secondary">
+            Essa ação bloqueia o acesso, remove dados pessoais do cadastro e registra auditoria administrativa. Ela não deve ser usada para contornar obrigações legais, fiscais ou de pagamento.
+          </Typography>
+          {anonymizeUser ? (
+            <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 'none', bgcolor: 'action.hover' }}>
+              <Typography fontWeight={900}>{anonymizeUser.name}</Typography>
+              <Typography color="text.secondary">{anonymizeUser.email}</Typography>
+            </Paper>
+          ) : null}
+          <Typography color="text.secondary">
+            Para confirmar, digite exatamente o e-mail do usuário.
+          </Typography>
+          <TextField
+            label="E-mail de confirmação"
+            value={anonymizeEmail}
+            onChange={(event) => setAnonymizeEmail(event.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Observação interna"
+            value={anonymizeNote}
+            onChange={(event) => setAnonymizeNote(event.target.value)}
+            multiline
+            minRows={2}
+            fullWidth
+          />
         </Stack>
       </AppDialog>
     </Stack>

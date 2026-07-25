@@ -80,6 +80,9 @@ export type AdminBillingOverview = {
   blockedUsers: number;
   currentMonthlyRecurringRevenue: number;
   realizedRevenueEstimate: number;
+  currentMonthRevenue: number;
+  currentMonthNewPaidPlans: number;
+  currentMonthMonthlyRevenueIncrease: number;
   projectedTrialRevenue: number;
   defaultTrialDays: number;
 };
@@ -113,7 +116,14 @@ export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRI
   return data.checkout;
 }
 
-export async function listAdminSubscriptionUsers(params: { page?: number; pageSize?: number } = {}) {
+export async function listAdminSubscriptionUsers(params: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  subscriptionStatus?: SubscriptionStatus;
+  role?: UserRole;
+  billingPlanId?: string;
+} = {}) {
   const { data } = await api.get<{ users: AdminSubscriptionUser[]; pagination: PaginationInfo }>('/admin/subscriptions/users', {
     params
   });
@@ -138,6 +148,11 @@ export async function updateAdminSubscriptionUser(
 
 export async function grantAdminTrial(userId: string, days: number) {
   const { data } = await api.post<{ user: AdminSubscriptionUser }>(`/admin/subscriptions/users/${userId}/grant-trial`, { days });
+  return data.user;
+}
+
+export async function anonymizeAdminSubscriptionUser(userId: string, payload: { confirmationEmail: string; note?: string }) {
+  const { data } = await api.post<{ user: AdminSubscriptionUser }>(`/admin/subscriptions/users/${userId}/anonymize`, payload);
   return data.user;
 }
 

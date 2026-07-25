@@ -14,6 +14,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
@@ -166,6 +167,15 @@ export function ProfilePage() {
       <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
         <Stack spacing={1.2}>
           <Typography variant="h5" fontWeight={950}>Meu plano</Typography>
+          {user?.access?.hasPaidAccess ? (
+            <Alert severity="success" sx={{ borderRadius: 3 }}>
+              Você está atualmente com um plano ativo.
+            </Alert>
+          ) : user?.trialEndsAt ? (
+            <Alert severity="info" sx={{ borderRadius: 3 }}>
+              Você está no teste grátis até {formatDate(user.trialEndsAt)}.
+            </Alert>
+          ) : null}
           <Typography color="text.secondary">
             Plano: <strong>{user?.planNameSnapshot ?? "Teste grátis / sem plano pago"}</strong>
           </Typography>
@@ -184,6 +194,11 @@ export function ProfilePage() {
           <Typography color="text.secondary">
             Vencimento: <strong>{user?.subscriptionCurrentPeriodEnd ? formatDate(user.subscriptionCurrentPeriodEnd) : user?.trialEndsAt ? `Teste até ${formatDate(user.trialEndsAt)}` : "-"}</strong>
           </Typography>
+          <Box display="flex" justifyContent="flex-end" pt={1}>
+            <Button component={Link} to="/app/billing" variant="contained">
+              Ver planos e contratação
+            </Button>
+          </Box>
         </Stack>
       </Paper>
 
