@@ -3,6 +3,7 @@ import PixIcon from '@mui/icons-material/Pix';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
+import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
@@ -129,6 +130,9 @@ export function BillingPage() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <PixIcon color="primary" />
                   <Typography variant="h5" fontWeight={950}>{item.name}</Typography>
+                  {billing?.billingPlanId === item.id && billing.access?.hasPaidAccess ? (
+                    <Chip label="Plano atual" color="success" size="small" sx={{ fontWeight: 900 }} />
+                  ) : null}
                 </Stack>
                 <Typography variant="h3" fontWeight={950}>{formatMoney(item.price)}</Typography>
                 <Typography color="text.secondary">
@@ -189,10 +193,12 @@ export function BillingPage() {
                 <Button
                   variant="contained"
                   size="large"
-                  disabled={Boolean(loadingPlan) || !legalAcceptedByPlan[item.id]}
+                  disabled={Boolean(loadingPlan) || !legalAcceptedByPlan[item.id] || (billing?.billingPlanId === item.id && billing.access?.hasPaidAccess)}
                   onClick={() => subscribe(item.id)}
                 >
-                  {loadingPlan === item.id ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
+                  {billing?.billingPlanId === item.id && billing.access?.hasPaidAccess
+                    ? 'Plano atual'
+                    : loadingPlan === item.id ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
                 </Button>
               </Stack>
             </Paper>

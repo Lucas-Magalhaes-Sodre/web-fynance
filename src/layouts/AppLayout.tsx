@@ -11,6 +11,7 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import PersonIcon from '@mui/icons-material/Person';
 import SavingsIcon from '@mui/icons-material/Savings';
 import SettingsIcon from '@mui/icons-material/Settings';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -24,8 +25,8 @@ import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { PreferenceControls } from '@/components/molecules/PreferenceControls';
@@ -38,9 +39,25 @@ export function AppLayout() {
   const { user, signOut } = useAuth();
   const { t } = usePreferences();
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(() => localStorage.getItem('@minha-receita:menu-open') !== 'false');
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [trialModalOpen, setTrialModalOpen] = useState(false);
   const currentWidth = open ? drawerWidth : collapsedDrawerWidth;
+  const trialInfo = useMemo(() => {
+    if (!user || user.role === 'ADMIN' || user.access?.hasPaidAccess || !user.trialEndsAt) return null;
+    const end = new Date(user.trialEndsAt);
+    if (Number.isNaN(end.getTime())) return null;
+    const today = new Date();
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    const daysLeft = Math.ceil((endOnly.getTime() - todayOnly.getTime()) / 86400000);
+    if (daysLeft < 0) return null;
+    return {
+      daysLeft,
+      endsAt: end.toLocaleDateString('pt-BR')
+    };
+  }, [user]);
   const links = [
     { to: '/app', label: t('menuDashboard'), icon: <DashboardIcon /> },
     { to: '/app/control', label: t('menuFinancialControl'), icon: <CalendarMonthIcon /> },
@@ -60,6 +77,19 @@ export function AppLayout() {
       localStorage.setItem('@minha-receita:menu-open', String(!current));
       return !current;
     });
+  }
+
+  useEffect(() => {
+    if (!user?.id || !trialInfo) return;
+    const key = `@minha-receita:trial-welcome-seen:${user.id}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, 'true');
+    setTrialModalOpen(true);
+  }, [trialInfo, user?.id]);
+
+  function goToBilling() {
+    setTrialModalOpen(false);
+    navigate('/app/billing');
   }
 
   return (
@@ -162,8 +192,42 @@ export function AppLayout() {
         background: 'var(--mr-main-bg)'
       }}
       >
+        {trialInfo ? (
+          <Alert
+            severity="info"
+            action={
+              <Button color="inherit" size="small" onClick={goToBilling}>
+                Ver planos
+              </Button>
+            }
+            sx={{ mb: 2, borderRadius: 3, alignItems: 'center' }}
+          >
+            Você está no teste grátis. {trialInfo.daysLeft === 0
+              ? `Ele termina hoje (${trialInfo.endsAt}).`
+              : `Faltam ${trialInfo.daysLeft} dia${trialInfo.daysLeft === 1 ? '' : 's'} para acabar (${trialInfo.endsAt}).`}
+          </Alert>
+        ) : null}
         <Outlet />
       </Box>
+      <Dialog open={trialModalOpen} onClose={() => setTrialModalOpen(false)} maxWidth="xs" fullWidth>
+        <Box p={3}>
+          <Typography variant="h5" fontWeight={950} mb={1}>Seu teste grátis começou</Typography>
+          <Typography color="text.secondary" mb={2}>
+            Você pode usar o Deluket Finance durante o período de teste. {trialInfo
+              ? trialInfo.daysLeft === 0
+                ? `Seu teste termina hoje (${trialInfo.endsAt}).`
+                : `Seu teste termina em ${trialInfo.daysLeft} dia${trialInfo.daysLeft === 1 ? '' : 's'}, em ${trialInfo.endsAt}.`
+              : ''}
+          </Typography>
+          <Typography color="text.secondary" mb={3}>
+            Quando quiser, você pode contratar um plano para manter o acesso ao dashboard, controle financeiro, cartões, economias, metas e lembretes.
+          </Typography>
+          <Box display="flex" justifyContent="flex-end" gap={1}>
+            <Button onClick={() => setTrialModalOpen(false)}>Continuar teste</Button>
+            <Button variant="contained" onClick={goToBilling}>Ver planos</Button>
+          </Box>
+        </Box>
+      </Dialog>
       <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)}>
         <Box p={3}>
           <Typography variant="h6" fontWeight={900} mb={1}>{t('signOutTitle')}</Typography>
