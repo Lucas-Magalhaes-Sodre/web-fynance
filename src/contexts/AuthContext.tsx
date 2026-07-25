@@ -7,7 +7,7 @@ type AuthContextValue = {
   token: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: (idToken: string) => Promise<void>;
+  signInWithGoogle: (idToken: string, legalAccepted?: boolean) => Promise<void>;
   signUp: (name: string, email: string, password: string, marketingConsent?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
   signOut: () => void;
@@ -48,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
-  async function signInWithGoogle(idToken: string) {
-    const { data } = await api.post('/auth/google', { idToken });
+  async function signInWithGoogle(idToken: string, legalAccepted = false) {
+    const { data } = await api.post('/auth/google', { idToken, ...(legalAccepted ? { legalAccepted: true } : {}) });
     localStorage.setItem('@minha-receita:token', data.token);
     setToken(data.token);
     setUser(data.user);
@@ -61,7 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUp(name: string, email: string, password: string, marketingConsent = false) {
-    const { data } = await api.post('/auth/register', { name, email, password, lgpdAccepted: true, marketingConsent });
+    const { data } = await api.post('/auth/register', {
+      name,
+      email,
+      password,
+      lgpdAccepted: true,
+      termsAccepted: true,
+      privacyAccepted: true,
+      marketingConsent
+    });
     localStorage.setItem('@minha-receita:token', data.token);
     setToken(data.token);
     setUser(data.user);
