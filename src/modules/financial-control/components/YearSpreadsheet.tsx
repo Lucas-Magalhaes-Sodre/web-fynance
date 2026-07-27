@@ -34,6 +34,7 @@ import type {
   FinancialCategoryType,
   YearControl,
 } from "@/interfaces/financial";
+import { useAuth } from "@/contexts/AuthContext";
 import { financeColors, formatMoney } from "@/utils/format";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
@@ -110,6 +111,7 @@ export function YearSpreadsheet({
   onEditCell,
   onOpenCreditCard,
 }: YearSpreadsheetProps) {
+  const { user } = useAuth();
   const { language, t } = usePreferences();
   const [groupsSeparated, setGroupsSeparated] = useState(false);
   const [tableScale, setTableScale] = useState(0);
@@ -190,6 +192,12 @@ export function YearSpreadsheet({
     acc[index + 1] = label.slice(0, 3).toUpperCase();
     return acc;
   }, {});
+  const issuedAtLabel = useMemo(() => new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date()), []);
+  const printUserLabel = user?.email || user?.name || t("name");
+  const printFooterLabel = `${t("generatedBy")} ${t("appName")} • ${printUserLabel} • ${t("year")}: ${year} • ${t("issuedAt")}: ${issuedAtLabel}`;
 
   function resizeCategoryColumn(width: number) {
     setCategoryColumnWidth(Math.min(420, Math.max(132, width)));
@@ -1045,6 +1053,14 @@ export function YearSpreadsheet({
               },
             }}
           />
+          <Button
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={printExpandedTable}
+            sx={{ justifyContent: "flex-start", fontWeight: 850 }}
+          >
+            {t("printExpandedAnnualTable")}
+          </Button>
         </Stack>
       </Popover>
       <Paper
@@ -1062,6 +1078,23 @@ export function YearSpreadsheet({
           borderTop: "none",
         }}
       >
+        <Box
+          className="financial-year-print-title"
+          sx={{ display: "none" }}
+        >
+          <Typography variant="h5" fontWeight={950}>
+            {t("menuFinancialControl")}
+          </Typography>
+          <Typography fontWeight={800}>
+            {t("year")}: {year}
+          </Typography>
+        </Box>
+        <Box className="financial-year-print-footer" sx={{ display: "none" }}>
+          {printFooterLabel}
+        </Box>
+        <Box className="financial-year-print-watermark" sx={{ display: "none" }}>
+          {t("appName")}
+        </Box>
         <Table
           stickyHeader
           size="small"
