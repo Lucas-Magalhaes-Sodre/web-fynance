@@ -114,13 +114,38 @@ export function AppLayout() {
       >
         <Toolbar sx={{ gap: 1.5, justifyContent: open ? 'space-between' : 'center', px: open ? 2 : 1 }}>
           {open ? (
-          <Box display="flex" alignItems="center" gap={1.5} minWidth={0}>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => navigate('/app/profile')}
+            aria-label={t('menuProfile')}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              minWidth: 0,
+              border: 0,
+              p: 0,
+              m: 0,
+              bgcolor: 'transparent',
+              color: 'inherit',
+              textAlign: 'left',
+              cursor: 'pointer',
+              borderRadius: 2,
+              '&:hover .user-name': { color: 'primary.main' },
+              '&:focus-visible': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: 4,
+              },
+            }}
+          >
             <Box className="premium-gradient" width={40} height={40} borderRadius={3} display="grid" sx={{ placeItems: 'center', color: 'white' }}>
               <AccountBalanceWalletIcon fontSize="small" />
             </Box>
             <Box minWidth={0}>
               <Typography fontWeight={800} noWrap>{t('appName')}</Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
+              <Typography className="user-name" variant="caption" color="text.secondary" noWrap>
                 {user?.name}
               </Typography>
             </Box>

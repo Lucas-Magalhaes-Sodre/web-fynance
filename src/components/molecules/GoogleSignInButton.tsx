@@ -87,7 +87,7 @@ export function GoogleSignInButton({
     window.google.accounts.id.renderButton(buttonRef.current, {
       theme: 'outline',
       size: 'large',
-      width: buttonRef.current.clientWidth || 320,
+      width: buttonRef.current.clientWidth || 360,
       text: 'continue_with',
       locale: 'pt_BR'
     });
@@ -102,8 +102,18 @@ export function GoogleSignInButton({
   }
 
   return (
-    <Box>
-      <Box ref={buttonRef} sx={{ minHeight: 44, '& iframe': { mx: 'auto' } }} />
+    <Box sx={{ width: '100%' }}>
+      <Box
+        ref={buttonRef}
+        sx={{
+          minHeight: 44,
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          '& > div': { width: '100% !important' },
+          '& iframe': { mx: 'auto' }
+        }}
+      />
       {error ? <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert> : null}
     </Box>
   );

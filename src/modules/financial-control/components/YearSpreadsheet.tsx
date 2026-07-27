@@ -4,6 +4,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import PrintIcon from "@mui/icons-material/Print";
 import RemoveIcon from "@mui/icons-material/Remove";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -25,7 +26,9 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { useMemo, useState } from "react";
+import type { Theme } from "@mui/material/styles";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type {
   EntryType,
   FinancialCategoryType,
@@ -110,10 +113,14 @@ export function YearSpreadsheet({
   const { language, t } = usePreferences();
   const [groupsSeparated, setGroupsSeparated] = useState(false);
   const [tableScale, setTableScale] = useState(0);
+  const [categoryColumnWidth, setCategoryColumnWidth] = useState(168);
+  const [categoryColumnResizing, setCategoryColumnResizing] = useState(false);
+  const [printRequested, setPrintRequested] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
   const [selectedSearchOption, setSelectedSearchOption] =
     useState<SearchOption | null>(null);
-  const stickyCategoryWidth = 168 + tableScale * 14;
+  const categoryResizeRef = useRef({ startX: 0, startWidth: 168 });
+  const stickyCategoryWidth = categoryColumnWidth + tableScale * 14;
   const totalColumnWidth = 96 + tableScale * 12;
   const monthColumnMinWidth = 74 + tableScale * 10;
   const tableFontSize = 10.5 + tableScale;
@@ -147,10 +154,88 @@ export function YearSpreadsheet({
   const groupTotalTextSx = {
     textShadow: "0 1px 2px rgba(15,23,42,0.28)",
   };
+  const tableSurfaceBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "var(--mr-card-solid)" : "#FFFFFF";
+  const tableMutedBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "#132238" : "#F8FAFC";
+  const tableSpacerBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "#07111f" : "#FFFFFF";
+  const tablePrimaryText = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "#E5EEF8" : "#111827";
+  const tableBodyCellBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "#0f1b2d" : "#FFFFFF";
+  const tableValueText = (color: string, isCategory = false) => (theme: Theme) =>
+    theme.palette.mode === "dark"
+      ? isCategory
+        ? "#E5EEF8"
+        : color
+      : isCategory
+        ? "#111827"
+        : readableCategoryTextColor(color);
+  const positiveResultBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "rgba(22,163,74,0.18)" : "#F0FDF4";
+  const negativeResultBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "rgba(220,38,38,0.18)" : "#FEF2F2";
+  const nestedRowBg = (theme: Theme) =>
+    theme.palette.mode === "dark" ? "rgba(15,27,45,0.78)" : "rgba(248,250,252,0.92)";
+  const nestedCellSx = {
+    bgcolor: nestedRowBg,
+    pl: 0.6,
+  };
+  const nestedContentSx = {
+    pl: 4,
+    pr: 0.5,
+  };
   const compactMonthLabels = monthsByLanguage[language].reduce<Record<number, string>>((acc, label, index) => {
     acc[index + 1] = label.slice(0, 3).toUpperCase();
     return acc;
   }, {});
+
+  function resizeCategoryColumn(width: number) {
+    setCategoryColumnWidth(Math.min(420, Math.max(132, width)));
+  }
+
+  function startCategoryColumnResize(event: ReactPointerEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    categoryResizeRef.current = {
+      startX: event.clientX,
+      startWidth: categoryColumnWidth,
+    };
+    setCategoryColumnResizing(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveCategoryColumnResize(event: ReactPointerEvent<HTMLElement>) {
+    if (!categoryColumnResizing) return;
+    event.preventDefault();
+    const delta = event.clientX - categoryResizeRef.current.startX;
+    resizeCategoryColumn(categoryResizeRef.current.startWidth + delta);
+  }
+
+  function stopCategoryColumnResize(event: ReactPointerEvent<HTMLElement>) {
+    if (!categoryColumnResizing) return;
+    setCategoryColumnResizing(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  useEffect(() => {
+    if (!printRequested || !categoryGroupsExpanded || !allCategoryRowsExpanded) return;
+    const timer = window.setTimeout(() => {
+      window.print();
+      setPrintRequested(false);
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [allCategoryRowsExpanded, categoryGroupsExpanded, printRequested]);
+
+  function printExpandedTable() {
+    setSettingsAnchor(null);
+    onToggleCategoryGroups(true);
+    onToggleAllCategoryRows(true);
+    setPrintRequested(true);
+  }
 
   function isCreditCardCategory(category: string) {
     const name = category
@@ -288,7 +373,7 @@ export function YearSpreadsheet({
     );
   }
 
-  function truncatedName(name: string, color?: string, fontWeight = 850, displayName = name) {
+  function truncatedName(name: string, color?: string | ((theme: Theme) => string), fontWeight = 850, displayName = name) {
     return (
       <Tooltip title={displayName}>
         <Typography
@@ -335,11 +420,8 @@ export function YearSpreadsheet({
         onClick={onClick}
         sx={{
           position: "relative",
-          color: isCategory ? "#111827" : readableCategoryTextColor(color),
-          bgcolor:
-            tone === "INCOME"
-              ? sheetColors.incomeCell
-              : sheetColors.expenseCell,
+          color: tableValueText(color, isCategory),
+          bgcolor: tableBodyCellBg,
           fontWeight: isCategory ? 850 : 500,
           borderRight: `${isCategory ? 3 : 1}px solid ${color}`,
           borderTop: `${isCategory ? 3 : 1}px solid ${color}`,
@@ -350,10 +432,10 @@ export function YearSpreadsheet({
           ...(isTotal ? totalColumnSx : {}),
           "&:hover": onClick
             ? {
-                bgcolor:
+              bgcolor:
                   tone === "INCOME"
-                    ? "rgba(37,99,235,0.06)"
-                    : "rgba(234,88,12,0.06)",
+                    ? (theme) => theme.palette.mode === "dark" ? "rgba(37,99,235,0.18)" : "rgba(37,99,235,0.06)"
+                    : (theme) => theme.palette.mode === "dark" ? "rgba(234,88,12,0.18)" : "rgba(234,88,12,0.06)",
               }
             : undefined,
         }}
@@ -372,7 +454,8 @@ export function YearSpreadsheet({
         sx={{
           position: "sticky",
           left: 0,
-          bgcolor: "#F8FAFC",
+          bgcolor: tableMutedBg,
+          color: tablePrimaryText,
           fontWeight: 850,
           width: stickyCategoryWidth,
           minWidth: stickyCategoryWidth,
@@ -408,7 +491,7 @@ export function YearSpreadsheet({
                 variant="text"
                 onClick={() => onOpenCreditCard?.()}
                 sx={{
-                  color: "#111827",
+                  color: tablePrimaryText,
                   fontWeight: 850,
                   justifyContent: "flex-start",
                   px: 0,
@@ -417,10 +500,10 @@ export function YearSpreadsheet({
                   maxWidth: "100%",
                 }}
               >
-                {truncatedName(category, "#111827", 850, translateCategoryName(category, language))}
+                {truncatedName(category, undefined, 850, translateCategoryName(category, language))}
               </Button>
             ) : (
-              truncatedName(category, "#111827", 850, translateCategoryName(category, language))
+              truncatedName(category, undefined, 850, translateCategoryName(category, language))
             )}
           </Box>
           <Tooltip title={t("deleteYearLine")}>
@@ -439,7 +522,7 @@ export function YearSpreadsheet({
 
   function detailRows(type: EntryType, category: string) {
     const color = categoryColor(type, category);
-    const textColor = readableCategoryTextColor(color);
+    const textColor = tableValueText(color);
     return rowsForCategory(type, category).map((child) => (
       <TableRow
         key={`${child.category}:${child.name}`}
@@ -449,10 +532,9 @@ export function YearSpreadsheet({
       >
         <TableCell
           sx={{
+            ...nestedCellSx,
             position: "sticky",
             left: 0,
-            bgcolor: "#FFFFFF",
-            pl: 5,
             fontWeight: 700,
             width: stickyCategoryWidth,
             minWidth: stickyCategoryWidth,
@@ -468,6 +550,7 @@ export function YearSpreadsheet({
             alignItems="center"
             justifyContent="space-between"
             spacing={1}
+            sx={nestedContentSx}
           >
             <Button
               size="small"
@@ -527,7 +610,7 @@ export function YearSpreadsheet({
           align="right"
           sx={{
             color: textColor,
-            bgcolor: "#FFFFFF",
+            bgcolor: tableSurfaceBg,
             fontWeight: 500,
             borderBottom: `1px solid ${color}`,
             ...totalColumnSx,
@@ -584,7 +667,7 @@ export function YearSpreadsheet({
         sx={{
           position: "sticky",
           left: 0,
-          bgcolor: "#FFFFFF",
+          bgcolor: tableSurfaceBg,
           color,
           fontWeight: 850,
           width: stickyCategoryWidth,
@@ -628,14 +711,13 @@ export function YearSpreadsheet({
           hover
           sx={highlightedRowSx(searchKey("INVESTMENT", child.category, child.name))}
         >
-          <TableCell
-            sx={{
-              position: "sticky",
-              left: 0,
-              bgcolor: "#FFFFFF",
-              color,
-              pl: 5,
-              fontWeight: 700,
+        <TableCell
+          sx={{
+            ...nestedCellSx,
+            position: "sticky",
+            left: 0,
+            color,
+            fontWeight: 700,
               width: stickyCategoryWidth,
               minWidth: stickyCategoryWidth,
               maxWidth: stickyCategoryWidth,
@@ -645,7 +727,9 @@ export function YearSpreadsheet({
               borderBottom: `1px solid ${color}`,
             }}
           >
-            {truncatedName(child.name, color, 600)}
+            <Box sx={{ ...nestedContentSx, minWidth: 0 }}>
+              {truncatedName(child.name, color, 600)}
+            </Box>
           </TableCell>
           {yearData.months.map((monthItem) => (
             <TableCell
@@ -654,7 +738,7 @@ export function YearSpreadsheet({
               sx={{
                 position: "relative",
                 color,
-                bgcolor: "#FFFFFF",
+                bgcolor: tableSurfaceBg,
                 fontWeight: 650,
                 borderRight: `1px solid ${color}`,
                 borderBottom: `1px solid ${color}`,
@@ -668,7 +752,7 @@ export function YearSpreadsheet({
             align="right"
             sx={{
               color,
-              bgcolor: "#FFFFFF",
+              bgcolor: tableSurfaceBg,
               fontWeight: 850,
               borderBottom: `1px solid ${color}`,
               ...totalColumnSx,
@@ -689,7 +773,7 @@ export function YearSpreadsheet({
           sx={{
             p: "0 !important",
             height: 12,
-            bgcolor: "#FFFFFF !important",
+            bgcolor: (theme) => `${tableSpacerBg(theme)} !important`,
             border: "none !important",
           }}
         />
@@ -964,7 +1048,7 @@ export function YearSpreadsheet({
         </Stack>
       </Popover>
       <Paper
-        className="soft-card premium-scrollbar"
+        className="soft-card premium-scrollbar financial-year-print-area"
         sx={{
           borderRadius: 3,
           overflow: "auto",
@@ -1035,7 +1119,64 @@ export function YearSpreadsheet({
                       : "rgba(15,23,42,0.12)",
                   borderBottom: `2px solid ${sheetColors.grid}`,
                 }}
-              />
+              >
+                <Tooltip title={t("resizeCategoryColumn")}>
+                  <Box
+                    component="span"
+                    role="separator"
+                    aria-orientation="vertical"
+                    tabIndex={0}
+                    onPointerDown={startCategoryColumnResize}
+                    onPointerMove={moveCategoryColumnResize}
+                    onPointerUp={stopCategoryColumnResize}
+                    onPointerCancel={stopCategoryColumnResize}
+                    onDoubleClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      resizeCategoryColumn(168);
+                    }}
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      right: -5,
+                      bottom: 0,
+                      zIndex: 8,
+                      width: 10,
+                      cursor: "col-resize",
+                      touchAction: "none",
+                      outline: "none",
+                      "&::after": {
+                        content: '""',
+                        position: "absolute",
+                        top: 8,
+                        bottom: 8,
+                        left: "50%",
+                        width: categoryColumnResizing ? 3 : 2,
+                        transform: "translateX(-50%)",
+                        borderRadius: 999,
+                        bgcolor: (theme) =>
+                          categoryColumnResizing
+                            ? "#2DD4BF"
+                            : theme.palette.mode === "dark"
+                              ? "rgba(226,232,240,0.32)"
+                              : "rgba(15,23,42,0.24)",
+                        boxShadow: categoryColumnResizing
+                          ? `0 0 0 3px rgba(45,212,191,0.16)`
+                          : "none",
+                      },
+                      "&:hover::after": {
+                        width: 3,
+                        bgcolor: "#2DD4BF",
+                      },
+                      "&:focus-visible::after": {
+                        width: 3,
+                        bgcolor: "#2DD4BF",
+                        boxShadow: `0 0 0 3px rgba(45,212,191,0.18)`,
+                      },
+                    }}
+                  />
+                </Tooltip>
+              </TableCell>
               {yearData.months.map((monthItem) => {
                 const isCurrent =
                   year === realCurrentYear &&
@@ -1546,7 +1687,7 @@ export function YearSpreadsheet({
                   key={summary.month}
                   align="right"
                   sx={{
-                    bgcolor: summary.balance >= 0 ? "#F0FDF4" : "#FEF2F2",
+                    bgcolor: summary.balance >= 0 ? positiveResultBg : negativeResultBg,
                     color: amountColor(summary.balance),
                     fontWeight: 950,
                     fontSize: tableFontSize + 1,
@@ -1577,8 +1718,8 @@ export function YearSpreadsheet({
                 sx={{
                   bgcolor:
                     yearData.totals.finalBalance >= 0
-                      ? `${financeColors.positiveSoft} !important`
-                      : `${financeColors.negativeSoft} !important`,
+                      ? (theme) => `${positiveResultBg(theme)} !important`
+                      : (theme) => `${negativeResultBg(theme)} !important`,
                   color: amountColor(yearData.totals.finalBalance),
                   fontWeight: 950,
                   fontSize: tableFontSize + 1,
