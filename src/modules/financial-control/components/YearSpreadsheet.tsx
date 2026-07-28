@@ -43,7 +43,7 @@ import {
   realCurrentYear,
   sheetColors,
 } from "./constants";
-import { amountColor, formatResultMoney, readableCategoryTextColor } from "./helpers";
+import { amountColor, formatResultMoney, readableTableValueBackground } from "./helpers";
 import type { LineEditState } from "./RenameLineDialog";
 import type { DetailSpreadsheetRow, SpreadsheetCellEdit } from "./types";
 
@@ -173,7 +173,12 @@ export function YearSpreadsheet({
         : color
       : isCategory
         ? "#111827"
-        : readableCategoryTextColor(color);
+        : color;
+  const tableValueBg = (color: string, isCategory = false) => (theme: Theme) => {
+    if (isCategory) return tableBodyCellBg(theme);
+    const base = theme.palette.mode === "dark" ? "#0f1b2d" : "#FFFFFF";
+    return readableTableValueBackground(color, base);
+  };
   const positiveResultBg = (theme: Theme) =>
     theme.palette.mode === "dark" ? "rgba(22,163,74,0.18)" : "#F0FDF4";
   const negativeResultBg = (theme: Theme) =>
@@ -429,8 +434,8 @@ export function YearSpreadsheet({
         sx={{
           position: "relative",
           color: tableValueText(color, isCategory),
-          bgcolor: tableBodyCellBg,
-          fontWeight: isCategory ? 850 : 500,
+          bgcolor: tableValueBg(color, isCategory),
+          fontWeight: isCategory ? 850 : 750,
           borderRight: `${isCategory ? 3 : 1}px solid ${color}`,
           borderTop: `${isCategory ? 3 : 1}px solid ${color}`,
           borderBottom: `${isCategory ? 3 : 1}px solid ${color}`,
@@ -543,6 +548,7 @@ export function YearSpreadsheet({
             ...nestedCellSx,
             position: "sticky",
             left: 0,
+            bgcolor: tableValueBg(color),
             fontWeight: 700,
             width: stickyCategoryWidth,
             minWidth: stickyCategoryWidth,
@@ -618,8 +624,8 @@ export function YearSpreadsheet({
           align="right"
           sx={{
             color: textColor,
-            bgcolor: tableSurfaceBg,
-            fontWeight: 500,
+            bgcolor: tableValueBg(color),
+            fontWeight: 750,
             borderBottom: `1px solid ${color}`,
             ...totalColumnSx,
           }}
@@ -724,6 +730,7 @@ export function YearSpreadsheet({
             ...nestedCellSx,
             position: "sticky",
             left: 0,
+            bgcolor: tableValueBg(color),
             color,
             fontWeight: 700,
               width: stickyCategoryWidth,
@@ -745,9 +752,9 @@ export function YearSpreadsheet({
               align="right"
               sx={{
                 position: "relative",
-                color,
-                bgcolor: tableSurfaceBg,
-                fontWeight: 650,
+                color: tableValueText(color),
+                bgcolor: tableValueBg(color),
+                fontWeight: 750,
                 borderRight: `1px solid ${color}`,
                 borderBottom: `1px solid ${color}`,
               }}
@@ -759,8 +766,8 @@ export function YearSpreadsheet({
           <TableCell
             align="right"
             sx={{
-              color,
-              bgcolor: tableSurfaceBg,
+              color: tableValueText(color),
+              bgcolor: tableValueBg(color),
               fontWeight: 850,
               borderBottom: `1px solid ${color}`,
               ...totalColumnSx,

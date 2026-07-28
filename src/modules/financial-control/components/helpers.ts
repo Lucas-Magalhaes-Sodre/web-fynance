@@ -84,3 +84,58 @@ function contrastRatio(firstColor: string, secondColor: string) {
 export function readableCategoryTextColor(color: string) {
   return contrastRatio(color, "#FFFFFF") >= 4.5 ? color : "#111827";
 }
+
+function rgbToHex(rgb: { r: number; g: number; b: number }) {
+  return `#${[rgb.r, rgb.g, rgb.b]
+    .map((channel) => Math.round(channel).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function mixRgb(
+  color: { r: number; g: number; b: number },
+  target: { r: number; g: number; b: number },
+  amount: number,
+) {
+  return {
+    r: color.r + (target.r - color.r) * amount,
+    g: color.g + (target.g - color.g) * amount,
+    b: color.b + (target.b - color.b) * amount,
+  };
+}
+
+export function readableTableValueColor(color: string, backgroundColor: string) {
+  if (contrastRatio(color, backgroundColor) >= 4.5) return color;
+
+  const rgb = hexToRgb(color);
+  const background = hexToRgb(backgroundColor);
+  if (!rgb || !background) return readableCategoryTextColor(color);
+
+  const target = relativeLuminance(backgroundColor) > 0.5
+    ? { r: 0, g: 0, b: 0 }
+    : { r: 255, g: 255, b: 255 };
+
+  for (let amount = 0.12; amount <= 0.82; amount += 0.06) {
+    const mixed = rgbToHex(mixRgb(rgb, target, amount));
+    if (contrastRatio(mixed, backgroundColor) >= 4.5) return mixed;
+  }
+
+  return relativeLuminance(backgroundColor) > 0.5 ? "#111827" : "#F8FAFC";
+}
+
+export function readableTableValueBackground(color: string, backgroundColor: string) {
+  if (contrastRatio(color, backgroundColor) >= 3) return backgroundColor;
+
+  const background = hexToRgb(backgroundColor);
+  if (!background) return backgroundColor;
+
+  const target = relativeLuminance(backgroundColor) > 0.5
+    ? { r: 15, g: 23, b: 42 }
+    : { r: 248, g: 250, b: 252 };
+
+  for (let amount = 0.08; amount <= 0.54; amount += 0.04) {
+    const mixed = rgbToHex(mixRgb(background, target, amount));
+    if (contrastRatio(color, mixed) >= 3) return mixed;
+  }
+
+  return rgbToHex(mixRgb(background, target, 0.54));
+}

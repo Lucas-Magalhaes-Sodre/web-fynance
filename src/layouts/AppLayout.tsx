@@ -3,6 +3,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CakeIcon from '@mui/icons-material/Cake';
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import FlagIcon from '@mui/icons-material/Flag';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -65,6 +66,7 @@ export function AppLayout() {
     { to: '/app/economy', label: t('menuSavings'), icon: <SavingsIcon /> },
     { to: '/app/goals', label: t('menuGoals'), icon: <FlagIcon /> },
     { to: '/app/birthdays', label: t('menuBirthdays'), icon: <CakeIcon /> },
+    { to: '/app/vacation-calculator', label: t('menuVacationCalculator'), icon: <BeachAccessIcon /> },
     { to: '/app/profile', label: t('menuProfile'), icon: <PersonIcon /> },
     { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon /> },
     ...(user?.role === 'ADMIN'
