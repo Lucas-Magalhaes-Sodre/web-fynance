@@ -11,6 +11,7 @@ import {
   createSaving,
   deleteCategoryLine,
   deleteEntry,
+  deleteSaving,
   FinancialEntryPayload,
   getDayControl,
   getFinancialCalendar,
@@ -25,6 +26,7 @@ import {
   updateEntry,
   updateEntryPaymentStatus,
   updateEntryValue,
+  updateSaving,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -699,6 +701,39 @@ export function FinancialControlPage() {
     await loadData();
   }
 
+  async function removeInvestmentCategoryLine(category: string) {
+    const confirmed = await confirm({
+      title: "Excluir economia da tabela",
+      description: `Deseja excluir "${category}" e todas as economias desta categoria em ${year}?`,
+      confirmLabel: "Excluir",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    const savings = (yearData?.savings ?? []).filter(
+      (saving) => saving.category === category && saving.year === year,
+    );
+    await Promise.all(savings.map((saving) => deleteSaving(saving.id)));
+    await Promise.all([loadData(), loadAvailableSavings()]);
+  }
+
+  async function removeInvestmentItemLine(category: string, name: string) {
+    const confirmed = await confirm({
+      title: "Excluir subitem de economia",
+      description: `Deseja excluir a linha "${name}" dentro de "${category}" em ${year}?`,
+      confirmLabel: "Excluir",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    const savings = (yearData?.savings ?? []).filter(
+      (saving) =>
+        saving.category === category &&
+        (saving.title || saving.category) === name &&
+        saving.year === year,
+    );
+    await Promise.all(savings.map((saving) => deleteSaving(saving.id)));
+    await Promise.all([loadData(), loadAvailableSavings()]);
+  }
+
   function findCellItem(
     category: string,
     name: string,
@@ -716,12 +751,82 @@ export function FinancialControlPage() {
     });
   }
 
+  function savingsForLine(category: string, name: string) {
+    return (yearData?.savings ?? []).filter(
+      (saving) =>
+        saving.category === category &&
+        (saving.title || saving.category) === name &&
+        saving.year === year,
+    );
+  }
+
+  function targetMonthsForScope(startMonth: number, scope: ValueUpdateScope) {
+    if (scope === "ONLY_THIS_PERIOD") return [startMonth];
+    if (scope === "FROM_THIS_PERIOD_FORWARD") {
+      return Array.from({ length: 13 - startMonth }, (_, index) => startMonth + index);
+    }
+    return Array.from({ length: 12 }, (_, index) => index + 1);
+  }
+
+  async function saveInvestmentCellValue(payload: {
+    amount: number;
+    scope: ValueUpdateScope;
+    description?: string | null;
+  }) {
+    if (!cellEdit) return;
+    const lineSavings = savingsForLine(cellEdit.category, cellEdit.name);
+    const months = targetMonthsForScope(cellEdit.month, payload.scope);
+
+    await Promise.all(
+      months.map(async (monthValue) => {
+        const savingsInMonth = lineSavings.filter((saving) => saving.month === monthValue);
+        const [primary, ...duplicates] = savingsInMonth;
+        if (primary) {
+          await updateSaving(primary.id, {
+            title: cellEdit.name,
+            category: cellEdit.category,
+            amount: payload.amount,
+            date: primary.date.slice(0, 10),
+            month: monthValue,
+            year,
+            description: payload.description,
+          });
+          await Promise.all(duplicates.map((saving) => deleteSaving(saving.id)));
+          return;
+        }
+
+        if (payload.amount <= 0) return;
+        await createSaving({
+          title: cellEdit.name,
+          category: cellEdit.category,
+          amount: payload.amount,
+          date: dateForMonthlyOccurrence(year, monthValue, 1),
+          month: monthValue,
+          year,
+          description: payload.description,
+        });
+      }),
+    );
+  }
+
   async function saveCellValue(payload: {
     amount: number;
     scope: ValueUpdateScope;
     description?: string | null;
   }) {
     if (!cellEdit) return;
+    if (cellEdit.type === "INVESTMENT") {
+      setCellSaving(true);
+      try {
+        await saveInvestmentCellValue(payload);
+        setCellEdit(null);
+        await Promise.all([loadData(), loadAvailableSavings()]);
+      } finally {
+        setCellSaving(false);
+      }
+      return;
+    }
+
     const item = findCellItem(
       cellEdit.category,
       cellEdit.name,
@@ -906,8 +1011,10 @@ export function FinancialControlPage() {
           onToggleCategoryDetails={toggleCategoryDetails}
           onToggleInvestmentCategoryDetails={toggleInvestmentCategoryDetails}
           onRemoveCategoryLine={removeCategoryLine}
+          onRemoveInvestmentCategoryLine={removeInvestmentCategoryLine}
           onEditLine={setLineEdit}
           onRemoveItemLine={removeItemLine}
+          onRemoveInvestmentItemLine={removeInvestmentItemLine}
           onEditCell={setCellEdit}
           onOpenCreditCard={(cardName) => {
             const query = cardName ? `?card=${encodeURIComponent(cardName)}` : "";
@@ -971,6 +1078,7 @@ export function FinancialControlPage() {
           type={cellEdit.type}
           currentMonthIncome={editedMonthSummary?.totalIncome ?? 0}
           currentMonthExpense={editedMonthSummary?.totalExpense ?? 0}
+          currentMonthSavings={editedMonthSummary?.totalSavings ?? 0}
           saving={cellSaving}
           onClose={() => setCellEdit(null)}
           onSubmit={saveCellValue}

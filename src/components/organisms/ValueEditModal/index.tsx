@@ -17,9 +17,10 @@ type Props = {
   month: number;
   year: number;
   currentValue: number;
-  type: EntryType;
+  type: EntryType | 'INVESTMENT';
   currentMonthIncome: number;
   currentMonthExpense: number;
+  currentMonthSavings?: number;
   saving?: boolean;
   onClose: () => void;
   onSubmit: (payload: { amount: number; scope: ValueUpdateScope; description?: string | null }) => Promise<void>;
@@ -34,6 +35,7 @@ export function ValueEditModal({
   type,
   currentMonthIncome,
   currentMonthExpense,
+  currentMonthSavings = 0,
   saving = false,
   onClose,
   onSubmit
@@ -53,8 +55,9 @@ export function ValueEditModal({
   const preview = useMemo(() => {
     const income = type === 'INCOME' ? currentMonthIncome + delta : currentMonthIncome;
     const expense = type === 'EXPENSE' ? currentMonthExpense + delta : currentMonthExpense;
-    return { income, expense, balance: income - expense };
-  }, [currentMonthExpense, currentMonthIncome, delta, type]);
+    const savings = type === 'INVESTMENT' ? currentMonthSavings + delta : currentMonthSavings;
+    return { income, expense, savings, balance: income - expense - savings };
+  }, [currentMonthExpense, currentMonthIncome, currentMonthSavings, delta, type]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -79,7 +82,9 @@ export function ValueEditModal({
         <S.FormStack component="form" id="value-edit-form" spacing={2.5} onSubmit={handleSubmit}>
           <Stack spacing={0.5}>
             <Typography fontWeight={900}>{category}</Typography>
-            <Typography color="text.secondary">{months[month - 1]} de {year} • {type === 'INCOME' ? 'Receita' : 'Despesa'}</Typography>
+            <Typography color="text.secondary">
+              {months[month - 1]} de {year} • {type === 'INCOME' ? 'Receita' : type === 'EXPENSE' ? 'Despesa' : 'Economia'}
+            </Typography>
           </Stack>
           <TextField label="Novo valor" required value={amount} onChange={(event) => setAmount(digitsToCurrency(event.target.value))} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
           <TextField label="Descrição opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
@@ -90,9 +95,10 @@ export function ValueEditModal({
           </RadioGroup>
           <S.PreviewPanel spacing={1.2}>
             <Typography fontWeight={900}>Preview do impacto</Typography>
-            <Typography color={type === 'INCOME' ? financeColors.income : financeColors.expense}>Diferenca no mês: {formatMoney(delta)}</Typography>
+            <Typography color={type === 'INCOME' ? financeColors.income : type === 'EXPENSE' ? financeColors.expense : financeColors.saving}>Diferenca no mês: {formatMoney(delta)}</Typography>
             <Typography color={financeColors.income}>Novo total de receitas: {formatMoney(preview.income)}</Typography>
             <Typography color={financeColors.expense}>Novo total de despesas: {formatMoney(preview.expense)}</Typography>
+            <Typography color={financeColors.saving}>Novo total de economias: {formatMoney(preview.savings)}</Typography>
             <Typography fontWeight={950} color={balanceColor(preview.balance)}>Novo saldo do mês: {formatMoney(preview.balance)}</Typography>
           </S.PreviewPanel>
         </S.FormStack>

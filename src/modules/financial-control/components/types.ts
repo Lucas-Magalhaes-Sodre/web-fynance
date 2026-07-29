@@ -15,6 +15,6 @@ export type SpreadsheetCellEdit = {
   category: string;
   name: string;
   month: number;
-  type: EntryType;
+  type: EntryType | "INVESTMENT";
   value: number;
 };
