@@ -39,6 +39,10 @@ export type SavingMovementFormState = {
   goalId: string;
   hasYield: boolean;
   yieldRateMonthly: string;
+  notify: boolean;
+  notifyOffsetDays: string;
+  notifyTime: string;
+  notifyMessage: string;
 };
 
 const recurrenceLabels: Record<Exclude<RecurrenceType, "NONE">, string> = {
@@ -541,6 +545,68 @@ export function SavingMovementDialog({
                     onChange={(event) => updateForm({ yieldRateMonthly: event.target.value })}
                     helperText={selectedGoal?.hasYield ? t("goalRateAutoFilled") : t("yieldExample")}
                   />
+                ) : null}
+              </Stack>
+            </S.HighlightPanel>
+            <S.HighlightPanel
+              $panelBorderColor="rgba(236,72,153,0.18)"
+              $panelBackground="rgba(236,72,153,0.08)"
+            >
+              <Stack spacing={2}>
+                <S.SplitFormControlLabel
+                  label={
+                    <Box display="flex">
+                      <Typography fontWeight={900}>{t("notify")}: </Typography>
+                      <Typography fontWeight={900} ml={1} color={form.notify ? "success" : "text.secondary"}>
+                        {form.notify ? t("yes") : t("no")}
+                      </Typography>
+                    </Box>
+                  }
+                  labelPlacement="start"
+                  control={
+                    <Switch
+                      color="success"
+                      checked={form.notify}
+                      onChange={(event) => updateForm({ notify: event.target.checked })}
+                    />
+                  }
+                />
+                {form.notify ? (
+                  <>
+                    <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                      {t("notificationReminder")}
+                    </Typography>
+                    <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <TextField
+                        select
+                        label={t("whenRemind")}
+                        value={form.notifyOffsetDays}
+                        onChange={(event) => updateForm({ notifyOffsetDays: event.target.value })}
+                        fullWidth
+                      >
+                        {[0, 1, 2, 3, 5, 7, 15, 30].map((days) => (
+                          <MenuItem key={days} value={String(days)}>
+                            {days === 0 ? t("sameDay") : t("daysBefore").replace("{days}", String(days))}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                      <TextField
+                        label={t("time")}
+                        type="time"
+                        value={form.notifyTime}
+                        onChange={(event) => updateForm({ notifyTime: event.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        fullWidth
+                      />
+                    </S.ColorFieldStack>
+                    <TextField
+                      label={t("optionalMessage")}
+                      value={form.notifyMessage}
+                      onChange={(event) => updateForm({ notifyMessage: event.target.value })}
+                      multiline
+                      minRows={2}
+                    />
+                  </>
                 ) : null}
               </Stack>
             </S.HighlightPanel>

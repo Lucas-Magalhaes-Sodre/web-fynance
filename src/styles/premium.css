@@ -162,3 +162,99 @@ body {
 :root[data-theme='dark'] .premium-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(226, 232, 240, 0.22);
 }
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm 8mm 22mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .financial-year-print-area,
+  .financial-year-print-area * {
+    visibility: visible !important;
+  }
+
+  .financial-year-print-area {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: max-content !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    padding: 0 0 24mm !important;
+  }
+
+  .financial-year-print-area table {
+    width: max-content !important;
+    min-width: 0 !important;
+    border-collapse: separate !important;
+    break-inside: auto;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .financial-year-print-title {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+    color: #0f172a !important;
+    margin: 0 0 8px !important;
+    padding: 0 0 6px !important;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.18) !important;
+  }
+
+  .financial-year-print-footer {
+    display: block !important;
+    position: fixed !important;
+    left: 8mm !important;
+    right: 8mm !important;
+    bottom: 7mm !important;
+    color: #334155 !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    text-align: right !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    padding-top: 2mm !important;
+    border-top: 1px solid rgba(15, 23, 42, 0.12) !important;
+  }
+
+  .financial-year-print-watermark {
+    display: block !important;
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) rotate(-18deg) !important;
+    z-index: 0 !important;
+    color: rgba(15, 23, 42, 0.055) !important;
+    font-size: 82px !important;
+    font-weight: 950 !important;
+    letter-spacing: 0 !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+  }
+
+  .financial-year-print-area thead {
+    display: table-header-group;
+  }
+
+  .financial-year-print-area tr {
+    break-inside: avoid;
+  }
+
+  .financial-year-print-area th,
+  .financial-year-print-area td {
+    position: static !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

@@ -69,6 +69,16 @@ type FormState = {
   recurrenceStartYear: string;
   recurrenceEndMonth: string;
   recurrenceEndYear: string;
+  notify: boolean;
+  notifyOffsetDays: string;
+  notifyTime: string;
+  notifyMessage: string;
+};
+
+export type FinancialEntryReminderDraft = {
+  offsetDays: number;
+  time: string;
+  message?: string | null;
 };
 
 type Props = {
@@ -78,7 +88,10 @@ type Props = {
   defaultDate?: string;
   categories?: FinancialCategory[];
   onClose: () => void;
-  onSubmit: (payload: FinancialEntryPayload) => Promise<void>;
+  onSubmit: (
+    payload: FinancialEntryPayload,
+    reminder?: FinancialEntryReminderDraft,
+  ) => Promise<void>;
 };
 
 function formatCurrencyInput(value: number) {
@@ -124,6 +137,10 @@ export function FinancialEntryForm({
     recurrenceStartYear: String(initialDate.getFullYear()),
     recurrenceEndMonth: "12",
     recurrenceEndYear: String(initialDate.getFullYear()),
+    notify: false,
+    notifyOffsetDays: "0",
+    notifyTime: "09:00",
+    notifyMessage: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -185,6 +202,10 @@ export function FinancialEntryForm({
         recurrenceStartYear: String(new Date(item.date).getFullYear()),
         recurrenceEndMonth: "12",
         recurrenceEndYear: String(new Date(item.date).getFullYear()),
+        notify: false,
+        notifyOffsetDays: "0",
+        notifyTime: "09:00",
+        notifyMessage: "",
       });
       return;
     }
@@ -204,6 +225,10 @@ export function FinancialEntryForm({
       recurrenceStartYear: String(nextDefaultDate.getFullYear()),
       recurrenceEndMonth: "12",
       recurrenceEndYear: String(nextDefaultDate.getFullYear()),
+      notify: false,
+      notifyOffsetDays: "0",
+      notifyTime: "09:00",
+      notifyMessage: "",
     });
   }, [item, defaultType, defaultDate, open]);
 
@@ -269,7 +294,13 @@ export function FinancialEntryForm({
                 endYear: Number(form.recurrenceEndYear),
               }
             : undefined,
-      });
+      }, !isIncome && !item && form.notify
+        ? {
+            offsetDays: Number(form.notifyOffsetDays),
+            time: form.notifyTime,
+            message: form.notifyMessage.trim() || null,
+          }
+        : undefined);
       onClose();
     } finally {
       setSaving(false);
@@ -567,6 +598,71 @@ export function FinancialEntryForm({
               )}
             </Stack>
           </S.HighlightPanel>
+
+          {!isIncome && !item ? (
+            <S.HighlightPanel
+              $panelBorderColor="rgba(236,72,153,0.18)"
+              $panelBackground="rgba(236,72,153,0.08)"
+            >
+              <Stack spacing={2}>
+                <S.SplitFormControlLabel
+                  label={
+                    <Box display="flex">
+                      <Typography fontWeight={900}>{t("notify")}: </Typography>
+                      <Typography fontWeight={900} ml={1} color={form.notify ? "success" : "text.secondary"}>
+                        {form.notify ? t("yes") : t("no")}
+                      </Typography>
+                    </Box>
+                  }
+                  labelPlacement="start"
+                  control={
+                    <Switch
+                      color="success"
+                      checked={form.notify}
+                      onChange={(event) => setForm({ ...form, notify: event.target.checked })}
+                    />
+                  }
+                />
+                {form.notify ? (
+                  <>
+                    <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                      {t("notificationReminder")}
+                    </Typography>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <TextField
+                        select
+                        label={t("whenRemind")}
+                        value={form.notifyOffsetDays}
+                        onChange={(event) => setForm({ ...form, notifyOffsetDays: event.target.value })}
+                        fullWidth
+                      >
+                        {[0, 1, 2, 3, 5, 7, 15, 30].map((days) => (
+                          <MenuItem key={days} value={String(days)}>
+                            {days === 0 ? t("sameDay") : t("daysBefore").replace("{days}", String(days))}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                      <TextField
+                        label={t("time")}
+                        type="time"
+                        value={form.notifyTime}
+                        onChange={(event) => setForm({ ...form, notifyTime: event.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        fullWidth
+                      />
+                    </Stack>
+                    <TextField
+                      label={t("optionalMessage")}
+                      value={form.notifyMessage}
+                      onChange={(event) => setForm({ ...form, notifyMessage: event.target.value })}
+                      multiline
+                      minRows={2}
+                    />
+                  </>
+                ) : null}
+              </Stack>
+            </S.HighlightPanel>
+          ) : null}
 
           <TextField
             label={t("optionalNote")}

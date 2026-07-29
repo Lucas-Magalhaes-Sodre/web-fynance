@@ -11,6 +11,7 @@ import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  createFinancialReminder,
   createSaving,
   deleteSaving,
   getSavingsOverview,
@@ -68,7 +69,21 @@ const initialForm: SavingMovementFormState = {
   goalId: "",
   hasYield: false,
   yieldRateMonthly: "",
+  notify: false,
+  notifyOffsetDays: "0",
+  notifyTime: "09:00",
+  notifyMessage: "",
 };
+
+function reminderDate(baseDate: string, offsetDays: number, time: string) {
+  const [datePart] = baseDate.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() - offsetDays);
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+}
 
 function toPayload(form: SavingMovementFormState): SavingPayload {
   const date = new Date(`${form.date}T00:00:00`);
@@ -275,6 +290,10 @@ export function EconomyPage() {
       goalId: "",
       hasYield: false,
       yieldRateMonthly: "",
+      notify: false,
+      notifyOffsetDays: "0",
+      notifyTime: "09:00",
+      notifyMessage: "",
     });
     setFormOpen(true);
   }
@@ -299,6 +318,10 @@ export function EconomyPage() {
       goalId: saving.goalId ?? "",
       hasYield: saving.hasYield ?? false,
       yieldRateMonthly: saving.yieldRateMonthly ? String(saving.yieldRateMonthly) : "",
+      notify: false,
+      notifyOffsetDays: "0",
+      notifyTime: "09:00",
+      notifyMessage: "",
     });
     setFormOpen(true);
   }
@@ -337,7 +360,20 @@ export function EconomyPage() {
         await updateSaving(editingSaving.id, payload);
         setNotice(t("savingUpdated"));
       } else {
-        await createSaving(payload);
+        const createdSaving = await createSaving(payload);
+        if (form.notify) {
+          await createFinancialReminder({
+            savingId: createdSaving.id,
+            title: createdSaving.title,
+            message: form.notifyMessage.trim() || null,
+            offsetDays: Number(form.notifyOffsetDays),
+            remindAt: reminderDate(
+              createdSaving.date.slice(0, 10),
+              Number(form.notifyOffsetDays),
+              form.notifyTime,
+            ),
+          });
+        }
         setNotice(t("savingAdded"));
       }
 

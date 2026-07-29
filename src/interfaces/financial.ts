@@ -25,7 +25,8 @@ export type AccessInfo = {
 export type FinancialReminder = {
   id: string;
   userId: string;
-  financialItemId: string;
+  financialItemId?: string | null;
+  savingId?: string | null;
   title: string;
   message?: string | null;
   remindAt: string;

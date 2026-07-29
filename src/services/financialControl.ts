@@ -133,7 +133,8 @@ export type CreditCardPurchasePayload = {
 };
 
 export type FinancialReminderPayload = {
-  financialItemId: string;
+  financialItemId?: string;
+  savingId?: string;
   title: string;
   message?: string | null;
   remindAt: string;
@@ -272,6 +273,7 @@ export async function listFinancialItems(params?: {
 
 export async function listFinancialReminders(params?: {
   financialItemId?: string;
+  savingId?: string;
   status?: 'PENDING' | 'READ' | 'DISMISSED';
   from?: string;
   to?: string;

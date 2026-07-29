@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   createEntry,
+  createFinancialReminder,
   createSaving,
   deleteCategoryLine,
   deleteEntry,
@@ -29,6 +30,7 @@ import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { FinancialEntryForm } from "@/components/organisms/FinancialEntryForm";
+import type { FinancialEntryReminderDraft } from "@/components/organisms/FinancialEntryForm";
 import { FinancialRemindersDialog } from "@/components/organisms/FinancialRemindersDialog";
 import { CurrentPeriodSections } from "@/modules/financial-control/components/CurrentPeriodSections";
 import { FinancialControlFilters } from "@/modules/financial-control/components/FinancialControlFilters";
@@ -95,9 +97,23 @@ const initialSavingForm: SavingMovementFormState = {
   goalId: "",
   hasYield: false,
   yieldRateMonthly: "",
+  notify: false,
+  notifyOffsetDays: "0",
+  notifyTime: "09:00",
+  notifyMessage: "",
 };
 
 const current = new Date();
+
+function reminderDate(baseDate: string, offsetDays: number, time: string) {
+  const [datePart] = baseDate.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() - offsetDays);
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+}
 
 function FinancialControlSkeleton({ mode }: { mode: ViewMode }) {
   return (
@@ -377,6 +393,10 @@ export function FinancialControlPage() {
       title: action === "WITHDRAW_TO_BALANCE" ? firstBalance?.title ?? "" : "",
       hasYield: false,
       yieldRateMonthly: "",
+      notify: false,
+      notifyOffsetDays: "0",
+      notifyTime: "09:00",
+      notifyMessage: "",
     });
     setSavingFormOpen(true);
   }
@@ -431,7 +451,20 @@ export function FinancialControlPage() {
     setSavingTransferSaving(true);
     try {
       if (savingForm.action === "REGISTER") {
-        await createSaving(payload);
+        const createdSaving = await createSaving(payload);
+        if (savingForm.notify) {
+          await createFinancialReminder({
+            savingId: createdSaving.id,
+            title: createdSaving.title,
+            message: savingForm.notifyMessage.trim() || null,
+            offsetDays: Number(savingForm.notifyOffsetDays),
+            remindAt: reminderDate(
+              createdSaving.date.slice(0, 10),
+              Number(savingForm.notifyOffsetDays),
+              savingForm.notifyTime,
+            ),
+          });
+        }
       } else {
         const currentDate = new Date();
         await transferSaving({
@@ -449,7 +482,19 @@ export function FinancialControlPage() {
     }
   }
 
-  async function saveEntry(payload: FinancialEntryPayload) {
+  async function createEntryReminder(item: FinancialItem, reminder?: FinancialEntryReminderDraft) {
+    if (!reminder || !item.type.includes("EXPENSE")) return;
+    const baseDate = (item.dueDate ?? item.date).slice(0, 10);
+    await createFinancialReminder({
+      financialItemId: item.id,
+      title: item.name ?? item.title,
+      message: reminder.message ?? null,
+      offsetDays: reminder.offsetDays,
+      remindAt: reminderDate(baseDate, reminder.offsetDays, reminder.time),
+    });
+  }
+
+  async function saveEntry(payload: FinancialEntryPayload, reminder?: FinancialEntryReminderDraft) {
     if (editingItem) await updateEntry(editingItem.id, payload);
     else if (
       payload.recurrenceType === "MONTHLY" &&
@@ -500,8 +545,12 @@ export function FinancialControlPage() {
         );
       }
 
-      await Promise.all(requests);
-    } else await createEntry(payload);
+      const createdItems = await Promise.all(requests);
+      await Promise.all(createdItems.map((item) => createEntryReminder(item, reminder)));
+    } else {
+      const createdItem = await createEntry(payload);
+      await createEntryReminder(createdItem, reminder);
+    }
     await loadData();
   }
 
