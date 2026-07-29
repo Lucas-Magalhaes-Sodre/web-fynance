@@ -71,8 +71,10 @@ type YearSpreadsheetProps = {
   onToggleCategoryDetails: (type: EntryType, category: string) => void;
   onToggleInvestmentCategoryDetails: (category: string) => void;
   onRemoveCategoryLine: (category: string, type: EntryType) => void;
+  onRemoveInvestmentCategoryLine: (category: string) => void;
   onEditLine: (lineEdit: LineEditState) => void;
   onRemoveItemLine: (category: string, name: string, type: EntryType) => void;
+  onRemoveInvestmentItemLine: (category: string, name: string) => void;
   onEditCell: (cellEdit: SpreadsheetCellEdit) => void;
   onOpenCreditCard?: (cardName?: string) => void;
 };
@@ -106,8 +108,10 @@ export function YearSpreadsheet({
   onToggleCategoryDetails,
   onToggleInvestmentCategoryDetails,
   onRemoveCategoryLine,
+  onRemoveInvestmentCategoryLine,
   onEditLine,
   onRemoveItemLine,
+  onRemoveInvestmentItemLine,
   onEditCell,
   onOpenCreditCard,
 }: YearSpreadsheetProps) {
@@ -179,6 +183,8 @@ export function YearSpreadsheet({
     const base = theme.palette.mode === "dark" ? "#0f1b2d" : "#FFFFFF";
     return readableTableValueBackground(color, base);
   };
+  const resultAmountColor = (value: number) => (theme: Theme) =>
+    value === 0 && theme.palette.mode === "dark" ? "#E5EEF8" : amountColor(value);
   const positiveResultBg = (theme: Theme) =>
     theme.palette.mode === "dark" ? "rgba(22,163,74,0.18)" : "#F0FDF4";
   const negativeResultBg = (theme: Theme) =>
@@ -709,6 +715,15 @@ export function YearSpreadsheet({
           <Box flex={1} minWidth={0}>
             {truncatedName(category, color, 850, translateCategoryName(category, language))}
           </Box>
+          <Tooltip title={t("deleteYearLine")}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => onRemoveInvestmentCategoryLine(category)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </TableCell>
     );
@@ -742,9 +757,26 @@ export function YearSpreadsheet({
               borderBottom: `1px solid ${color}`,
             }}
           >
-            <Box sx={{ ...nestedContentSx, minWidth: 0 }}>
-              {truncatedName(child.name, color, 600)}
-            </Box>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              spacing={1}
+              sx={nestedContentSx}
+            >
+              <Box minWidth={0} flex={1}>
+                {truncatedName(child.name, color, 600)}
+              </Box>
+              <Tooltip title={t("delete")}>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => onRemoveInvestmentItemLine(child.category, child.name)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </TableCell>
           {yearData.months.map((monthItem) => (
             <TableCell
@@ -757,7 +789,21 @@ export function YearSpreadsheet({
                 fontWeight: 750,
                 borderRight: `1px solid ${color}`,
                 borderBottom: `1px solid ${color}`,
+                cursor: "pointer",
+                "&:hover": {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark" ? "rgba(212,160,23,0.18)" : "rgba(212,160,23,0.08)",
+                },
               }}
+              onClick={() =>
+                onEditCell({
+                  category: child.category,
+                  name: child.name,
+                  month: monthItem.value,
+                  type: "INVESTMENT",
+                  value: child.months[monthItem.value] ?? 0,
+                })
+              }
             >
               {noteMarker(child.notes[monthItem.value] ?? [])}
               {formatMoney(child.months[monthItem.value] ?? 0)}
@@ -1728,7 +1774,7 @@ export function YearSpreadsheet({
                   align="right"
                   sx={{
                     bgcolor: summary.balance >= 0 ? positiveResultBg : negativeResultBg,
-                    color: amountColor(summary.balance),
+                    color: resultAmountColor(summary.balance),
                     fontWeight: 950,
                     fontSize: tableFontSize + 1,
                     borderRight: "1px dotted rgba(15,23,42,0.24)",
@@ -1760,14 +1806,15 @@ export function YearSpreadsheet({
                     yearData.totals.finalBalance >= 0
                       ? (theme) => `${positiveResultBg(theme)} !important`
                       : (theme) => `${negativeResultBg(theme)} !important`,
-                  color: amountColor(yearData.totals.finalBalance),
+                  color: resultAmountColor(yearData.totals.finalBalance),
                   fontWeight: 950,
                   fontSize: tableFontSize + 1,
                   whiteSpace: "nowrap",
                   width: totalColumnWidth,
                   borderLeft: totalColumnSx.borderLeft,
                   borderRight: totalColumnSx.borderRight,
-                  boxShadow: `${totalColumnSx.boxShadow}, inset 0 0 0 2px ${amountColor(yearData.totals.finalBalance)}`,
+                  boxShadow: (theme) =>
+                    `${totalColumnSx.boxShadow}, inset 0 0 0 2px ${resultAmountColor(yearData.totals.finalBalance)(theme)}`,
                 }}
               >
                 <Box
