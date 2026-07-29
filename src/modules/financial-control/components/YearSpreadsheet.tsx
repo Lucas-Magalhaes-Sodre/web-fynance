@@ -199,6 +199,20 @@ export function YearSpreadsheet({
     pl: 4,
     pr: 0.5,
   };
+  const stickyNameCellSx = {
+    zIndex: 5,
+    overflow: "hidden",
+    boxShadow: "6px 0 12px -14px rgba(15,23,42,0.85)",
+    "& .year-row-delete": {
+      opacity: 0,
+      pointerEvents: "none",
+      transition: "opacity 0.15s ease",
+    },
+    "&:hover .year-row-delete, &:focus-within .year-row-delete": {
+      opacity: 1,
+      pointerEvents: "auto",
+    },
+  };
   const compactMonthLabels = monthsByLanguage[language].reduce<Record<number, string>>((acc, label, index) => {
     acc[index + 1] = label.slice(0, 3).toUpperCase();
     return acc;
@@ -482,6 +496,7 @@ export function YearSpreadsheet({
           borderRight: `3px solid ${color}`,
           borderTop: `3px solid ${color}`,
           borderBottom: `3px solid ${color}`,
+          ...stickyNameCellSx,
         }}
       >
         <Stack
@@ -527,6 +542,7 @@ export function YearSpreadsheet({
           </Box>
           <Tooltip title={t("deleteYearLine")}>
             <IconButton
+              className="year-row-delete"
               size="small"
               color="error"
               onClick={() => onRemoveCategoryLine(category, type)}
@@ -563,6 +579,7 @@ export function YearSpreadsheet({
             borderLeft: `1px solid ${color}`,
             borderTop: `1px solid ${color}`,
             borderBottom: `1px solid ${color}`,
+            ...stickyNameCellSx,
           }}
         >
           <Stack
@@ -600,6 +617,7 @@ export function YearSpreadsheet({
             </Button>
             <Tooltip title={t("delete")}>
               <IconButton
+                className="year-row-delete"
                 size="small"
                 color="error"
                 onClick={() => onRemoveItemLine(child.category, child.name, type)}
@@ -696,6 +714,7 @@ export function YearSpreadsheet({
           borderRight: `2px solid ${color}`,
           borderTop: `2px solid ${color}`,
           borderBottom: `2px solid ${color}`,
+          ...stickyNameCellSx,
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1}>
@@ -717,6 +736,7 @@ export function YearSpreadsheet({
           </Box>
           <Tooltip title={t("deleteYearLine")}>
             <IconButton
+              className="year-row-delete"
               size="small"
               color="error"
               onClick={() => onRemoveInvestmentCategoryLine(category)}
@@ -755,6 +775,7 @@ export function YearSpreadsheet({
               borderLeft: `1px solid ${color}`,
               borderTop: `1px solid ${color}`,
               borderBottom: `1px solid ${color}`,
+              ...stickyNameCellSx,
             }}
           >
             <Stack
@@ -769,6 +790,7 @@ export function YearSpreadsheet({
               </Box>
               <Tooltip title={t("delete")}>
                 <IconButton
+                  className="year-row-delete"
                   size="small"
                   color="error"
                   onClick={() => onRemoveInvestmentItemLine(child.category, child.name)}
