@@ -100,6 +100,14 @@ export type SavingTransferPayload = {
   goalId?: string | null;
 };
 
+export type FinancialTablePreferences = {
+  groupsSeparated: boolean;
+  tableScale: number;
+  categoryColumnWidth: number;
+  categoryGroupsExpanded: boolean;
+  subitemsExpanded: boolean;
+};
+
 export type FinancialGoalPayload = {
   title: string;
   description?: string | null;
@@ -145,6 +153,16 @@ export type FinancialReminderPayload = {
 export async function getYearControl(year: number) {
   const { data } = await api.get<YearControl>('/financial-control/year', { params: { year } });
   return data;
+}
+
+export async function getFinancialTablePreferences() {
+  const { data } = await api.get<{ preferences: FinancialTablePreferences }>('/financial-control/table-preferences');
+  return data.preferences;
+}
+
+export async function updateFinancialTablePreferences(payload: Partial<FinancialTablePreferences>) {
+  const { data } = await api.put<{ preferences: FinancialTablePreferences }>('/financial-control/table-preferences', payload);
+  return data.preferences;
 }
 
 export async function listCreditCards(params?: {

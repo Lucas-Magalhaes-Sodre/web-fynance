@@ -20,6 +20,7 @@ import {
   deleteSaving,
   FinancialEntryPayload,
   getDayControl,
+  getFinancialTablePreferences,
   getFinancialCalendar,
   getMonthControl,
   getWeekControl,
@@ -32,6 +33,7 @@ import {
   updateEntry,
   updateEntryPaymentStatus,
   updateEntryValue,
+  updateFinancialTablePreferences,
   updateSaving,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
@@ -133,9 +135,16 @@ const initialSavingForm: SavingMovementFormState = {
 const current = new Date();
 const COPY_YEAR_MIN = 1900;
 const COPY_YEAR_MAX = 3000;
+const FINANCIAL_CONTROL_YEAR_KEY = "financial-control:selected-year";
 
 function isValidCopyYear(value: number) {
   return Number.isInteger(value) && value >= COPY_YEAR_MIN && value <= COPY_YEAR_MAX;
+}
+
+function initialFinancialYear() {
+  if (typeof window === "undefined") return current.getFullYear();
+  const storedYear = Number(window.localStorage.getItem(FINANCIAL_CONTROL_YEAR_KEY));
+  return isValidCopyYear(storedYear) ? storedYear : current.getFullYear();
 }
 
 function reminderDate(baseDate: string, offsetDays: number, time: string) {
@@ -167,8 +176,8 @@ function FinancialControlSkeleton({ mode }: { mode: ViewMode }) {
 export function FinancialControlPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<ViewMode>("year");
-  const [year, setYear] = useState(current.getFullYear());
-  const [yearInput, setYearInput] = useState(String(current.getFullYear()));
+  const [year, setYear] = useState(initialFinancialYear);
+  const [yearInput, setYearInput] = useState(() => String(initialFinancialYear()));
   const [month, setMonth] = useState(current.getMonth() + 1);
   const [date, setDate] = useState(isoDate());
   const [week, setWeek] = useState(weekRange());
@@ -192,6 +201,10 @@ export function FinancialControlPage() {
   const [expenseRowsExpanded, setExpenseRowsExpanded] = useState(false);
   const [investmentRowsExpanded, setInvestmentRowsExpanded] = useState(false);
   const [allCategoryRowsExpanded, setAllCategoryRowsExpanded] = useState(false);
+  const [groupsSeparated, setGroupsSeparated] = useState(false);
+  const [tableScale, setTableScale] = useState(0);
+  const [categoryColumnWidth, setCategoryColumnWidth] = useState(220);
+  const [tablePreferencesLoaded, setTablePreferencesLoaded] = useState(false);
   const [categoryRowsExpanded, setCategoryRowsExpanded] = useState<
     Record<string, boolean>
   >({});
@@ -219,6 +232,10 @@ export function FinancialControlPage() {
   const [bulkDeleteScope, setBulkDeleteScope] = useState<CopyScope>("ALL_TABLE");
   const [bulkDeleteSelectedSubItems, setBulkDeleteSelectedSubItems] = useState<CopySubItemOption[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [fillConfirmation, setFillConfirmation] = useState<{
+    source: SpreadsheetCellEdit;
+    target: SpreadsheetCellEdit;
+  } | null>(null);
   const [reminderItem, setReminderItem] = useState<FinancialItem | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { t } = usePreferences();
@@ -444,13 +461,49 @@ export function FinancialControlPage() {
   useEffect(() => {
     loadCategories();
     loadAvailableSavings();
+    getFinancialTablePreferences()
+      .then((preferences) => {
+        setGroupsSeparated(preferences.groupsSeparated);
+        setTableScale(preferences.tableScale);
+        setCategoryColumnWidth(preferences.categoryColumnWidth);
+        setIncomeRowsExpanded(preferences.categoryGroupsExpanded);
+        setExpenseRowsExpanded(preferences.categoryGroupsExpanded);
+        setInvestmentRowsExpanded(preferences.categoryGroupsExpanded);
+        setAllCategoryRowsExpanded(preferences.subitemsExpanded);
+      })
+      .catch(() => undefined)
+      .finally(() => setTablePreferencesLoaded(true));
     listFinancialGoals()
       .then(setGoals)
       .catch(() => setGoals([]));
   }, []);
 
   useEffect(() => {
+    if (!tablePreferencesLoaded) return;
+    const timer = window.setTimeout(() => {
+      void updateFinancialTablePreferences({
+        groupsSeparated,
+        tableScale,
+        categoryColumnWidth,
+        categoryGroupsExpanded: incomeRowsExpanded && expenseRowsExpanded && investmentRowsExpanded,
+        subitemsExpanded: allCategoryRowsExpanded,
+      }).catch(() => undefined);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [
+    allCategoryRowsExpanded,
+    categoryColumnWidth,
+    expenseRowsExpanded,
+    groupsSeparated,
+    incomeRowsExpanded,
+    investmentRowsExpanded,
+    tablePreferencesLoaded,
+    tableScale,
+  ]);
+
+  useEffect(() => {
     setYearInput(String(year));
+    window.localStorage.setItem(FINANCIAL_CONTROL_YEAR_KEY, String(year));
   }, [year]);
 
   function openCreate(type: EntryType) {
@@ -1000,8 +1053,21 @@ export function FinancialControlPage() {
     ) {
       return;
     }
+    setFillConfirmation({ source, target });
+  }
+
+  async function confirmFillCells() {
+    if (!fillConfirmation) return;
+    const { source, target } = fillConfirmation;
+    if (source.type === "INVESTMENT" || target.type === "INVESTMENT") {
+      setFillConfirmation(null);
+      return;
+    }
     const item = findCellItem(source.category, source.name, source.month, source.type);
-    if (!item) return;
+    if (!item) {
+      setFillConfirmation(null);
+      return;
+    }
     setCellSaving(true);
     try {
       await updateEntryValue(item.id, {
@@ -1012,6 +1078,7 @@ export function FinancialControlPage() {
         endMonth: target.month,
         description: item.description ?? null,
       });
+      setFillConfirmation(null);
       await loadData();
     } finally {
       setCellSaving(false);
@@ -1154,6 +1221,9 @@ export function FinancialControlPage() {
           expenseRowsExpanded={expenseRowsExpanded}
           investmentRowsExpanded={investmentRowsExpanded}
           allCategoryRowsExpanded={allCategoryRowsExpanded}
+          groupsSeparated={groupsSeparated}
+          tableScale={tableScale}
+          categoryColumnWidth={categoryColumnWidth}
           categoryColor={categoryColor}
           rowsForCategory={rowsForCategory}
           notesForCategory={notesForCategory}
@@ -1163,6 +1233,9 @@ export function FinancialControlPage() {
           onToggleExpenseRows={() => setExpenseRowsExpanded((expanded) => !expanded)}
           onToggleInvestmentRows={() => setInvestmentRowsExpanded((expanded) => !expanded)}
           onToggleCategoryGroups={toggleCategoryGroups}
+          onGroupsSeparatedChange={setGroupsSeparated}
+          onTableScaleChange={setTableScale}
+          onCategoryColumnWidthChange={setCategoryColumnWidth}
           onToggleAllCategoryRows={(expanded) => {
             setAllCategoryRowsExpanded(expanded);
             if (expanded) {
@@ -1288,6 +1361,57 @@ export function FinancialControlPage() {
         onSave={saveLineName}
         onLineEditChange={setLineEdit}
       />
+      <AppDialog
+        open={Boolean(fillConfirmation)}
+        onClose={() => {
+          if (!cellSaving) setFillConfirmation(null);
+        }}
+        title="Confirmar cópia de valores"
+        actions={
+          <>
+            <Button
+              onClick={() => setFillConfirmation(null)}
+              disabled={cellSaving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={confirmFillCells}
+              disabled={cellSaving}
+            >
+              {cellSaving ? "Copiando..." : "Confirmar cópia"}
+            </Button>
+          </>
+        }
+      >
+        {fillConfirmation ? (
+          <Stack spacing={1.5}>
+            <Typography color="text.secondary">
+              O valor de {formatMoney(fillConfirmation.source.value)} será copiado na linha "{fillConfirmation.source.name}".
+            </Typography>
+            <Box
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                p: 1.5,
+                bgcolor: "var(--mr-card)",
+              }}
+            >
+              <Typography fontWeight={900}>
+                Ano: {year}
+              </Typography>
+              <Typography color="text.secondary">
+                Meses afetados: {fillConfirmation.source.month + 1} até {fillConfirmation.target.month}
+              </Typography>
+              <Typography color="text.secondary">
+                Categoria: {fillConfirmation.source.category}
+              </Typography>
+            </Box>
+          </Stack>
+        ) : null}
+      </AppDialog>
       <AppDialog
         open={copyDialogOpen}
         onClose={() => {
