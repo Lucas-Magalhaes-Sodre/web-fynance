@@ -74,6 +74,7 @@ export type SavingPayload = {
   isFixed?: boolean;
   recurrenceType?: 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
   recurrenceGroupId?: string | null;
+  isInitialBalance?: boolean;
   recurrenceGeneration?: {
     mode: 'ALL_YEAR' | 'FROM_SELECTED_MONTH' | 'CUSTOM';
     startMonth: number;
@@ -214,6 +215,34 @@ export async function createEntry(payload: FinancialEntryPayload) {
   return data.item;
 }
 
+export async function copyFinancialCategory(payload: {
+  scope?: 'CATEGORY' | 'ALL_INCOME' | 'ALL_EXPENSE' | 'ALL_INVESTMENT' | 'ALL_TABLE' | 'SELECTED_SUBITEMS';
+  type?: FinancialCategoryType;
+  category?: string;
+  subItems?: Array<{ type: FinancialCategoryType; category: string; name: string }>;
+  sourceYear: number;
+  targetYears: number[];
+  overwrite?: boolean;
+}) {
+  const { data } = await api.post<{ copiedCount: number }>('/financial-items/copy-category', payload);
+  return data;
+}
+
+export async function bulkDeleteFinancialScope(payload: {
+  scope: 'CATEGORY' | 'ALL_INCOME' | 'ALL_EXPENSE' | 'ALL_INVESTMENT' | 'ALL_TABLE' | 'SELECTED_SUBITEMS';
+  type?: FinancialCategoryType;
+  category?: string;
+  subItems?: Array<{ type: FinancialCategoryType; category: string; name: string }>;
+  year: number;
+}) {
+  const { data } = await api.delete<{
+    deletedItemsCount: number;
+    deletedSavingsCount: number;
+    deletedCount: number;
+  }>('/financial-items/bulk-scope', { data: payload });
+  return data;
+}
+
 export async function updateEntry(id: string, payload: FinancialEntryPayload) {
   const { data } = await api.put<{ item: FinancialItem }>(`/financial-items/${id}`, payload);
   return data.item;
@@ -321,6 +350,7 @@ export async function updateEntryValue(id: string, payload: {
   date: string;
   scope: ValueUpdateScope;
   periodType: PeriodType;
+  endMonth?: number;
   description?: string | null;
 }) {
   const { data } = await api.patch(`/financial-items/${id}/value`, payload);
@@ -351,6 +381,11 @@ export async function updateSaving(id: string, payload: Partial<SavingPayload>) 
 
 export async function deleteSaving(id: string) {
   await api.delete(`/savings/${id}`);
+}
+
+export async function deleteSavingsGroup(params: { category: string; title?: string }) {
+  const { data } = await api.delete<{ deletedCount: number }>('/savings/group', { params });
+  return data;
 }
 
 export async function transferSaving(payload: SavingTransferPayload) {

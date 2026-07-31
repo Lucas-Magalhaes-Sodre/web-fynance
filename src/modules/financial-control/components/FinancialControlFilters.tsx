@@ -12,6 +12,9 @@ import { monthsByLanguage } from "@/i18n/display";
 import type { ViewMode } from "./types";
 import * as S from "./styles";
 
+const YEAR_MIN = 1900;
+const YEAR_MAX = 3000;
+
 type WeekRangeState = {
   startDate: string;
   endDate: string;
@@ -132,9 +135,25 @@ export function FinancialControlFilters({
                 options={yearOptions.map(String)}
                 value={String(year)}
                 inputValue={yearInput}
+                filterOptions={(options, params) => {
+                  const query = params.inputValue.trim();
+                  const filtered = query
+                    ? options.filter((option) => option.includes(query))
+                    : options;
+                  const typedYear = Number(query);
+                  if (
+                    /^\d{4}$/.test(query) &&
+                    typedYear >= YEAR_MIN &&
+                    typedYear <= YEAR_MAX &&
+                    !filtered.includes(query)
+                  ) {
+                    return [query, ...filtered];
+                  }
+                  return filtered;
+                }}
                 onChange={(_, value) => {
                   const nextYear = Number(value);
-                  if (!Number.isNaN(nextYear)) {
+                  if (Number.isInteger(nextYear) && nextYear >= YEAR_MIN && nextYear <= YEAR_MAX) {
                     onYearSelect(nextYear);
                     onYearInputChange(String(nextYear));
                   }
@@ -144,8 +163,8 @@ export function FinancialControlFilters({
                   const nextYear = Number(value);
                   if (
                     /^\d{4}$/.test(value) &&
-                    nextYear >= 2000 &&
-                    nextYear <= 2100
+                    nextYear >= YEAR_MIN &&
+                    nextYear <= YEAR_MAX
                   ) {
                     onYearSelect(nextYear);
                   }

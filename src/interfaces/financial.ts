@@ -123,6 +123,7 @@ export type Saving = {
   isFixed: boolean;
   recurrenceType: RecurrenceType;
   recurrenceGroupId?: string | null;
+  isInitialBalance?: boolean;
   goalId?: string | null;
   hasYield?: boolean;
   yieldRateMonthly?: number | null;
