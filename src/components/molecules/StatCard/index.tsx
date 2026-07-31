@@ -15,7 +15,10 @@ type StatCardProps = {
 
 export function StatCard({ label, value, tone, helperText, onClick }: StatCardProps) {
   const theme = useTheme();
-  const color = tone === 'neutral' ? theme.palette.text.primary : amountToneColor(tone, value);
+  const color =
+    tone === 'neutral' || (theme.palette.mode === 'dark' && value === 0)
+      ? theme.palette.text.primary
+      : amountToneColor(tone, value);
   const Icon = tone === 'expense'
     ? ArrowDownRight
     : tone === 'income'

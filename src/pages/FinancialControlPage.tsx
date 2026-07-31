@@ -1,19 +1,26 @@
 import Grid from "@mui/material/Grid";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  bulkDeleteFinancialScope,
   createEntry,
+  copyFinancialCategory,
   createFinancialReminder,
   createSaving,
-  deleteCategoryLine,
   deleteEntry,
   deleteSaving,
   FinancialEntryPayload,
   getDayControl,
+  getFinancialTablePreferences,
   getFinancialCalendar,
   getMonthControl,
   getWeekControl,
@@ -26,6 +33,7 @@ import {
   updateEntry,
   updateEntryPaymentStatus,
   updateEntryValue,
+  updateFinancialTablePreferences,
   updateSaving,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
@@ -64,6 +72,7 @@ import { WeekOverview } from "@/modules/financial-control/components/WeekOvervie
 import { YearSpreadsheet } from "@/modules/financial-control/components/YearSpreadsheet";
 import { PeriodSummaryCards } from "@/components/organisms/PeriodSummaryCards";
 import { ValueEditModal } from "@/components/organisms/ValueEditModal";
+import { AppDialog } from "@/components/molecules/AppDialog";
 import type {
   DayControl,
   EntryType,
@@ -81,6 +90,23 @@ import type {
 } from "@/interfaces/financial";
 import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate, weekRange } from "@/utils/format";
 
+type CopyScope =
+  | "CATEGORY"
+  | "ALL_INCOME"
+  | "ALL_EXPENSE"
+  | "ALL_INVESTMENT"
+  | "ALL_TABLE"
+  | "SELECTED_SUBITEMS";
+
+type CopySubItemOption = {
+  key: string;
+  type: FinancialCategoryType;
+  category: string;
+  name: string;
+  label: string;
+  group: string;
+};
+
 const initialSavingForm: SavingMovementFormState = {
   action: "REGISTER",
   title: "",
@@ -90,6 +116,7 @@ const initialSavingForm: SavingMovementFormState = {
   amount: "",
   date: isoDate(),
   dueDay: String(new Date().getDate()),
+  isInitialBalance: false,
   isFixed: false,
   recurrenceType: "NONE",
   recurrenceStartMonth: String(new Date().getMonth() + 1),
@@ -106,6 +133,19 @@ const initialSavingForm: SavingMovementFormState = {
 };
 
 const current = new Date();
+const COPY_YEAR_MIN = 1900;
+const COPY_YEAR_MAX = 3000;
+const FINANCIAL_CONTROL_YEAR_KEY = "financial-control:selected-year";
+
+function isValidCopyYear(value: number) {
+  return Number.isInteger(value) && value >= COPY_YEAR_MIN && value <= COPY_YEAR_MAX;
+}
+
+function initialFinancialYear() {
+  if (typeof window === "undefined") return current.getFullYear();
+  const storedYear = Number(window.localStorage.getItem(FINANCIAL_CONTROL_YEAR_KEY));
+  return isValidCopyYear(storedYear) ? storedYear : current.getFullYear();
+}
 
 function reminderDate(baseDate: string, offsetDays: number, time: string) {
   const [datePart] = baseDate.split("T");
@@ -136,8 +176,8 @@ function FinancialControlSkeleton({ mode }: { mode: ViewMode }) {
 export function FinancialControlPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<ViewMode>("year");
-  const [year, setYear] = useState(current.getFullYear());
-  const [yearInput, setYearInput] = useState(String(current.getFullYear()));
+  const [year, setYear] = useState(initialFinancialYear);
+  const [yearInput, setYearInput] = useState(() => String(initialFinancialYear()));
   const [month, setMonth] = useState(current.getMonth() + 1);
   const [date, setDate] = useState(isoDate());
   const [week, setWeek] = useState(weekRange());
@@ -161,6 +201,10 @@ export function FinancialControlPage() {
   const [expenseRowsExpanded, setExpenseRowsExpanded] = useState(false);
   const [investmentRowsExpanded, setInvestmentRowsExpanded] = useState(false);
   const [allCategoryRowsExpanded, setAllCategoryRowsExpanded] = useState(false);
+  const [groupsSeparated, setGroupsSeparated] = useState(false);
+  const [tableScale, setTableScale] = useState(0);
+  const [categoryColumnWidth, setCategoryColumnWidth] = useState(220);
+  const [tablePreferencesLoaded, setTablePreferencesLoaded] = useState(false);
   const [categoryRowsExpanded, setCategoryRowsExpanded] = useState<
     Record<string, boolean>
   >({});
@@ -171,9 +215,34 @@ export function FinancialControlPage() {
   const [cellSaving, setCellSaving] = useState(false);
   const [lineEdit, setLineEdit] = useState<LineEditState | null>(null);
   const [lineSaving, setLineSaving] = useState(false);
+  const [copyCategory, setCopyCategory] = useState<{
+    category: string;
+    type: FinancialCategoryType;
+  } | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyScope, setCopyScope] = useState<CopyScope>("CATEGORY");
+  const [copySelectedSubItems, setCopySelectedSubItems] = useState<CopySubItemOption[]>([]);
+  const [copyTargetYears, setCopyTargetYears] = useState<number[]>([current.getFullYear() + 1]);
+  const [copySaving, setCopySaving] = useState(false);
+  const [bulkDeleteCategory, setBulkDeleteCategory] = useState<{
+    category: string;
+    type: FinancialCategoryType;
+  } | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteScope, setBulkDeleteScope] = useState<CopyScope>("ALL_TABLE");
+  const [bulkDeleteSelectedSubItems, setBulkDeleteSelectedSubItems] = useState<CopySubItemOption[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [fillConfirmation, setFillConfirmation] = useState<{
+    source: SpreadsheetCellEdit;
+    target: SpreadsheetCellEdit;
+  } | null>(null);
   const [reminderItem, setReminderItem] = useState<FinancialItem | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { t } = usePreferences();
+  const copyYearOptions = useMemo(
+    () => Array.from({ length: 101 }, (_, index) => current.getFullYear() - 10 + index),
+    [],
+  );
 
   const allCurrentItems = useMemo(() => {
     if (mode === "day")
@@ -261,6 +330,35 @@ export function FinancialControlPage() {
     );
   }, [yearData]);
 
+  const copySubItemOptions = useMemo<CopySubItemOption[]>(() => {
+    const financialOptions = detailRows.map((row) => ({
+      key: `${row.type}:${row.category}:${row.name}`,
+      type: row.type,
+      category: row.category,
+      name: row.name,
+      label: row.name,
+      group: `${row.type === "INCOME" ? "Receitas" : "Despesas"} / ${row.category}`,
+    }));
+    const savingsMap = new Map<string, CopySubItemOption>();
+    for (const saving of yearData?.savings ?? []) {
+      const name = saving.title || saving.category;
+      const key = `INVESTMENT:${saving.category}:${name}`;
+      if (!savingsMap.has(key)) {
+        savingsMap.set(key, {
+          key,
+          type: "INVESTMENT",
+          category: saving.category,
+          name,
+          label: name,
+          group: `Economias / ${saving.category}`,
+        });
+      }
+    }
+    return [...financialOptions, ...Array.from(savingsMap.values())].sort(
+      (a, b) => a.group.localeCompare(b.group, "pt-BR") || a.label.localeCompare(b.label, "pt-BR"),
+    );
+  }, [detailRows, yearData]);
+
   function rowsForCategory(type: EntryType, category: string) {
     return detailRows.filter(
       (row) => row.type === type && row.category === category,
@@ -290,9 +388,11 @@ export function FinancialControlPage() {
 
   const yearOptions = useMemo(() => {
     const options = new Set<number>();
+    const start = Math.max(COPY_YEAR_MIN, Math.min(realCurrentYear, year) - 5);
+    const end = Math.min(COPY_YEAR_MAX, Math.max(realCurrentYear, year) + 5);
     for (
-      let option = realCurrentYear - 5;
-      option <= realCurrentYear + 5;
+      let option = start;
+      option <= end;
       option += 1
     ) {
       options.add(option);
@@ -304,6 +404,13 @@ export function FinancialControlPage() {
   async function loadData() {
     setLoading(true);
     setError("");
+    if (mode === "year") setYearData(null);
+    if (mode === "month") {
+      setMonthData(null);
+      setCalendarData(null);
+    }
+    if (mode === "day") setDayData(null);
+    if (mode === "week") setWeekData(null);
     try {
       if (mode === "year") setYearData(await getYearControl(year));
       if (mode === "month") {
@@ -318,6 +425,13 @@ export function FinancialControlPage() {
       if (mode === "week")
         setWeekData(await getWeekControl(week.startDate, week.endDate));
     } catch {
+      if (mode === "year") setYearData(null);
+      if (mode === "month") {
+        setMonthData(null);
+        setCalendarData(null);
+      }
+      if (mode === "day") setDayData(null);
+      if (mode === "week") setWeekData(null);
       setError("Não foi possível carregar os dados financeiros.");
     } finally {
       setLoading(false);
@@ -347,13 +461,49 @@ export function FinancialControlPage() {
   useEffect(() => {
     loadCategories();
     loadAvailableSavings();
+    getFinancialTablePreferences()
+      .then((preferences) => {
+        setGroupsSeparated(preferences.groupsSeparated);
+        setTableScale(preferences.tableScale);
+        setCategoryColumnWidth(preferences.categoryColumnWidth);
+        setIncomeRowsExpanded(preferences.categoryGroupsExpanded);
+        setExpenseRowsExpanded(preferences.categoryGroupsExpanded);
+        setInvestmentRowsExpanded(preferences.categoryGroupsExpanded);
+        setAllCategoryRowsExpanded(preferences.subitemsExpanded);
+      })
+      .catch(() => undefined)
+      .finally(() => setTablePreferencesLoaded(true));
     listFinancialGoals()
       .then(setGoals)
       .catch(() => setGoals([]));
   }, []);
 
   useEffect(() => {
+    if (!tablePreferencesLoaded) return;
+    const timer = window.setTimeout(() => {
+      void updateFinancialTablePreferences({
+        groupsSeparated,
+        tableScale,
+        categoryColumnWidth,
+        categoryGroupsExpanded: incomeRowsExpanded && expenseRowsExpanded && investmentRowsExpanded,
+        subitemsExpanded: allCategoryRowsExpanded,
+      }).catch(() => undefined);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [
+    allCategoryRowsExpanded,
+    categoryColumnWidth,
+    expenseRowsExpanded,
+    groupsSeparated,
+    incomeRowsExpanded,
+    investmentRowsExpanded,
+    tablePreferencesLoaded,
+    tableScale,
+  ]);
+
+  useEffect(() => {
     setYearInput(String(year));
+    window.localStorage.setItem(FINANCIAL_CONTROL_YEAR_KEY, String(year));
   }, [year]);
 
   function openCreate(type: EntryType) {
@@ -392,6 +542,7 @@ export function FinancialControlPage() {
       recurrenceStartYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       recurrenceEndYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       dueDay: String(new Date(`${baseDate}T00:00:00`).getDate()),
+      isInitialBalance: false,
       title: action === "WITHDRAW_TO_BALANCE" ? firstBalance?.title ?? "" : "",
       hasYield: false,
       yieldRateMonthly: "",
@@ -426,6 +577,7 @@ export function FinancialControlPage() {
       date: recurringDate,
       month: payloadDate.getMonth() + 1,
       year: payloadDate.getFullYear(),
+      isInitialBalance: savingForm.isInitialBalance,
       isFixed: savingForm.isFixed,
       recurrenceType: savingForm.isFixed ? savingForm.recurrenceType : "NONE",
       recurrenceGeneration:
@@ -671,19 +823,6 @@ export function FinancialControlPage() {
     }
   }
 
-  async function removeCategoryLine(category: string, type: EntryType) {
-    const label = type === "INCOME" ? "receita" : "despesa";
-    const confirmed = await confirm({
-      title: "Excluir categoria da tabela",
-      description: `Deseja excluir "${category}" e todos os valores de ${label} em ${year}?`,
-      confirmLabel: "Excluir",
-      tone: "danger",
-    });
-    if (!confirmed) return;
-    await deleteCategoryLine({ category, type, year });
-    await loadData();
-  }
-
   async function removeItemLine(
     category: string,
     name: string,
@@ -699,21 +838,6 @@ export function FinancialControlPage() {
     const items = lineItems(category, name, type);
     await Promise.all(items.map((item) => deleteEntry(item.id)));
     await loadData();
-  }
-
-  async function removeInvestmentCategoryLine(category: string) {
-    const confirmed = await confirm({
-      title: "Excluir economia da tabela",
-      description: `Deseja excluir "${category}" e todas as economias desta categoria em ${year}?`,
-      confirmLabel: "Excluir",
-      tone: "danger",
-    });
-    if (!confirmed) return;
-    const savings = (yearData?.savings ?? []).filter(
-      (saving) => saving.category === category && saving.year === year,
-    );
-    await Promise.all(savings.map((saving) => deleteSaving(saving.id)));
-    await Promise.all([loadData(), loadAvailableSavings()]);
   }
 
   async function removeInvestmentItemLine(category: string, name: string) {
@@ -732,6 +856,71 @@ export function FinancialControlPage() {
     );
     await Promise.all(savings.map((saving) => deleteSaving(saving.id)));
     await Promise.all([loadData(), loadAvailableSavings()]);
+  }
+
+  async function submitCopyCategory() {
+    if (copySaving) return;
+    const targetYears = Array.from(new Set(copyTargetYears))
+      .filter((value) => isValidCopyYear(value) && value !== year)
+      .sort((a, b) => a - b);
+    if (!targetYears.length || targetYears.length > 5) return;
+    if (copyScope === "CATEGORY" && !copyCategory) return;
+    if (copyScope === "SELECTED_SUBITEMS" && !copySelectedSubItems.length) return;
+    const categoryToCopy = copyScope === "CATEGORY" ? copyCategory : null;
+
+    setCopySaving(true);
+    try {
+      await copyFinancialCategory({
+        scope: copyScope,
+        type: categoryToCopy?.type,
+        category: categoryToCopy?.category,
+        subItems: copyScope === "SELECTED_SUBITEMS"
+          ? copySelectedSubItems.map((item) => ({
+              type: item.type,
+              category: item.category,
+              name: item.name,
+            }))
+          : undefined,
+        sourceYear: year,
+        targetYears,
+        overwrite: true,
+      });
+      setCopyDialogOpen(false);
+      setCopyCategory(null);
+      await loadData();
+    } finally {
+      setCopySaving(false);
+    }
+  }
+
+  async function submitBulkDelete() {
+    if (bulkDeleting) return;
+    if (bulkDeleteScope === "CATEGORY" && !bulkDeleteCategory) return;
+    if (bulkDeleteScope === "SELECTED_SUBITEMS" && !bulkDeleteSelectedSubItems.length) return;
+    const categoryToDelete = bulkDeleteScope === "CATEGORY" ? bulkDeleteCategory : null;
+
+    setBulkDeleting(true);
+    try {
+      await bulkDeleteFinancialScope({
+        scope: bulkDeleteScope,
+        type: categoryToDelete?.type,
+        category: categoryToDelete?.category,
+        subItems: bulkDeleteScope === "SELECTED_SUBITEMS"
+          ? bulkDeleteSelectedSubItems.map((item) => ({
+              type: item.type,
+              category: item.category,
+              name: item.name,
+            }))
+          : undefined,
+        year,
+      });
+      setBulkDeleteDialogOpen(false);
+      setBulkDeleteCategory(null);
+      setBulkDeleteSelectedSubItems([]);
+      await Promise.all([loadData(), loadAvailableSavings()]);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   function findCellItem(
@@ -848,6 +1037,48 @@ export function FinancialControlPage() {
         description: payload.description,
       });
       setCellEdit(null);
+      await loadData();
+    } finally {
+      setCellSaving(false);
+    }
+  }
+
+  async function fillCells(source: SpreadsheetCellEdit, target: SpreadsheetCellEdit) {
+    if (source.type === "INVESTMENT" || target.type === "INVESTMENT") return;
+    if (
+      source.type !== target.type ||
+      source.category !== target.category ||
+      source.name !== target.name ||
+      target.month <= source.month
+    ) {
+      return;
+    }
+    setFillConfirmation({ source, target });
+  }
+
+  async function confirmFillCells() {
+    if (!fillConfirmation) return;
+    const { source, target } = fillConfirmation;
+    if (source.type === "INVESTMENT" || target.type === "INVESTMENT") {
+      setFillConfirmation(null);
+      return;
+    }
+    const item = findCellItem(source.category, source.name, source.month, source.type);
+    if (!item) {
+      setFillConfirmation(null);
+      return;
+    }
+    setCellSaving(true);
+    try {
+      await updateEntryValue(item.id, {
+        amount: source.value,
+        date: dateForMonthlyOccurrence(year, source.month, item.dueDay ?? new Date(item.date).getDate()),
+        scope: "FROM_THIS_PERIOD_FORWARD",
+        periodType: "MONTH",
+        endMonth: target.month,
+        description: item.description ?? null,
+      });
+      setFillConfirmation(null);
       await loadData();
     } finally {
       setCellSaving(false);
@@ -990,6 +1221,9 @@ export function FinancialControlPage() {
           expenseRowsExpanded={expenseRowsExpanded}
           investmentRowsExpanded={investmentRowsExpanded}
           allCategoryRowsExpanded={allCategoryRowsExpanded}
+          groupsSeparated={groupsSeparated}
+          tableScale={tableScale}
+          categoryColumnWidth={categoryColumnWidth}
           categoryColor={categoryColor}
           rowsForCategory={rowsForCategory}
           notesForCategory={notesForCategory}
@@ -999,6 +1233,9 @@ export function FinancialControlPage() {
           onToggleExpenseRows={() => setExpenseRowsExpanded((expanded) => !expanded)}
           onToggleInvestmentRows={() => setInvestmentRowsExpanded((expanded) => !expanded)}
           onToggleCategoryGroups={toggleCategoryGroups}
+          onGroupsSeparatedChange={setGroupsSeparated}
+          onTableScaleChange={setTableScale}
+          onCategoryColumnWidthChange={setCategoryColumnWidth}
           onToggleAllCategoryRows={(expanded) => {
             setAllCategoryRowsExpanded(expanded);
             if (expanded) {
@@ -1010,12 +1247,43 @@ export function FinancialControlPage() {
           }}
           onToggleCategoryDetails={toggleCategoryDetails}
           onToggleInvestmentCategoryDetails={toggleInvestmentCategoryDetails}
-          onRemoveCategoryLine={removeCategoryLine}
-          onRemoveInvestmentCategoryLine={removeInvestmentCategoryLine}
+          onRemoveCategoryLine={(category, type) => {
+            setBulkDeleteCategory({ category, type });
+            setBulkDeleteScope("CATEGORY");
+            setBulkDeleteSelectedSubItems([]);
+            setBulkDeleteDialogOpen(true);
+          }}
+          onRemoveInvestmentCategoryLine={(category) => {
+            setBulkDeleteCategory({ category, type: "INVESTMENT" });
+            setBulkDeleteScope("CATEGORY");
+            setBulkDeleteSelectedSubItems([]);
+            setBulkDeleteDialogOpen(true);
+          }}
+          onCopyCategoryLine={(category, type) => {
+            setCopyCategory({ category, type });
+            setCopyScope("CATEGORY");
+            setCopySelectedSubItems([]);
+            setCopyTargetYears([year + 1]);
+            setCopyDialogOpen(true);
+          }}
+          onOpenCopyAdvanced={() => {
+            setCopyCategory(null);
+            setCopyScope("ALL_TABLE");
+            setCopySelectedSubItems([]);
+            setCopyTargetYears([year + 1]);
+            setCopyDialogOpen(true);
+          }}
+          onOpenBulkDelete={() => {
+            setBulkDeleteCategory(null);
+            setBulkDeleteScope("ALL_TABLE");
+            setBulkDeleteSelectedSubItems([]);
+            setBulkDeleteDialogOpen(true);
+          }}
           onEditLine={setLineEdit}
           onRemoveItemLine={removeItemLine}
           onRemoveInvestmentItemLine={removeInvestmentItemLine}
           onEditCell={setCellEdit}
+          onFillCells={fillCells}
           onOpenCreditCard={(cardName) => {
             const query = cardName ? `?card=${encodeURIComponent(cardName)}` : "";
             navigate(`/app/cards${query}`);
@@ -1093,6 +1361,341 @@ export function FinancialControlPage() {
         onSave={saveLineName}
         onLineEditChange={setLineEdit}
       />
+      <AppDialog
+        open={Boolean(fillConfirmation)}
+        onClose={() => {
+          if (!cellSaving) setFillConfirmation(null);
+        }}
+        title="Confirmar cópia de valores"
+        actions={
+          <>
+            <Button
+              onClick={() => setFillConfirmation(null)}
+              disabled={cellSaving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={confirmFillCells}
+              disabled={cellSaving}
+            >
+              {cellSaving ? "Copiando..." : "Confirmar cópia"}
+            </Button>
+          </>
+        }
+      >
+        {fillConfirmation ? (
+          <Stack spacing={1.5}>
+            <Typography color="text.secondary">
+              O valor de {formatMoney(fillConfirmation.source.value)} será copiado na linha "{fillConfirmation.source.name}".
+            </Typography>
+            <Box
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                p: 1.5,
+                bgcolor: "var(--mr-card)",
+              }}
+            >
+              <Typography fontWeight={900}>
+                Ano: {year}
+              </Typography>
+              <Typography color="text.secondary">
+                Meses afetados: {fillConfirmation.source.month + 1} até {fillConfirmation.target.month}
+              </Typography>
+              <Typography color="text.secondary">
+                Categoria: {fillConfirmation.source.category}
+              </Typography>
+            </Box>
+          </Stack>
+        ) : null}
+      </AppDialog>
+      <AppDialog
+        open={copyDialogOpen}
+        onClose={() => {
+          setCopyDialogOpen(false);
+          setCopyCategory(null);
+        }}
+        title="Copiar categoria para outros anos"
+        actions={
+          <>
+            <Button
+              onClick={() => {
+                setCopyDialogOpen(false);
+                setCopyCategory(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={submitCopyCategory}
+              disabled={
+                copySaving ||
+                copyTargetYears.length === 0 ||
+                copyTargetYears.length > 5 ||
+                (copyScope === "CATEGORY" && !copyCategory) ||
+                (copyScope === "SELECTED_SUBITEMS" && !copySelectedSubItems.length)
+              }
+            >
+              {copySaving ? "Copiando..." : "Copiar"}
+            </Button>
+          </>
+        }
+      >
+        <Stack spacing={2}>
+          <Typography color="text.secondary">
+            Escolha quais dados de {year} deseja copiar. Se ja existir o mesmo grupo no ano de destino, ele sera substituido.
+          </Typography>
+          <TextField
+            select
+            label="O que deseja copiar?"
+            value={copyScope}
+            onChange={(event) => {
+              const nextScope = event.target.value as CopyScope;
+              setCopyScope(nextScope);
+              if (nextScope !== "SELECTED_SUBITEMS") setCopySelectedSubItems([]);
+            }}
+          >
+            {copyCategory ? (
+              <MenuItem value="CATEGORY">
+                Categoria atual: {copyCategory.category}
+              </MenuItem>
+            ) : null}
+            <MenuItem value="ALL_EXPENSE">Todas as despesas</MenuItem>
+            <MenuItem value="ALL_INCOME">Todas as receitas</MenuItem>
+            <MenuItem value="ALL_INVESTMENT">Todas as economias</MenuItem>
+            <MenuItem value="ALL_TABLE">Tabela inteira</MenuItem>
+            <MenuItem value="SELECTED_SUBITEMS">Selecionar subitens especificos</MenuItem>
+          </TextField>
+          {copyScope === "SELECTED_SUBITEMS" ? (
+            <Autocomplete
+              multiple
+              disableCloseOnSelect
+              options={copySubItemOptions}
+              value={copySelectedSubItems}
+              groupBy={(option) => option.group}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, value) => option.key === value.key}
+              onChange={(_, values) => setCopySelectedSubItems(values)}
+              noOptionsText="Nenhum subitem encontrado"
+              renderTags={(values, getTagProps) =>
+                values.map((option, index) => (
+                  <Chip
+                    label={`${option.category} / ${option.name}`}
+                    {...getTagProps({ index })}
+                    key={option.key}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Subitens"
+                  helperText="Selecione subitens de categorias diferentes para copiar."
+                />
+              )}
+            />
+          ) : null}
+          <Autocomplete
+            multiple
+            freeSolo
+            disableCloseOnSelect
+            options={copyYearOptions}
+            value={copyTargetYears}
+            getOptionLabel={(option) => String(option)}
+            isOptionEqualToValue={(option, value) => Number(option) === Number(value)}
+            ListboxProps={{ style: { maxHeight: 240, overflow: "auto" } }}
+            filterOptions={(options, params) => {
+              const query = params.inputValue.trim();
+              const filtered = query
+                ? options.filter((option) => String(option).includes(query))
+                : options;
+              const typedYear = Number(query);
+              if (
+                query &&
+                isValidCopyYear(typedYear) &&
+                typedYear !== year &&
+                !filtered.includes(typedYear) &&
+                !copyTargetYears.includes(typedYear)
+              ) {
+                return [typedYear, ...filtered];
+              }
+              return filtered;
+            }}
+            onChange={(_, values) => {
+              const years = values
+                .map((value) => Number(value))
+                .filter((value) => isValidCopyYear(value) && value !== year);
+              setCopyTargetYears(Array.from(new Set(years)).sort((a, b) => a - b));
+            }}
+            renderTags={(values, getTagProps) =>
+              values.map((option, index) => (
+                <Chip
+                  label={option}
+                  {...getTagProps({ index })}
+                  key={option}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Anos de destino"
+                helperText={`Digite para buscar ou criar anos entre ${COPY_YEAR_MIN} e ${COPY_YEAR_MAX}.`}
+                error={copyTargetYears.length > 5}
+              />
+            )}
+          />
+          {copyTargetYears.length > 5 ? (
+            <Typography variant="body2" color="error">
+              Selecione no maximo 5 anos por vez.
+            </Typography>
+          ) : null}
+          {copyTargetYears.length ? (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {copyTargetYears.map((targetYear) => (
+                <Chip
+                  key={targetYear}
+                  label={targetYear}
+                  color="primary"
+                  onDelete={() =>
+                    setCopyTargetYears((selectedYears) =>
+                      selectedYears.filter((selectedYear) => selectedYear !== targetYear),
+                    )
+                  }
+                />
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Selecione pelo menos um ano valido diferente de {year}.
+            </Typography>
+          )}
+        </Stack>
+      </AppDialog>
+      <AppDialog
+        open={bulkDeleteDialogOpen}
+        onClose={() => {
+          if (bulkDeleting) return;
+          setBulkDeleteDialogOpen(false);
+          setBulkDeleteCategory(null);
+          setBulkDeleteSelectedSubItems([]);
+        }}
+        title="Excluir dados em massa"
+        actions={
+          <>
+            <Button
+              onClick={() => {
+                setBulkDeleteDialogOpen(false);
+                setBulkDeleteCategory(null);
+                setBulkDeleteSelectedSubItems([]);
+              }}
+              disabled={bulkDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={submitBulkDelete}
+              disabled={
+                bulkDeleting ||
+                (bulkDeleteScope === "CATEGORY" && !bulkDeleteCategory) ||
+                (bulkDeleteScope === "SELECTED_SUBITEMS" && !bulkDeleteSelectedSubItems.length)
+              }
+            >
+              {bulkDeleting ? "Excluindo..." : "Excluir definitivamente"}
+            </Button>
+          </>
+        }
+      >
+        <Stack spacing={2}>
+          <Box
+            sx={{
+              border: "1px solid",
+              borderColor: "error.main",
+              borderRadius: 2,
+              p: 1.5,
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(239,68,68,0.12)"
+                  : "rgba(254,242,242,0.9)",
+            }}
+          >
+            <Typography fontWeight={900} color="error.main">
+              Atenção: esta ação é irreversível.
+            </Typography>
+            <Typography color="text.secondary">
+              A exclusão será feita somente no ano filtrado: {year}.
+            </Typography>
+          </Box>
+          <TextField
+            select
+            label="O que deseja excluir?"
+            value={bulkDeleteScope}
+            onChange={(event) => {
+              const nextScope = event.target.value as CopyScope;
+              setBulkDeleteScope(nextScope);
+              if (nextScope !== "SELECTED_SUBITEMS") setBulkDeleteSelectedSubItems([]);
+            }}
+          >
+            {bulkDeleteCategory ? (
+              <MenuItem value="CATEGORY">
+                Categoria atual: {bulkDeleteCategory.category}
+              </MenuItem>
+            ) : null}
+            <MenuItem value="ALL_EXPENSE">Todas as despesas</MenuItem>
+            <MenuItem value="ALL_INCOME">Todas as receitas</MenuItem>
+            <MenuItem value="ALL_INVESTMENT">Todas as economias</MenuItem>
+            <MenuItem value="ALL_TABLE">Tabela inteira</MenuItem>
+            <MenuItem value="SELECTED_SUBITEMS">Selecionar subitens específicos</MenuItem>
+          </TextField>
+          {bulkDeleteScope === "SELECTED_SUBITEMS" ? (
+            <Autocomplete
+              multiple
+              disableCloseOnSelect
+              options={copySubItemOptions}
+              value={bulkDeleteSelectedSubItems}
+              groupBy={(option) => option.group}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, value) => option.key === value.key}
+              onChange={(_, values) => setBulkDeleteSelectedSubItems(values)}
+              noOptionsText="Nenhum subitem encontrado"
+              renderTags={(values, getTagProps) =>
+                values.map((option, index) => (
+                  <Chip
+                    label={`${option.category} / ${option.name}`}
+                    {...getTagProps({ index })}
+                    key={option.key}
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Subitens"
+                  helperText="Selecione linhas de categorias diferentes para excluir no ano filtrado."
+                />
+              )}
+            />
+          ) : null}
+          <Typography variant="body2" color="text.secondary">
+            Valores de saldo inicial das economias não serão apagados por esta ação, porque não pertencem a um mês da tabela anual.
+          </Typography>
+        </Stack>
+      </AppDialog>
       {confirmDialog}
     </Stack>
   );

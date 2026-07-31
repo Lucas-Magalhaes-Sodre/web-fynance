@@ -32,8 +32,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { PreferenceControls } from '@/components/molecules/PreferenceControls';
 import { WebReminderNotifier } from '@/components/organisms/WebReminderNotifier';
+import type { PlanProductKey } from '@/constants/planProducts';
+import { userCanAccessProduct } from '@/routes/ProductAccessRoute';
 
-const drawerWidth = 260;
+const drawerWidth = 280;
 const collapsedDrawerWidth = 76;
 
 export function AppLayout() {
@@ -59,20 +61,21 @@ export function AppLayout() {
       endsAt: end.toLocaleDateString('pt-BR')
     };
   }, [user]);
-  const links = [
-    { to: '/app', label: t('menuDashboard'), icon: <DashboardIcon /> },
-    { to: '/app/control', label: t('menuFinancialControl'), icon: <CalendarMonthIcon /> },
-    { to: '/app/cards', label: t('menuCards'), icon: <CreditCardIcon /> },
-    { to: '/app/economy', label: t('menuSavings'), icon: <SavingsIcon /> },
-    { to: '/app/goals', label: t('menuGoals'), icon: <FlagIcon /> },
-    { to: '/app/birthdays', label: t('menuBirthdays'), icon: <CakeIcon /> },
-    { to: '/app/vacation-calculator', label: t('menuVacationCalculator'), icon: <BeachAccessIcon /> },
+  const rawLinks: Array<{ to: string; label: string; icon: JSX.Element; productKey?: PlanProductKey }> = [
+    { to: '/app', label: t('menuDashboard'), icon: <DashboardIcon />, productKey: 'dashboard' as const },
+    { to: '/app/control', label: t('menuFinancialControl'), icon: <CalendarMonthIcon />, productKey: 'financial-control' as const },
+    { to: '/app/cards', label: t('menuCards'), icon: <CreditCardIcon />, productKey: 'cards' as const },
+    { to: '/app/economy', label: t('menuSavings'), icon: <SavingsIcon />, productKey: 'savings' as const },
+    { to: '/app/goals', label: t('menuGoals'), icon: <FlagIcon />, productKey: 'goals' as const },
+    { to: '/app/birthdays', label: t('menuBirthdays'), icon: <CakeIcon />, productKey: 'birthdays' as const },
+    { to: '/app/vacation-calculator', label: t('menuVacationCalculator'), icon: <BeachAccessIcon />, productKey: 'vacation-calculator' as const },
     { to: '/app/profile', label: t('menuProfile'), icon: <PersonIcon /> },
-    { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon /> },
+    { to: '/app/settings', label: t('menuSettings'), icon: <SettingsIcon />, productKey: 'settings' as const },
     ...(user?.role === 'ADMIN'
       ? [{ to: '/app/admin/subscriptions', label: 'Admin', icon: <AdminPanelSettingsIcon /> }]
       : [])
   ];
+  const links = rawLinks.filter((link) => !link.productKey || userCanAccessProduct(user, link.productKey));
 
   function toggleMenu() {
     setOpen((current) => {
@@ -114,7 +117,7 @@ export function AppLayout() {
           }
         }}
       >
-        <Toolbar sx={{ gap: 1.5, justifyContent: open ? 'space-between' : 'center', px: open ? 2 : 1 }}>
+        <Toolbar sx={{ gap: 1, justifyContent: open ? 'space-between' : 'center', px: open ? 1.5 : 1 }}>
           {open ? (
           <Box
             component="button"
@@ -124,8 +127,9 @@ export function AppLayout() {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1.5,
+              gap: 1.25,
               minWidth: 0,
+              flex: 1,
               border: 0,
               p: 0,
               m: 0,
@@ -142,11 +146,22 @@ export function AppLayout() {
               },
             }}
           >
-            <Box className="premium-gradient" width={40} height={40} borderRadius={3} display="grid" sx={{ placeItems: 'center', color: 'white' }}>
+            <Box className="premium-gradient" width={38} height={38} borderRadius={3} display="grid" flexShrink={0} sx={{ placeItems: 'center', color: 'white' }}>
               <AccountBalanceWalletIcon fontSize="small" />
             </Box>
-            <Box minWidth={0}>
-              <Typography fontWeight={800} noWrap>{t('appName')}</Typography>
+            <Box minWidth={0} flex={1}>
+              <Typography
+                fontWeight={900}
+                sx={{
+                  lineHeight: 1.2,
+                  fontSize: 16,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t('appName')}
+              </Typography>
               <Typography className="user-name" variant="caption" color="text.secondary" noWrap>
                 {user?.name}
               </Typography>

@@ -1,9 +1,11 @@
 import AddIcon from "@mui/icons-material/Add";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PrintIcon from "@mui/icons-material/Print";
 import RemoveIcon from "@mui/icons-material/Remove";
 import SearchIcon from "@mui/icons-material/Search";
@@ -14,6 +16,10 @@ import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Popover from "@mui/material/Popover";
 import Stack from "@mui/material/Stack";
@@ -54,6 +60,9 @@ type YearSpreadsheetProps = {
   expenseRowsExpanded: boolean;
   investmentRowsExpanded: boolean;
   allCategoryRowsExpanded: boolean;
+  groupsSeparated: boolean;
+  tableScale: number;
+  categoryColumnWidth: number;
   categoryColor: (type: FinancialCategoryType, category: string) => string;
   rowsForCategory: (type: EntryType, category: string) => DetailSpreadsheetRow[];
   notesForCategory: (
@@ -67,15 +76,22 @@ type YearSpreadsheetProps = {
   onToggleExpenseRows: () => void;
   onToggleInvestmentRows: () => void;
   onToggleCategoryGroups: (expanded: boolean) => void;
+  onGroupsSeparatedChange: (expanded: boolean) => void;
+  onTableScaleChange: (scale: number) => void;
+  onCategoryColumnWidthChange: (width: number) => void;
   onToggleAllCategoryRows: (expanded: boolean) => void;
   onToggleCategoryDetails: (type: EntryType, category: string) => void;
   onToggleInvestmentCategoryDetails: (category: string) => void;
   onRemoveCategoryLine: (category: string, type: EntryType) => void;
   onRemoveInvestmentCategoryLine: (category: string) => void;
+  onCopyCategoryLine: (category: string, type: FinancialCategoryType) => void;
+  onOpenCopyAdvanced: () => void;
+  onOpenBulkDelete: () => void;
   onEditLine: (lineEdit: LineEditState) => void;
   onRemoveItemLine: (category: string, name: string, type: EntryType) => void;
   onRemoveInvestmentItemLine: (category: string, name: string) => void;
   onEditCell: (cellEdit: SpreadsheetCellEdit) => void;
+  onFillCells: (source: SpreadsheetCellEdit, target: SpreadsheetCellEdit) => void;
   onOpenCreditCard?: (cardName?: string) => void;
 };
 
@@ -95,6 +111,9 @@ export function YearSpreadsheet({
   expenseRowsExpanded,
   investmentRowsExpanded,
   allCategoryRowsExpanded,
+  groupsSeparated,
+  tableScale,
+  categoryColumnWidth,
   categoryColor,
   rowsForCategory,
   notesForCategory,
@@ -104,28 +123,35 @@ export function YearSpreadsheet({
   onToggleExpenseRows,
   onToggleInvestmentRows,
   onToggleCategoryGroups,
+  onGroupsSeparatedChange,
+  onTableScaleChange,
+  onCategoryColumnWidthChange,
   onToggleAllCategoryRows,
   onToggleCategoryDetails,
   onToggleInvestmentCategoryDetails,
   onRemoveCategoryLine,
   onRemoveInvestmentCategoryLine,
+  onCopyCategoryLine,
+  onOpenCopyAdvanced,
+  onOpenBulkDelete,
   onEditLine,
   onRemoveItemLine,
   onRemoveInvestmentItemLine,
   onEditCell,
+  onFillCells,
   onOpenCreditCard,
 }: YearSpreadsheetProps) {
   const { user } = useAuth();
   const { language, t } = usePreferences();
-  const [groupsSeparated, setGroupsSeparated] = useState(false);
-  const [tableScale, setTableScale] = useState(0);
-  const [categoryColumnWidth, setCategoryColumnWidth] = useState(168);
   const [categoryColumnResizing, setCategoryColumnResizing] = useState(false);
   const [printRequested, setPrintRequested] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
+  const [actionsAnchor, setActionsAnchor] = useState<HTMLElement | null>(null);
   const [selectedSearchOption, setSelectedSearchOption] =
     useState<SearchOption | null>(null);
-  const categoryResizeRef = useRef({ startX: 0, startWidth: 168 });
+  const [fillDrag, setFillDrag] = useState<SpreadsheetCellEdit | null>(null);
+  const [fillHover, setFillHover] = useState<SpreadsheetCellEdit | null>(null);
+  const categoryResizeRef = useRef({ startX: 0, startWidth: 220 });
   const stickyCategoryWidth = categoryColumnWidth + tableScale * 14;
   const totalColumnWidth = 96 + tableScale * 12;
   const monthColumnMinWidth = 74 + tableScale * 10;
@@ -225,7 +251,7 @@ export function YearSpreadsheet({
   const printFooterLabel = `${t("generatedBy")} ${t("appName")} • ${printUserLabel} • ${t("year")}: ${year} • ${t("issuedAt")}: ${issuedAtLabel}`;
 
   function resizeCategoryColumn(width: number) {
-    setCategoryColumnWidth(Math.min(420, Math.max(132, width)));
+    onCategoryColumnWidthChange(Math.min(420, Math.max(132, width)));
   }
 
   function startCategoryColumnResize(event: ReactPointerEvent<HTMLElement>) {
@@ -435,6 +461,7 @@ export function YearSpreadsheet({
     isCategory = false,
     isTotal = false,
     onClick,
+    fillCell,
     key,
   }: {
     value: number;
@@ -444,17 +471,63 @@ export function YearSpreadsheet({
     isCategory?: boolean;
     isTotal?: boolean;
     onClick?: () => void;
+    fillCell?: SpreadsheetCellEdit;
     key?: string | number;
   }) {
+    const isSameFillLine =
+      Boolean(fillDrag && fillCell) &&
+      fillDrag?.category === fillCell?.category &&
+      fillDrag?.name === fillCell?.name &&
+      fillDrag?.type === fillCell?.type;
+    const isFillPreview =
+      Boolean(isSameFillLine && fillHover && fillCell && fillDrag) &&
+      fillCell!.month > fillDrag!.month &&
+      fillCell!.month <= fillHover!.month;
+    const displayValue = isFillPreview ? fillDrag?.value ?? value : value;
+
     return (
       <TableCell
         key={key}
         align="right"
         onClick={onClick}
+        onDragEnter={
+          fillCell
+            ? () => {
+                if (fillDrag && isSameFillLine && fillCell.month > fillDrag.month) {
+                  setFillHover(fillCell);
+                }
+              }
+            : undefined
+        }
+        onDragOver={
+          fillCell
+            ? (event) => {
+                if (fillDrag && isSameFillLine && fillCell.month > fillDrag.month) {
+                  event.preventDefault();
+                  setFillHover(fillCell);
+                }
+              }
+            : undefined
+        }
+        onDrop={
+          fillCell
+            ? (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (fillDrag && isSameFillLine && fillCell.month > fillDrag.month) {
+                  onFillCells(fillDrag, fillCell);
+                }
+                setFillDrag(null);
+                setFillHover(null);
+              }
+            : undefined
+        }
         sx={{
           position: "relative",
           color: tableValueText(color, isCategory),
-          bgcolor: tableValueBg(color, isCategory),
+          bgcolor: isFillPreview
+            ? (theme) => theme.palette.mode === "dark" ? "rgba(45,212,191,0.24)" : "rgba(204,251,241,0.92)"
+            : tableValueBg(color, isCategory),
           fontWeight: isCategory ? 850 : 750,
           borderRight: `${isCategory ? 3 : 1}px solid ${color}`,
           borderTop: `${isCategory ? 3 : 1}px solid ${color}`,
@@ -463,9 +536,18 @@ export function YearSpreadsheet({
           whiteSpace: "nowrap",
           fontSize: tableBaseFontSize,
           ...(isTotal ? totalColumnSx : {}),
+          ...(isFillPreview
+            ? {
+                boxShadow:
+                  "inset 0 0 0 2px rgba(20,184,166,0.85), inset 0 0 0 9999px rgba(20,184,166,0.08)",
+              }
+            : {}),
           "&:hover": onClick
             ? {
               bgcolor:
+                  isFillPreview
+                    ? undefined
+                    :
                   tone === "INCOME"
                     ? (theme) => theme.palette.mode === "dark" ? "rgba(37,99,235,0.18)" : "rgba(37,99,235,0.06)"
                     : (theme) => theme.palette.mode === "dark" ? "rgba(234,88,12,0.18)" : "rgba(234,88,12,0.06)",
@@ -474,7 +556,35 @@ export function YearSpreadsheet({
         }}
       >
         {noteMarker(notes)}
-        {formatMoney(value)}
+        {formatMoney(displayValue)}
+        {fillCell ? (
+          <Tooltip title="Clique e arraste para copiar" placement="top" arrow>
+            <Box
+              draggable
+              onDragStart={(event) => {
+                event.stopPropagation();
+                setFillDrag(fillCell);
+                setFillHover(null);
+              }}
+              onDragEnd={() => {
+                setFillDrag(null);
+                setFillHover(null);
+              }}
+              sx={{
+                position: "absolute",
+                right: 2,
+                bottom: 2,
+                width: 8,
+                height: 8,
+                borderRadius: "2px",
+                bgcolor: "currentColor",
+                cursor: "crosshair",
+                opacity: 0,
+                ".MuiTableCell-root:hover &": { opacity: 0.75 },
+              }}
+            />
+          </Tooltip>
+        ) : null}
       </TableCell>
     );
   }
@@ -540,7 +650,16 @@ export function YearSpreadsheet({
               truncatedName(category, undefined, 850, translateCategoryName(category, language))
             )}
           </Box>
-          <Tooltip title={t("deleteYearLine")}>
+          <Tooltip title="Copiar categoria">
+            <IconButton
+              className="year-row-delete"
+              size="small"
+              onClick={() => onCopyCategoryLine(category, type)}
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Copiar categoria">
             <IconButton
               className="year-row-delete"
               size="small"
@@ -642,6 +761,13 @@ export function YearSpreadsheet({
                 type,
                 value: child.months[monthItem.value] ?? 0,
               }),
+            fillCell: {
+              category: child.category,
+              name: child.name,
+              month: monthItem.value,
+              type,
+              value: child.months[monthItem.value] ?? 0,
+            },
           }),
         )}
         <TableCell
@@ -734,6 +860,15 @@ export function YearSpreadsheet({
           <Box flex={1} minWidth={0}>
             {truncatedName(category, color, 850, translateCategoryName(category, language))}
           </Box>
+          <Tooltip title="Copiar categoria">
+            <IconButton
+              className="year-row-delete"
+              size="small"
+              onClick={() => onCopyCategoryLine(category, "INVESTMENT")}
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={t("deleteYearLine")}>
             <IconButton
               className="year-row-delete"
@@ -961,27 +1096,95 @@ export function YearSpreadsheet({
             </Box>
           )}
         />
-        <Tooltip title={t("tableSettings")}>
-          <IconButton
-            size="small"
-            onClick={(event) => setSettingsAnchor(event.currentTarget)}
-            sx={{
-              alignSelf: { xs: "flex-end", md: "center" },
-              width: 38,
-              height: 38,
+        <Stack direction="row" justifyContent="flex-end" spacing={1}>
+          <Tooltip title="Ações da tabela">
+            <IconButton
+              size="small"
+              onClick={(event) => setActionsAnchor(event.currentTarget)}
+              sx={{
+                alignSelf: { xs: "flex-end", md: "center" },
+                width: 38,
+                height: 38,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "var(--mr-card)",
+                color: "text.primary",
+                "&:hover": {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(148,163,184,0.14)"
+                      : "rgba(241,245,249,0.96)",
+                },
+              }}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("tableSettings")}>
+            <IconButton
+              size="small"
+              onClick={(event) => setSettingsAnchor(event.currentTarget)}
+              sx={{
+                alignSelf: { xs: "flex-end", md: "center" },
+                width: 38,
+                height: 38,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "var(--mr-card)",
+                color: "primary.main",
+                "&:hover": {
+                  bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(45,212,191,0.12)" : "rgba(240,253,250,0.96)",
+                },
+              }}
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Stack>
+      <Menu
+        open={Boolean(actionsAnchor)}
+        anchorEl={actionsAnchor}
+        onClose={() => setActionsAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              minWidth: 220,
+              borderRadius: 2,
               border: "1px solid",
               borderColor: "divider",
-              bgcolor: "var(--mr-card)",
-              color: "primary.main",
-              "&:hover": {
-                bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(45,212,191,0.12)" : "rgba(240,253,250,0.96)",
-              },
-            }}
-          >
-            <SettingsIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Stack>
+              bgcolor: "var(--mr-card-solid)",
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setActionsAnchor(null);
+            onOpenCopyAdvanced();
+          }}
+        >
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Copiar dados" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setActionsAnchor(null);
+            onOpenBulkDelete();
+          }}
+          sx={{ color: "error.main" }}
+        >
+          <ListItemIcon sx={{ color: "error.main" }}>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Excluir em massa" />
+        </MenuItem>
+      </Menu>
       <Popover
         open={Boolean(settingsAnchor)}
         anchorEl={settingsAnchor}
@@ -1007,7 +1210,7 @@ export function YearSpreadsheet({
             control={
               <Switch
                 checked={groupsSeparated}
-                onChange={(event) => setGroupsSeparated(event.target.checked)}
+                onChange={(event) => onGroupsSeparatedChange(event.target.checked)}
               />
             }
             label={t("separateGroups")}
@@ -1031,7 +1234,7 @@ export function YearSpreadsheet({
                     size="small"
                     disabled={tableScale <= -2}
                     onClick={() =>
-                      setTableScale((current) => Math.max(-2, current - 1))
+                      onTableScaleChange(Math.max(-2, tableScale - 1))
                     }
                     sx={{
                       width: 30,
@@ -1058,7 +1261,7 @@ export function YearSpreadsheet({
                     size="small"
                     disabled={tableScale >= 2}
                     onClick={() =>
-                      setTableScale((current) => Math.min(2, current + 1))
+                      onTableScaleChange(Math.min(2, tableScale + 1))
                     }
                     sx={{
                       width: 30,
@@ -1075,7 +1278,7 @@ export function YearSpreadsheet({
                 size="small"
                 variant="text"
                 disabled={tableScale === 0}
-                onClick={() => setTableScale(0)}
+                onClick={() => onTableScaleChange(0)}
                 sx={{ minWidth: 0, px: 0.75, fontWeight: 800 }}
               >
                 {t("reset")}

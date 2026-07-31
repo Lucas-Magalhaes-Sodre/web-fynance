@@ -54,6 +54,15 @@ const monthOptions = [
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 11 }, (_, index) => currentYear - 5 + index);
+const SAVINGS_REDEMPTION_INCOME_CATEGORY = "Resgate de economia";
+
+function normalizeCategoryName(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
 
 type FormState = {
   name: string;
@@ -172,7 +181,14 @@ export function FinancialEntryForm({
     { value: 7, label: t("sunday") },
   ];
   const monthItems = monthsByLanguage[language].map((label, index) => ({ value: index + 1, label }));
-  const availableCategories = categories.filter((category) => category.type === form.type);
+  const availableCategories = categories.filter(
+    (category) =>
+      category.type === form.type &&
+      !(
+        form.type === "INCOME" &&
+        normalizeCategoryName(category.name) === normalizeCategoryName(SAVINGS_REDEMPTION_INCOME_CATEGORY)
+      ),
+  );
   const selectedCategoryExists = availableCategories.some((category) => category.name === form.category);
   const invalidCustomRecurrenceRange =
     form.isFixed &&

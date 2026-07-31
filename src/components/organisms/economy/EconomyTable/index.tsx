@@ -51,7 +51,7 @@ export function EconomyTable({
             <TableRow key={saving.id} hover>
               <TableCell>{saving.title}</TableCell>
               <TableCell>{translateCategoryName(saving.category, language)}</TableCell>
-              <TableCell>{formatDate(saving.date)}</TableCell>
+              <TableCell>{saving.isInitialBalance ? "Saldo inicial" : formatDate(saving.date)}</TableCell>
               <TableCell>
                 {goals.find((goal) => goal.id === saving.goalId)?.title ?? "-"}
               </TableCell>

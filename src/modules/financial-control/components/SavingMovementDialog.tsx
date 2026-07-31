@@ -30,6 +30,7 @@ export type SavingMovementFormState = {
   amount: string;
   date: string;
   dueDay: string;
+  isInitialBalance: boolean;
   isFixed: boolean;
   recurrenceType: RecurrenceType;
   recurrenceStartMonth: string;
@@ -149,6 +150,7 @@ export function SavingMovementDialog({
   }
 
   const isWithdraw = form.action === "WITHDRAW_TO_BALANCE";
+  const isInitialBalance = !isWithdraw && form.isInitialBalance;
   const investmentCategories = categories.filter((category) => category.type === "INVESTMENT");
   const withdrawOptions = Object.entries(
     availableSavings.reduce<Record<string, number>>((acc, saving) => {
@@ -213,8 +215,42 @@ export function SavingMovementDialog({
         <Typography color="text.secondary">
           {isWithdraw
             ? t("withdrawSavingText")
-            : t("addSavingText")}
+            : isInitialBalance
+              ? "Cadastre um valor que voce ja tinha guardado antes de usar o sistema. Ele entra no saldo das economias e metas, mas nao impacta o controle financeiro de nenhum mes."
+              : t("addSavingText")}
         </Typography>
+
+        {!isWithdraw ? (
+          <Box
+            sx={{
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography fontWeight={900}>Valor que ja tenho guardado</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Use para saldo inicial, sem vincular a um mes.
+              </Typography>
+            </Box>
+            <Switch
+              checked={form.isInitialBalance}
+              onChange={(event) =>
+                updateForm({
+                  isInitialBalance: event.target.checked,
+                  isFixed: event.target.checked ? false : form.isFixed,
+                  recurrenceType: event.target.checked ? "NONE" : form.recurrenceType,
+                  notify: event.target.checked ? false : form.notify,
+                })
+              }
+            />
+          </Box>
+        ) : null}
 
         <TextField
           select
@@ -319,6 +355,7 @@ export function SavingMovementDialog({
           </>
         ) : (
           <>
+            {!isInitialBalance ? (
             <S.HighlightPanel
               $panelBorderColor="rgba(15,23,42,0.08)"
               $panelBackground={financeColors.savingSoft}
@@ -484,6 +521,7 @@ export function SavingMovementDialog({
                 )}
               </Stack>
             </S.HighlightPanel>
+            ) : null}
             <TextField
               select
               label={t("linkedGoal")}
@@ -548,6 +586,7 @@ export function SavingMovementDialog({
                 ) : null}
               </Stack>
             </S.HighlightPanel>
+            {!isInitialBalance ? (
             <S.HighlightPanel
               $panelBorderColor="rgba(236,72,153,0.18)"
               $panelBackground="rgba(236,72,153,0.08)"
@@ -610,6 +649,7 @@ export function SavingMovementDialog({
                 ) : null}
               </Stack>
             </S.HighlightPanel>
+            ) : null}
             <TextField
               label={t("optionalNote")}
               multiline

@@ -3,6 +3,7 @@ import { i18n } from './index';
 
 const categoryKeys: Record<string, TranslationKey> = {
   economias: 'savings',
+  'resgate de economia': 'catSavingRedemption',
   salario: 'catSalary',
   freelance: 'catFreelance',
   rendimentos: 'catYield',

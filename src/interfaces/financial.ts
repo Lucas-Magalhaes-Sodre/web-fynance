@@ -19,6 +19,7 @@ export type AccessInfo = {
   hasManualAccess: boolean;
   hasTrialAccess: boolean;
   hasPaidAccess: boolean;
+  productKeys?: string[];
   reason: string | null;
 };
 
@@ -77,6 +78,9 @@ export type User = {
   planNameSnapshot?: string | null;
   planPriceSnapshot?: number | null;
   planDurationMonthsSnapshot?: number | null;
+  planProductKeysSnapshot?: string[];
+  planProductLabelsSnapshot?: Record<string, string>;
+  planIncludedItemsSnapshot?: string[];
   couponCodeSnapshot?: string | null;
   couponDiscountSnapshot?: number | null;
   subscriptionCurrentPeriodEnd?: string | null;
@@ -123,6 +127,7 @@ export type Saving = {
   isFixed: boolean;
   recurrenceType: RecurrenceType;
   recurrenceGroupId?: string | null;
+  isInitialBalance?: boolean;
   goalId?: string | null;
   hasYield?: boolean;
   yieldRateMonthly?: number | null;

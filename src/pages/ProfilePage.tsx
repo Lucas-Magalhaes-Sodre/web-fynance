@@ -6,6 +6,7 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Paper from "@mui/material/Paper";
@@ -20,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { AppDialog } from "@/components/molecules/AppDialog";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { normalizePlanProductKeys, productPlanLabel } from "@/constants/planProducts";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { formatDate, formatMoney } from "@/utils/format";
 
@@ -194,6 +196,17 @@ export function ProfilePage() {
           <Typography color="text.secondary">
             Vencimento: <strong>{user?.subscriptionCurrentPeriodEnd ? formatDate(user.subscriptionCurrentPeriodEnd) : user?.trialEndsAt ? `Teste até ${formatDate(user.trialEndsAt)}` : "-"}</strong>
           </Typography>
+          <Box>
+            <Typography color="text.secondary" mb={1}>Itens inclusos</Typography>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+              {normalizePlanProductKeys(user?.access?.productKeys ?? user?.planProductKeysSnapshot).map((key) => (
+                <Chip key={key} size="small" label={productPlanLabel(key, user?.planProductLabelsSnapshot)} variant="outlined" sx={{ fontWeight: 800 }} />
+              ))}
+              {(user?.planIncludedItemsSnapshot ?? []).map((label) => (
+                <Chip key={label} size="small" label={label} variant="outlined" sx={{ fontWeight: 800 }} />
+              ))}
+            </Stack>
+          </Box>
           <Box display="flex" justifyContent="flex-end" pt={1}>
             <Button component={Link} to="/app/billing" variant="contained">
               Ver planos e contratação

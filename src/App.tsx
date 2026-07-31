@@ -17,6 +17,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { LegalPage } from './pages/LegalPage';
 import { EconomyPage } from './pages/EconomyPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
+import { ProductAccessRoute } from './routes/ProductAccessRoute';
 import { CookieConsentBanner } from './components/molecules/CookieConsentBanner';
 
 export default function App() {
@@ -30,19 +31,34 @@ export default function App() {
         <Route path="/legal/:document" element={<LegalPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/app" element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
+            <Route element={<ProductAccessRoute productKey="dashboard" />}>
+              <Route index element={<DashboardPage />} />
+            </Route>
             <Route path="billing" element={<BillingPage />} />
             <Route path="admin/subscriptions" element={<AdminSubscriptionsPage />} />
-            <Route path="control" element={<FinancialControlPage />} />
-            <Route path="cards" element={<CreditCardsPage />} />
-            <Route path="categories" element={<FinancialCategoriesPage />} />
-            <Route path="economy" element={<EconomyPage />} />
+            <Route element={<ProductAccessRoute productKey="financial-control" />}>
+              <Route path="control" element={<FinancialControlPage />} />
+            </Route>
+            <Route element={<ProductAccessRoute productKey="cards" />}>
+              <Route path="cards" element={<CreditCardsPage />} />
+            </Route>
+            <Route element={<ProductAccessRoute productKey="savings" />}>
+              <Route path="economy" element={<EconomyPage />} />
+            </Route>
             <Route path="savings" element={<Navigate to="/app/economy" replace />} />
-            <Route path="goals" element={<FinancialGoalsPage />} />
-            <Route path="birthdays" element={<BirthdaysPage />} />
-            <Route path="vacation-calculator" element={<VacationCalculatorPage />} />
+            <Route element={<ProductAccessRoute productKey="goals" />}>
+              <Route path="goals" element={<FinancialGoalsPage />} />
+            </Route>
+            <Route element={<ProductAccessRoute productKey="birthdays" />}>
+              <Route path="birthdays" element={<BirthdaysPage />} />
+            </Route>
+            <Route element={<ProductAccessRoute productKey="vacation-calculator" />}>
+              <Route path="vacation-calculator" element={<VacationCalculatorPage />} />
+            </Route>
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="settings" element={<FinancialCategoriesPage />} />
+            <Route element={<ProductAccessRoute productKey="settings" />}>
+              <Route path="settings" element={<FinancialCategoriesPage />} />
+            </Route>
             <Route path="categories" element={<Navigate to="/app/settings" replace />} />
           </Route>
         </Route>

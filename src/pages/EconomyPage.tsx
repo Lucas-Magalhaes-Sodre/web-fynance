@@ -14,6 +14,7 @@ import {
   createFinancialReminder,
   createSaving,
   deleteSaving,
+  deleteSavingsGroup,
   getSavingsOverview,
   listFinancialCategories,
   listFinancialGoals,
@@ -60,6 +61,7 @@ const initialForm: SavingMovementFormState = {
   amount: "",
   date: isoDate(),
   dueDay: String(today.getDate()),
+  isInitialBalance: false,
   isFixed: false,
   recurrenceType: "NONE",
   recurrenceStartMonth: String(today.getMonth() + 1),
@@ -106,6 +108,7 @@ function toPayload(form: SavingMovementFormState): SavingPayload {
     date: recurringDate,
     month: payloadDate.getMonth() + 1,
     year: payloadDate.getFullYear(),
+    isInitialBalance: form.isInitialBalance,
     isFixed: form.isFixed,
     recurrenceType: form.isFixed ? form.recurrenceType : "NONE",
     recurrenceGeneration:
@@ -188,9 +191,10 @@ export function EconomyPage() {
             color: category.color,
             description: null,
             amount: item.currentSavedBalance,
-            date: isoDate(),
-            month: today.getMonth() + 1,
-            year: today.getFullYear(),
+      date: isoDate(),
+      month: today.getMonth() + 1,
+      year: today.getFullYear(),
+      isInitialBalance: false,
             isFixed: false,
             recurrenceType: "NONE",
             recurrenceGroupId: null,
@@ -207,7 +211,7 @@ export function EconomyPage() {
   const currentSavings = useMemo(
     () =>
       savings
-        .filter((saving) => saving.amount > 0 && isCurrentSaving(saving))
+        .filter((saving) => saving.amount > 0)
         .filter((saving) => {
           const key = saving.date.slice(0, 10);
           return key >= periodStart && key <= periodEnd;
@@ -309,6 +313,7 @@ export function EconomyPage() {
       amount: formatMoney(saving.amount),
       date: saving.date.slice(0, 10),
       dueDay: String(new Date(saving.date).getDate()),
+      isInitialBalance: saving.isInitialBalance ?? false,
       isFixed: saving.isFixed,
       recurrenceType: saving.recurrenceType,
       recurrenceStartMonth: String(saving.month),
@@ -399,6 +404,32 @@ export function EconomyPage() {
     await loadData();
   }
 
+  async function removeSavingsCategory(category: string) {
+    const confirmed = await confirm({
+      title: "Excluir caixinha inteira",
+      description: `Esta acao e irreversivel. Todas as economias da categoria "${translateCategoryName(category, language)}" serao removidas e isso refletira em metas, controle financeiro e historico.`,
+      confirmLabel: t("delete"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    await deleteSavingsGroup({ category });
+    setNotice(t("savingDeleted"));
+    await loadData();
+  }
+
+  async function removeSavingsItem(category: string, title: string) {
+    const confirmed = await confirm({
+      title: "Excluir economia inteira",
+      description: `Esta acao e irreversivel. Todas as movimentacoes de "${title}" serao removidas e isso refletira em metas, controle financeiro e historico.`,
+      confirmLabel: t("delete"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    await deleteSavingsGroup({ category, title });
+    setNotice(t("savingDeleted"));
+    await loadData();
+  }
+
   return (
     <Stack spacing={3}>
       <EconomyHero
@@ -437,6 +468,8 @@ export function EconomyPage() {
             categories={overview.categories}
             onEditItem={(category, title, savingIds) => openSavingFromBox(category, title, savingIds, "edit")}
             onDetailsItem={(category, title, savingIds) => openSavingFromBox(category, title, savingIds, "details")}
+            onDeleteCategory={removeSavingsCategory}
+            onDeleteItem={removeSavingsItem}
           />
           <Stack spacing={1}>
             <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>

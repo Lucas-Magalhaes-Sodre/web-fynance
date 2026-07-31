@@ -12,6 +12,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { normalizePlanProductKeys, productPlanLabel } from '@/constants/planProducts';
 import { useAuth } from '@/contexts/AuthContext';
 import { createCheckout, getBillingPublicSettings, getBillingStatus, listBillingPlans, validateBillingCoupon, type BillingPlan, type BillingStatus, type CouponValidationResult } from '@/services/billing';
 import { formatDate, formatMoney } from '@/utils/format';
@@ -134,7 +135,14 @@ export function BillingPage() {
                     <Chip label="Plano atual" color="success" size="small" sx={{ fontWeight: 900 }} />
                   ) : null}
                 </Stack>
-                <Typography variant="h3" fontWeight={950}>{formatMoney(item.price)}</Typography>
+                <Box>
+                  {item.originalPrice && item.originalPrice > item.price ? (
+                    <Typography color="text.secondary" sx={{ textDecoration: 'line-through', fontWeight: 900 }}>
+                      {formatMoney(item.originalPrice)}
+                    </Typography>
+                  ) : null}
+                  <Typography variant="h3" fontWeight={950}>{formatMoney(item.price)}</Typography>
+                </Box>
                 <Typography color="text.secondary">
                   {item.durationMonths === 1 ? 'por mês' : `a cada ${item.durationMonths} meses`}
                 </Typography>
@@ -150,9 +158,23 @@ export function BillingPage() {
                 ) : null}
                 <Typography color="text.secondary">{item.description}</Typography>
                 <Paper sx={{ p: 1.5, borderRadius: 3, bgcolor: 'action.hover', boxShadow: 'none' }}>
+                  <Typography variant="body2" fontWeight={900} mb={1}>Itens inclusos</Typography>
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                    {normalizePlanProductKeys(item.productKeys).map((key) => (
+                      <Chip key={key} size="small" label={productPlanLabel(key, item.productLabels)} variant="outlined" sx={{ fontWeight: 800 }} />
+                    ))}
+                    {(item.includedItems ?? []).map((label) => (
+                      <Chip key={label} size="small" label={label} variant="outlined" sx={{ fontWeight: 800 }} />
+                    ))}
+                    {!normalizePlanProductKeys(item.productKeys).length && !(item.includedItems ?? []).length ? (
+                      <Typography variant="body2" color="text.secondary">Nenhum item incluso.</Typography>
+                    ) : null}
+                  </Stack>
+                </Paper>
+                <Paper sx={{ p: 1.5, borderRadius: 3, bgcolor: 'action.hover', boxShadow: 'none' }}>
                   <Typography variant="body2" color="text.secondary">
                     Condições deste plano: {item.name}, {formatMoney(validatedCouponByPlan[item.id]?.finalPrice ?? item.price)}, duração de {item.durationMonths} mês(es)
-                    {validatedCouponByPlan[item.id] ? `, com cupom ${validatedCouponByPlan[item.id]?.code}` : ''}.
+                    {validatedCouponByPlan[item.id] ? `, com cupom ${validatedCouponByPlan[item.id]?.code}` : ''}, com acesso aos itens listados acima.
                   </Typography>
                 </Paper>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
