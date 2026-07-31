@@ -1,3 +1,4 @@
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
@@ -36,6 +37,15 @@ export function LoginPage() {
     <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
       <Paper sx={{ p: 4, width: '100%', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
         <Stack component="form" spacing={2.5} onSubmit={handleSubmit}>
+          <Button
+            component={Link}
+            to="/"
+            variant="text"
+            startIcon={<ArrowBackIcon />}
+            sx={{ alignSelf: 'flex-start', fontWeight: 800 }}
+          >
+            Voltar para a página inicial
+          </Button>
           <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
             <Typography variant="h4" fontWeight={900}>{t('loginTitle')}</Typography>
             <PreferenceControls />

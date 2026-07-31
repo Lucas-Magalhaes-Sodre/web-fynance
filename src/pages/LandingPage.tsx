@@ -22,8 +22,9 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PreferenceControls } from "@/components/molecules/PreferenceControls";
+import { normalizePlanProductKeys, productPlanLabel } from "@/constants/planProducts";
 import { usePreferences } from "@/contexts/PreferencesContext";
-import { listBillingPlans, type BillingPlan } from "@/services/billing";
+import { getBillingPublicSettings, listBillingPlans, type BillingPlan } from "@/services/billing";
 import { formatMoney } from "@/utils/format";
 
 const MotionBox = motion(Box);
@@ -47,15 +48,15 @@ function MiniDashboard() {
         position: "relative",
         maxWidth: 640,
         mx: "auto",
-        p: 2,
-        borderRadius: 7,
+        p: { xs: 1.2, sm: 2 },
+        borderRadius: { xs: 5, sm: 7 },
         overflow: "visible",
       }}
     >
       <Paper
         sx={{
-          p: 3,
-          borderRadius: 5,
+          p: { xs: 2, sm: 3 },
+          borderRadius: { xs: 4, sm: 5 },
           border: "1px solid rgba(226,232,240,0.85)",
           boxShadow: "none",
           bgcolor: "var(--mr-card-solid)",
@@ -71,8 +72,17 @@ function MiniDashboard() {
             <Typography fontWeight={800} color="text.secondary">
               {t('miniFinalBalance')}
             </Typography>
-            <Typography variant="h3" fontWeight={950} letterSpacing="-0.05em">
-              R$ 8.420,00
+            <Typography
+              variant="h3"
+              fontWeight={950}
+              letterSpacing={0}
+              sx={{
+                fontSize: { xs: 34, sm: 48 },
+                lineHeight: 1.05,
+                whiteSpace: "nowrap",
+              }}
+            >
+              R$&nbsp;8.420,00
             </Typography>
           </Box>
           <Box
@@ -80,9 +90,10 @@ function MiniDashboard() {
               borderRadius: 999,
               bgcolor: "#ECFDF5",
               color: "#047857",
-              px: 2,
-              py: 1,
+              px: { xs: 1.4, sm: 2 },
+              py: { xs: 0.7, sm: 1 },
               fontWeight: 900,
+              whiteSpace: "nowrap",
             }}
           >
             +18,4%
@@ -96,16 +107,16 @@ function MiniDashboard() {
             [t('miniPending'), "R$ 920", "rgba(180,83,9,0.12)", "#B45309"],
           ].map(([label, value, bg, color]) => (
             <Grid item xs={4} key={label}>
-              <Box sx={{ p: 2, borderRadius: 4, bgcolor: bg }}>
+              <Box sx={{ p: { xs: 1.15, sm: 2 }, borderRadius: { xs: 3, sm: 4 }, bgcolor: bg, minHeight: { xs: 96, sm: 104 } }}>
                 <Typography
                   variant="caption"
                   fontWeight={900}
                   color={color}
-                  sx={{ opacity: 0.78 }}
+                  sx={{ opacity: 0.78, fontSize: { xs: 11, sm: 12 } }}
                 >
                   {label}
                 </Typography>
-                <Typography mt={1} fontWeight={950} color={color}>
+                <Typography mt={1} fontWeight={950} color={color} sx={{ fontSize: { xs: 15, sm: 16 }, lineHeight: 1.25 }}>
                   {value}
                 </Typography>
               </Box>
@@ -138,7 +149,7 @@ function MiniDashboard() {
               2026
             </Typography>
           </Stack>
-          <Stack direction="row" alignItems="flex-end" spacing={1} height={128}>
+          <Stack direction="row" alignItems="flex-end" spacing={1} height={{ xs: 104, sm: 128 }}>
             {[46, 60, 44, 72, 68, 82, 57, 76, 88, 64, 92, 78].map(
               (height, index) => (
                 <MotionBox
@@ -161,6 +172,7 @@ function MiniDashboard() {
       <Box
         className="floating-card"
         sx={{
+          display: { xs: "none", sm: "block" },
           position: "absolute",
           left: { xs: 8, md: -48 },
           top: { xs: 86, md: 94 },
@@ -184,6 +196,7 @@ function MiniDashboard() {
       <Box
         className="floating-card"
         sx={{
+          display: { xs: "none", sm: "block" },
           position: "absolute",
           right: { xs: 10, md: -24 },
           bottom: 72,
@@ -210,6 +223,8 @@ function MiniDashboard() {
 export function LandingPage() {
   const { themeMode, t } = usePreferences();
   const [plans, setPlans] = useState<BillingPlan[]>([]);
+  const [trialDays, setTrialDays] = useState(14);
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
   const { scrollY } = useScroll();
   const navBg = useTransform(
     scrollY,
@@ -228,6 +243,10 @@ export function LandingPage() {
     [t('featureCalendarTitle'), t('featureCalendarText'), BarChart3],
     [t('featureSavingsTitle'), t('featureSavingsText'), WalletCards],
     [t('featureGoalsTitle'), t('featureGoalsText'), LayoutGrid],
+    [t('featureBirthdaysTitle'), t('featureBirthdaysText'), CalendarDays],
+    [t('featureVacationTitle'), t('featureVacationText'), Sparkles],
+    [t('featureRemindersTitle'), t('featureRemindersText'), CalendarDays],
+    [t('featurePersonalizationTitle'), t('featurePersonalizationText'), Sparkles],
     [t('featureEntriesTitle'), t('featureEntriesText'), Sparkles],
     [t('featureCardsTitle'), t('featureCardsText'), CreditCard],
     [t('featureDashboardTitle'), t('featureDashboardText'), BarChart3],
@@ -235,14 +254,19 @@ export function LandingPage() {
   ] as const;
 
   useEffect(() => {
-    listBillingPlans().then(setPlans).catch(() => setPlans([]));
+    Promise.all([listBillingPlans(), getBillingPublicSettings()])
+      .then(([plansResult, settingsResult]) => {
+        setPlans(plansResult);
+        setTrialDays(settingsResult.defaultTrialDays || 14);
+      })
+      .catch(() => setPlans([]));
   }, []);
 
   const visiblePlans = plans.length
     ? plans
     : [
-        { id: 'monthly', name: t('monthly'), description: t('monthlyDescription'), price: 24.9, durationMonths: 1, currency: 'BRL', active: true, sortOrder: 10, createdAt: '', updatedAt: '' },
-        { id: 'yearly', name: t('yearly'), description: t('yearlyDescription'), price: 238.9, durationMonths: 12, currency: 'BRL', active: true, sortOrder: 20, createdAt: '', updatedAt: '' }
+        { id: 'monthly', name: t('monthly'), description: t('monthlyDescription'), originalPrice: null, price: 24.9, durationMonths: 1, productKeys: normalizePlanProductKeys(), includedItems: [], currency: 'BRL', active: true, sortOrder: 10, createdAt: '', updatedAt: '' },
+        { id: 'yearly', name: t('yearly'), description: t('yearlyDescription'), originalPrice: null, price: 238.9, durationMonths: 12, productKeys: normalizePlanProductKeys(), includedItems: [], currency: 'BRL', active: true, sortOrder: 20, createdAt: '', updatedAt: '' }
       ];
 
   return (
@@ -434,6 +458,31 @@ export function LandingPage() {
                   </Typography>
                 </MotionBox>
                 <MotionBox variants={fadeUp}>
+                  <Paper
+                    sx={{
+                      mt: 3,
+                      p: 2,
+                      borderRadius: 4,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      bgcolor: "var(--mr-card-solid)",
+                      border: "1px solid var(--mr-line)",
+                      boxShadow: "0 16px 40px rgba(15,23,42,0.08)",
+                    }}
+                  >
+                    <CheckCircle2 color="#0F766E" size={22} />
+                    <Box>
+                      <Typography fontWeight={950} color="var(--mr-ink)">
+                        {t('freeTrialPrefix')} {trialDays} {t('freeTrialDaysSuffix')}
+                      </Typography>
+                      <Typography color="text.secondary" fontWeight={700}>
+                        {t('freeTrialNoCard')}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </MotionBox>
+                <MotionBox variants={fadeUp}>
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     spacing={2}
@@ -450,14 +499,16 @@ export function LandingPage() {
                         py: 1.8,
                         fontWeight: 950,
                         textTransform: "none",
-                        bgcolor: "#0F172A",
+                        bgcolor: themeMode === "dark" ? "#5EEAD4" : "#0F172A",
+                        color: themeMode === "dark" ? "#06231F" : "#FFFFFF",
+                        boxShadow: themeMode === "dark" ? "0 18px 42px rgba(94,234,212,0.24)" : "0 18px 42px rgba(15,23,42,0.18)",
                         "&:hover": {
-                          bgcolor: "#1E293B",
+                          bgcolor: themeMode === "dark" ? "#2DD4BF" : "#1E293B",
                           transform: "translateY(-2px)",
                         },
                       }}
                     >
-                      {t('landingStart')}
+                      {t('landingTrialCta')}
                     </Button>
                     <Button
                       component={Link}
@@ -581,50 +632,86 @@ export function LandingPage() {
                 </Stack>
                 <Box
                   sx={{
-                    overflow: "hidden",
+                    overflowX: { xs: "auto", md: "hidden" },
                     borderRadius: 4,
-                  border: "1px solid var(--mr-line)",
+                    border: "1px solid var(--mr-line)",
                   }}
                 >
-                  {[t('miniIncomes'), t('miniExpenses'), t('result')].map(
-                    (row, rowIndex) => (
-                      <Grid
-                        container
-                        key={row}
+                  <Box
+                    sx={{
+                      width: "100%",
+                      minWidth: { xs: 620, md: 0 },
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1.65fr repeat(4, 1fr)",
+                        md: "minmax(128px, 1.5fr) repeat(4, minmax(58px, 1fr))",
+                      },
+                      "& > *": {
+                        borderRight: "1px solid var(--mr-line)",
+                        borderBottom: "1px solid var(--mr-line)",
+                        p: { xs: 1.2, md: 1.05 },
+                        fontWeight: 900,
+                        minWidth: 0,
+                      },
+                    }}
+                  >
+                    {[t('landingPreviewCategory'), 'Jan', 'Fev', 'Mar', t('landingPreviewTotal')].map((label) => (
+                      <Typography
+                        key={label}
+                        textAlign={label === t('landingPreviewCategory') ? "left" : "right"}
+                        color="text.secondary"
+                        sx={{ fontSize: { xs: 14, md: 13 }, whiteSpace: "nowrap" }}
+                      >
+                        {label}
+                      </Typography>
+                    ))}
+                    {[
+                      { label: t('incomes'), type: 'section', color: '#2563EB', values: ['', '', '', ''] },
+                      { label: t('landingPreviewSalary'), type: 'category', color: '#16A34A', values: ['R$ 6.200', 'R$ 6.200', 'R$ 6.200', 'R$ 18.600'] },
+                      { label: t('landingPreviewSalaryFixed'), type: 'child', color: '#16A34A', values: ['R$ 5.800', 'R$ 5.800', 'R$ 5.800', 'R$ 17.400'] },
+                      { label: t('landingPreviewFreelance'), type: 'child', color: '#16A34A', values: ['R$ 400', 'R$ 400', 'R$ 400', 'R$ 1.200'] },
+                      { label: t('expenses'), type: 'section', color: '#EA580C', values: ['', '', '', ''] },
+                      { label: t('landingPreviewCards'), type: 'category', color: '#EA580C', values: ['R$ 920', 'R$ 920', 'R$ 920', 'R$ 2.760'] },
+                      { label: t('landingPreviewInstallment'), type: 'child', color: '#EA580C', values: ['R$ 300', 'R$ 300', 'R$ 300', 'R$ 900'] },
+                      { label: t('landingPreviewSubscriptions'), type: 'child', color: '#EA580C', values: ['R$ 120', 'R$ 120', 'R$ 120', 'R$ 360'] },
+                      { label: t('savings'), type: 'section', color: '#D59A00', values: ['', '', '', ''] },
+                      { label: t('landingPreviewReserve'), type: 'category', color: '#D59A00', values: ['R$ 500', 'R$ 500', 'R$ 500', 'R$ 1.500'] },
+                      { label: t('landingPreviewEmergencyBox'), type: 'child', color: '#D59A00', values: ['R$ 500', 'R$ 500', 'R$ 500', 'R$ 1.500'] },
+                      { label: t('result'), type: 'result', color: '#16A34A', values: ['R$ 4.780', 'R$ 4.780', 'R$ 4.780', 'R$ 14.340'] },
+                    ].flatMap((row) => [
+                      <Box
+                        key={`${row.label}-label`}
                         sx={{
-                          borderBottom: rowIndex < 2 ? "1px solid var(--mr-line)" : 0,
+                          bgcolor: row.type === 'section' ? row.color : row.type === 'result' ? '#ECFDF5' : 'var(--mr-card-solid)',
+                          color: row.type === 'section' ? '#FFFFFF' : row.color,
+                          pl: row.type === 'child' ? 4 : 1.3,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
                         }}
                       >
-                        <Grid
-                          item
-                          xs={4}
-                          sx={{ bgcolor: "var(--mr-field)", p: 1.7, fontWeight: 950 }}
+                        {row.type === 'category' ? <ArrowRight size={14} /> : null}
+                        {row.type === 'child' ? <Box sx={{ width: 8, height: 8, borderRadius: 999, bgcolor: row.color }} /> : null}
+                        <Typography fontWeight={950} noWrap sx={{ fontSize: { xs: 14, md: 13 } }}>{row.label}</Typography>
+                      </Box>,
+                      ...row.values.map((value, index) => (
+                        <Typography
+                          key={`${row.label}-${index}`}
+                          textAlign="right"
+                          sx={{
+                            bgcolor: row.type === 'section' ? row.color : row.type === 'result' ? '#ECFDF5' : 'var(--mr-card-solid)',
+                            color: row.type === 'section' ? '#FFFFFF' : row.color,
+                            fontSize: { xs: 14, md: 13 },
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
                         >
-                          {row}
-                        </Grid>
-                        {[8200, 4380, 3820, 4960].map((value, index) => (
-                          <Grid
-                            item
-                            xs={2}
-                            key={index}
-                            sx={{
-                              p: 1.7,
-                              textAlign: "right",
-                              fontWeight: 900,
-                              color:
-                                rowIndex === 0
-                                  ? "#2563EB"
-                                  : rowIndex === 1
-                                    ? "#EA580C"
-                                    : "#16A34A",
-                            }}
-                          >
-                            R$ {value}
-                          </Grid>
-                        ))}
-                      </Grid>
-                    ),
-                  )}
+                          {value}
+                        </Typography>
+                      )),
+                    ])}
+                  </Box>
                 </Box>
               </Paper>
             </MotionPaper>
@@ -667,6 +754,45 @@ export function LandingPage() {
             </MotionBox>
           </Grid>
         </Grid>
+      </Container>
+
+      <Container maxWidth="xl" sx={{ py: { xs: 8, md: 12 } }}>
+        <Paper
+          className="glass-card"
+          sx={{ p: { xs: 3, md: 5 }, borderRadius: 7 }}
+        >
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <WalletCards color="#0F766E" size={34} />
+              <Typography
+                variant="h2"
+                sx={{ mt: 2, fontSize: { xs: 34, md: 46 }, fontWeight: 950, letterSpacing: "-0.05em" }}
+              >
+                {t('savingsShowcaseTitle')}
+              </Typography>
+              <Typography sx={{ mt: 2, color: "text.secondary", fontSize: 18, lineHeight: 1.7 }}>
+                {t('savingsShowcaseText')}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={7}>
+              <Grid container spacing={2}>
+                {[
+                  [t('savingsShowcaseBoxTitle'), t('savingsShowcaseBoxText')],
+                  [t('savingsShowcaseYieldTitle'), t('savingsShowcaseYieldText')],
+                  [t('savingsShowcaseWithdrawTitle'), t('savingsShowcaseWithdrawText')],
+                ].map(([title, text]) => (
+                  <Grid item xs={12} sm={4} key={title}>
+                    <Paper sx={{ height: '100%', p: 2.5, borderRadius: 4, bgcolor: 'var(--mr-card-soft)', border: '1px solid var(--mr-line)', boxShadow: 'none' }}>
+                      <CheckCircle2 color="#0F766E" size={20} />
+                      <Typography mt={1.5} fontWeight={950}>{title}</Typography>
+                      <Typography mt={0.8} color="text.secondary" lineHeight={1.6}>{text}</Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Paper>
       </Container>
 
       <Container id="seguranca" maxWidth="xl" sx={{ py: { xs: 8, md: 12 } }}>
@@ -767,8 +893,12 @@ export function LandingPage() {
               {[
                 [t('menuDashboard'), t('moduleDashboardText')],
                 [t('menuFinancialControl'), t('moduleControlText')],
+                [t('menuCards'), t('moduleCardsText')],
                 [t('menuSavings'), t('moduleSavingsText')],
                 [t('menuGoals'), t('moduleGoalsText')],
+                [t('menuBirthdays'), t('moduleBirthdaysText')],
+                [t('menuVacationCalculator'), t('moduleVacationText')],
+                [t('landingPersonalizationModule'), t('modulePersonalizationText')],
               ].map(([title, text]) => (
                 <Grid item xs={12} sm={6} key={title}>
                   <MotionPaper
@@ -833,8 +963,38 @@ export function LandingPage() {
               </Typography>
             </Box>
 
+            <Paper
+              sx={{
+                p: 2.5,
+                borderRadius: 5,
+                bgcolor: themeMode === "dark" ? "rgba(45,212,191,0.12)" : "#ECFDF5",
+                border: "1px solid rgba(15,118,110,0.28)",
+                boxShadow: "none",
+              }}
+            >
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }}>
+                <CheckCircle2 color="#0F766E" size={26} />
+                <Box>
+                  <Typography fontWeight={950} color="var(--mr-ink)">
+                    {t('freeTrialPricingTitle')}: {trialDays} {t('freeTrialDaysSuffix')}
+                  </Typography>
+                  <Typography color="text.secondary" lineHeight={1.6}>
+                    {t('freeTrialPricingText')}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+
             <Grid container spacing={2.5}>
-              {visiblePlans.map((plan, index) => (
+              {visiblePlans.map((plan, index) => {
+                const includedLabels = [
+                  ...normalizePlanProductKeys(plan.productKeys).map((key) => productPlanLabel(key, plan.productLabels)),
+                  ...(plan.includedItems ?? []),
+                ];
+                const isExpanded = Boolean(expandedPlans[plan.id]);
+                const hiddenCount = Math.max(includedLabels.length - 6, 0);
+                const visibleIncludedItems = isExpanded ? includedLabels : includedLabels.slice(0, 6);
+                return (
               <Grid item xs={12} md={visiblePlans.length === 1 ? 12 : 6} key={plan.id}>
                 <Paper
                   sx={{
@@ -866,6 +1026,11 @@ export function LandingPage() {
                     </Box>
                   ) : null}
                   <Typography fontWeight={950} color="primary">{plan.name}</Typography>
+                  {plan.originalPrice && plan.originalPrice > plan.price ? (
+                    <Typography mt={1} color="text.secondary" sx={{ textDecoration: "line-through", fontWeight: 900 }}>
+                      {formatMoney(plan.originalPrice)}
+                    </Typography>
+                  ) : null}
                   <Typography variant="h3" fontWeight={950} letterSpacing={0} mt={1}>
                     {formatMoney(plan.price)}
                   </Typography>
@@ -875,9 +1040,27 @@ export function LandingPage() {
                   <Typography mt={2} color="text.secondary" lineHeight={1.7}>
                     {plan.description}
                   </Typography>
+                  <Stack spacing={1} mt={2}>
+                    {visibleIncludedItems.map((label) => (
+                      <Stack key={label} direction="row" spacing={1} alignItems="center">
+                        <CheckCircle2 color="#0F766E" size={16} />
+                        <Typography variant="body2" fontWeight={800}>{label}</Typography>
+                      </Stack>
+                    ))}
+                    {hiddenCount > 0 ? (
+                      <Button
+                        size="small"
+                        onClick={() => setExpandedPlans((current) => ({ ...current, [plan.id]: !isExpanded }))}
+                        sx={{ alignSelf: "flex-start", px: 0, fontWeight: 950, textTransform: "none", color: "#0F766E" }}
+                      >
+                        {isExpanded ? t('showLessItems') : `${t('showMoreItems')} (+${hiddenCount})`}
+                      </Button>
+                    ) : null}
+                  </Stack>
                 </Paper>
               </Grid>
-              ))}
+                );
+              })}
             </Grid>
 
             <Grid container spacing={1.5}>
@@ -903,18 +1086,27 @@ export function LandingPage() {
                 component={Link}
                 to="/register"
                 variant="contained"
+                endIcon={<ArrowRight size={18} />}
                 sx={{
                   borderRadius: 999,
-                  px: 4,
-                  py: 1.7,
-                  bgcolor: "#0F172A",
-                  color: "white",
+                  px: { xs: 4, sm: 5.5 },
+                  py: 1.9,
+                  minWidth: { xs: "100%", sm: 250 },
+                  bgcolor: "#2DD4BF",
+                  background: "linear-gradient(135deg, #5EEAD4 0%, #2DD4BF 48%, #38BDF8 100%)",
+                  color: "#06231F",
                   fontWeight: 950,
                   textTransform: "none",
-                  "&:hover": { bgcolor: "#1E293B", transform: "translateY(-2px)" },
+                  boxShadow: "0 18px 44px rgba(45,212,191,0.34)",
+                  border: "1px solid rgba(255,255,255,0.45)",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #99F6E4 0%, #5EEAD4 46%, #7DD3FC 100%)",
+                    transform: "translateY(-3px)",
+                    boxShadow: "0 24px 56px rgba(45,212,191,0.42)",
+                  },
                 }}
               >
-                {t('landingStart')}
+                {t('landingTrialCta')}
               </Button>
             </Box>
           </Stack>

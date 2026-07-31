@@ -10,14 +10,14 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 const documents = {
   terms: {
     title: 'Termos de Uso',
-    version: '2026-07-24',
+    version: '2026-07-31',
     summary: 'Regras gerais para uso do Deluket Finance, contratação de planos, acesso e responsabilidades.',
     sections: [
       ['1. Serviço', 'O Deluket Finance é uma plataforma de organização financeira para controle de receitas, despesas, cartões, economias, metas, aniversários e lembretes. O sistema não substitui consultoria financeira, contábil, jurídica ou tributária.'],
       ['2. Conta e segurança', 'Cada usuário é responsável por manter seus dados de acesso protegidos e por informar dados verdadeiros no cadastro. O acesso administrativo é restrito a usuários autorizados.'],
-      ['3. Planos dinâmicos', 'Os planos podem variar em nome, preço, duração, benefícios e promoções ao longo do tempo. As condições aplicáveis são aquelas exibidas na tela de contratação no momento em que o usuário confirma o pagamento.'],
-      ['4. Cobrança e acesso', 'Ao contratar um plano, o usuário autoriza a cobrança pelo provedor de pagamento selecionado. O acesso pago permanece conforme o prazo, status de pagamento e condições do plano contratado.'],
-      ['5. Alterações futuras', 'Mudanças futuras nos planos, preços ou duração não alteram automaticamente o snapshot da contratação já realizada, salvo em nova contratação, renovação ou ajuste informado ao usuário quando aplicável.'],
+      ['3. Planos dinâmicos', 'Os planos podem variar em nome, preço, valor promocional, duração, itens inclusos, benefícios e promoções ao longo do tempo. As condições aplicáveis são aquelas exibidas na tela de contratação no momento em que o usuário confirma o pagamento.'],
+      ['4. Cobrança e acesso', 'Ao contratar um plano, o usuário autoriza a cobrança pelo provedor de pagamento selecionado. O acesso pago permanece conforme o prazo, status de pagamento, itens inclusos e condições do plano contratado.'],
+      ['5. Alterações futuras', 'Mudanças futuras nos planos, preços, duração ou itens inclusos não alteram automaticamente o snapshot da contratação já realizada, salvo em nova contratação, renovação ou ajuste informado ao usuário quando aplicável.'],
       ['6. Uso adequado', 'É proibido tentar acessar dados de outros usuários, explorar falhas, burlar controles de acesso, automatizar abuso da plataforma ou usar o sistema para finalidade ilegal.'],
       ['7. Limitações', 'Embora o sistema busque precisão, valores, projeções e alertas dependem dos dados informados pelo usuário e podem exigir conferência manual.'],
       ['8. Suspensão ou bloqueio', 'O acesso pode ser bloqueado em caso de inadimplência, suspeita de fraude, violação dos termos ou solicitação do próprio usuário.']
@@ -25,7 +25,7 @@ const documents = {
   },
   privacy: {
     title: 'Política de Privacidade',
-    version: '2026-07-24',
+    version: '2026-07-31',
     summary: 'Como o Deluket Finance trata dados pessoais em conformidade com a LGPD.',
     sections: [
       ['1. Dados coletados', 'Podemos tratar nome, e-mail, telefone, cidade, ocupação, preferências, registros financeiros inseridos pelo usuário, dados de assinatura, consentimentos, logs técnicos e dados necessários para segurança.'],
@@ -57,7 +57,7 @@ const documents = {
       ['2. Cancelamento', 'O usuário pode cancelar a assinatura conforme os meios oferecidos pelo provedor de pagamento ou pelo suporte do Deluket Finance. O cancelamento impede cobranças futuras quando processado corretamente.'],
       ['3. Direito de arrependimento', 'Para contratações online no Brasil, o consumidor pode exercer o direito de arrependimento no prazo legal de 7 dias, quando aplicável.'],
       ['4. Reembolsos', 'Reembolsos serão avaliados conforme a lei, status da assinatura, data da contratação, uso do serviço, regras do provedor de pagamento e política vigente no momento da compra.'],
-      ['5. Planos dinâmicos', 'O valor e duração considerados para cancelamento ou reembolso são os do plano aceito no momento da contratação, incluindo eventuais cupons aplicados.']
+      ['5. Planos dinâmicos', 'O valor, duração e itens inclusos considerados para cancelamento ou reembolso são os do plano aceito no momento da contratação, incluindo eventuais cupons aplicados.']
     ]
   }
 } as const;

@@ -18,6 +18,9 @@ export type BillingStatus = Pick<
   | 'planNameSnapshot'
   | 'planPriceSnapshot'
   | 'planDurationMonthsSnapshot'
+  | 'planProductKeysSnapshot'
+  | 'planProductLabelsSnapshot'
+  | 'planIncludedItemsSnapshot'
   | 'couponCodeSnapshot'
   | 'couponDiscountSnapshot'
   | 'subscriptionCurrentPeriodEnd'
@@ -38,9 +41,13 @@ export type BillingPlan = {
   id: string;
   name: string;
   description?: string | null;
+  originalPrice?: number | null;
   price: number;
   currency: string;
   durationMonths: number;
+  productKeys: string[];
+  productLabels?: Record<string, string>;
+  includedItems: string[];
   active: boolean;
   sortOrder: number;
   createdAt: string;
