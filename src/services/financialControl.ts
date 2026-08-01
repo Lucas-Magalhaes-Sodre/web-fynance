@@ -373,6 +373,8 @@ export async function updateEntryValue(id: string, payload: {
   paidWithCreditCard?: boolean;
   creditCardId?: string | null;
   creditCardInstallments?: number | null;
+  creditCardFirstInstallmentMonth?: number | null;
+  creditCardFirstInstallmentYear?: number | null;
 }) {
   const { data } = await api.patch(`/financial-items/${id}/value`, payload);
   return data;

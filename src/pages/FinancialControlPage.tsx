@@ -1025,6 +1025,8 @@ export function FinancialControlPage() {
     paidWithCreditCard?: boolean;
     creditCardId?: string | null;
     creditCardInstallments?: number | null;
+    creditCardFirstInstallmentMonth?: number | null;
+    creditCardFirstInstallmentYear?: number | null;
   }) {
     if (!cellEdit) return;
     if (cellEdit.type === "INVESTMENT") {
@@ -1061,6 +1063,8 @@ export function FinancialControlPage() {
         paidWithCreditCard: payload.paidWithCreditCard,
         creditCardId: payload.creditCardId,
         creditCardInstallments: payload.creditCardInstallments,
+        creditCardFirstInstallmentMonth: payload.creditCardFirstInstallmentMonth,
+        creditCardFirstInstallmentYear: payload.creditCardFirstInstallmentYear,
       });
       setCellEdit(null);
       await loadData();
