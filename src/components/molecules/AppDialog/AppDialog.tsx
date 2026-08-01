@@ -1,4 +1,6 @@
+import CloseIcon from "@mui/icons-material/Close";
 import Dialog, { type DialogProps } from "@mui/material/Dialog";
+import IconButton from "@mui/material/IconButton";
 import type { ReactNode } from "react";
 import * as S from "./styles";
 
@@ -11,6 +13,7 @@ type AppDialogProps = {
   onClose: () => void;
   maxWidth?: DialogProps["maxWidth"];
   titleAccent?: string;
+  hideCloseButton?: boolean;
 };
 
 export function AppDialog({
@@ -22,20 +25,28 @@ export function AppDialog({
   onClose,
   maxWidth = "sm",
   titleAccent,
+  hideCloseButton = false,
 }: AppDialogProps) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth={maxWidth}>
       <S.Header>
-        {eyebrow ? (
-          <S.ColoredEyebrow variant="overline" $accent={titleAccent}>
-            {eyebrow}
-          </S.ColoredEyebrow>
+        <S.TitleContent>
+          {eyebrow ? (
+            <S.ColoredEyebrow variant="overline" $accent={titleAccent}>
+              {eyebrow}
+            </S.ColoredEyebrow>
+          ) : null}
+          {typeof title === "string" ? (
+            <S.Heading variant="h5">{title}</S.Heading>
+          ) : (
+            title
+          )}
+        </S.TitleContent>
+        {!hideCloseButton ? (
+          <IconButton size="small" onClick={onClose} aria-label="Fechar">
+            <CloseIcon fontSize="small" />
+          </IconButton>
         ) : null}
-        {typeof title === "string" ? (
-          <S.Heading variant="h5">{title}</S.Heading>
-        ) : (
-          title
-        )}
       </S.Header>
       <S.Content>{children}</S.Content>
       <S.Actions>{actions}</S.Actions>

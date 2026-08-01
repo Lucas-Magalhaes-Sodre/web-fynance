@@ -86,6 +86,11 @@ export function AppLayout() {
     });
   }
 
+  function closeMenu() {
+    localStorage.setItem('@minha-receita:menu-open', 'false');
+    setOpen(false);
+  }
+
   useEffect(() => {
     if (!user?.id || !trialInfo) return;
     const key = `@minha-receita:trial-welcome-seen:${user.id}`;
@@ -139,7 +144,10 @@ export function AppLayout() {
           <Box
             component="button"
             type="button"
-            onClick={() => navigate('/app/profile')}
+            onClick={() => {
+              closeMenu();
+              navigate('/app/profile');
+            }}
             aria-label={t('menuProfile')}
             sx={{
               display: 'flex',
@@ -198,6 +206,7 @@ export function AppLayout() {
               <ListItemButton
                 component={NavLink}
                 to={link.to}
+                onClick={closeMenu}
                 selected={location.pathname === link.to}
                 sx={{
                   borderRadius: 3,
@@ -275,17 +284,24 @@ export function AppLayout() {
           component="footer"
           mt={{ xs: 4, md: 5 }}
           sx={{
-            color: 'text.secondary'
+            mx: { xs: -2, md: -3 },
+            px: { xs: 2, md: 3 },
+            py: { xs: 2.5, md: 3 },
+            color: 'text.secondary',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            background: (theme) => theme.palette.mode === 'dark'
+              ? 'linear-gradient(180deg, rgba(45, 212, 191, 0.08) 0%, rgba(15, 23, 42, 0.96) 18%, rgba(2, 6, 23, 0.98) 100%)'
+              : 'linear-gradient(180deg, rgba(15, 118, 110, 0.08) 0%, rgba(248, 250, 252, 0.98) 22%, rgba(241, 245, 249, 0.98) 100%)',
+            boxShadow: (theme) => theme.palette.mode === 'dark'
+              ? 'inset 0 1px 0 rgba(45, 212, 191, 0.18)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.8)'
           }}
         >
           <Box
             sx={{
-              p: { xs: 2, md: 2.5 },
-              borderRadius: 4,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-              boxShadow: '0 10px 28px rgba(15,23,42,0.06)'
+              maxWidth: 1440,
+              mx: 'auto'
             }}
           >
             <Box display="flex" alignItems="center" gap={1.25}>

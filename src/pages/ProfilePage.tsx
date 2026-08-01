@@ -168,161 +168,163 @@ export function ProfilePage() {
         </Typography>
       </Paper>
 
-      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
-        <Stack spacing={2}>
-          <TextField label={t("name")} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} fullWidth />
-          <TextField label={t("email")} value={user?.email ?? ""} fullWidth disabled />
-          <TextField label={t("phone")} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} fullWidth />
-          <TextField label={t("city")} value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} fullWidth />
-          <TextField label={t("occupation")} value={form.occupation} onChange={(event) => setForm({ ...form, occupation: event.target.value })} fullWidth />
-          <Box display="flex" justifyContent="flex-end">
-            <LoadingActionButton variant="contained" onClick={saveProfile} disabled={!form.name.trim()} loading={saving} loadingLabel={t("saving")}>
-              {t("saveProfile")}
-            </LoadingActionButton>
-          </Box>
-        </Stack>
-      </Paper>
-
-      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
-        <Stack spacing={2}>
-          <Stack direction="row" spacing={1.5} alignItems="flex-start">
-            <AttachMoneyIcon color="primary" sx={{ mt: 0.35 }} />
-            <Box>
-              <Typography variant="h5" fontWeight={950}>{t("profileCurrencyTitle")}</Typography>
-              <Typography color="text.secondary">
-                {t("profileCurrencyText")}
-              </Typography>
+      <Box display="grid" gridTemplateColumns={{ xs: "1fr", lg: "1fr 1fr" }} gap={3} alignItems="start">
+        <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+          <Stack spacing={2}>
+            <TextField label={t("name")} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} fullWidth />
+            <TextField label={t("email")} value={user?.email ?? ""} fullWidth disabled />
+            <TextField label={t("phone")} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} fullWidth />
+            <TextField label={t("city")} value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} fullWidth />
+            <TextField label={t("occupation")} value={form.occupation} onChange={(event) => setForm({ ...form, occupation: event.target.value })} fullWidth />
+            <Box display="flex" justifyContent="flex-end">
+              <LoadingActionButton variant="contained" onClick={saveProfile} disabled={!form.name.trim()} loading={saving} loadingLabel={t("saving")}>
+                {t("saveProfile")}
+              </LoadingActionButton>
             </Box>
           </Stack>
+        </Paper>
 
-          <FormControl fullWidth>
-            <InputLabel id="profile-currency-label">{t("currency")}</InputLabel>
-            <Select
-              labelId="profile-currency-label"
-              label={t("currency")}
-              value={draftCurrency}
-              onChange={(event) => setDraftCurrency(event.target.value as AppCurrency)}
-            >
-              {(Object.keys(currencyNames) as AppCurrency[]).map((item) => (
-                <MenuItem key={item} value={item}>
-                  {currencySymbols[item]} {item} - {currencyNames[item]}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <Alert severity="info" sx={{ borderRadius: 3 }}>
-            {t("profileCurrencyPreview")} <strong>{formatMoneyWithCurrency(1234.56, draftCurrency)}</strong>
-          </Alert>
-
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              variant="contained"
-              onClick={saveCurrencyPreference}
-              disabled={draftCurrency === currency}
-            >
-              {t("savePreferences")}
-            </Button>
-          </Box>
-        </Stack>
-      </Paper>
-
-      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
-        <Stack spacing={1.2}>
-          <Typography variant="h5" fontWeight={950}>Meu plano</Typography>
-          {user?.access?.hasPaidAccess ? (
-            <Alert severity="success" sx={{ borderRadius: 3 }}>
-              Você está atualmente com um plano ativo.
-            </Alert>
-          ) : user?.trialEndsAt ? (
-            <Alert severity="info" sx={{ borderRadius: 3 }}>
-              Você está no teste grátis até {formatDate(user.trialEndsAt)}.
-            </Alert>
-          ) : null}
-          <Typography color="text.secondary">
-            Plano: <strong>{user?.planNameSnapshot ?? "Teste grátis / sem plano pago"}</strong>
-          </Typography>
-          <Typography color="text.secondary">
-            Valor: <strong>{user?.planPriceSnapshot ? formatMoney(user.planPriceSnapshot) : "-"}</strong>
-          </Typography>
-          {user?.couponCodeSnapshot ? (
+        <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+          <Stack spacing={1.2}>
+            <Typography variant="h5" fontWeight={950}>Meu plano</Typography>
+            {user?.access?.hasPaidAccess ? (
+              <Alert severity="success" sx={{ borderRadius: 3 }}>
+                Você está atualmente com um plano ativo.
+              </Alert>
+            ) : user?.trialEndsAt ? (
+              <Alert severity="info" sx={{ borderRadius: 3 }}>
+                Você está no teste grátis até {formatDate(user.trialEndsAt)}.
+              </Alert>
+            ) : null}
             <Typography color="text.secondary">
-              Cupom: <strong>{user.couponCodeSnapshot}</strong>
-              {user.couponDiscountSnapshot ? ` · desconto de ${formatMoney(user.couponDiscountSnapshot)}` : ""}
+              Plano: <strong>{user?.planNameSnapshot ?? "Teste grátis / sem plano pago"}</strong>
             </Typography>
-          ) : null}
-          <Typography color="text.secondary">
-            Duração: <strong>{user?.planDurationMonthsSnapshot ? `${user.planDurationMonthsSnapshot} mês(es)` : "-"}</strong>
-          </Typography>
-          <Typography color="text.secondary">
-            Vencimento: <strong>{user?.subscriptionCurrentPeriodEnd ? formatDate(user.subscriptionCurrentPeriodEnd) : user?.trialEndsAt ? `Teste até ${formatDate(user.trialEndsAt)}` : "-"}</strong>
-          </Typography>
-          <Box>
-            <Typography color="text.secondary" mb={1}>Itens inclusos</Typography>
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-              {normalizePlanProductKeys(user?.access?.productKeys ?? user?.planProductKeysSnapshot).map((key) => (
-                <Chip key={key} size="small" label={productPlanLabel(key, user?.planProductLabelsSnapshot)} variant="outlined" sx={{ fontWeight: 800 }} />
-              ))}
-              {(user?.planIncludedItemsSnapshot ?? []).map((label) => (
-                <Chip key={label} size="small" label={label} variant="outlined" sx={{ fontWeight: 800 }} />
-              ))}
+            <Typography color="text.secondary">
+              Valor: <strong>{user?.planPriceSnapshot ? formatMoney(user.planPriceSnapshot) : "-"}</strong>
+            </Typography>
+            {user?.couponCodeSnapshot ? (
+              <Typography color="text.secondary">
+                Cupom: <strong>{user.couponCodeSnapshot}</strong>
+                {user.couponDiscountSnapshot ? ` · desconto de ${formatMoney(user.couponDiscountSnapshot)}` : ""}
+              </Typography>
+            ) : null}
+            <Typography color="text.secondary">
+              Duração: <strong>{user?.planDurationMonthsSnapshot ? `${user.planDurationMonthsSnapshot} mês(es)` : "-"}</strong>
+            </Typography>
+            <Typography color="text.secondary">
+              Vencimento: <strong>{user?.subscriptionCurrentPeriodEnd ? formatDate(user.subscriptionCurrentPeriodEnd) : user?.trialEndsAt ? `Teste até ${formatDate(user.trialEndsAt)}` : "-"}</strong>
+            </Typography>
+            <Box>
+              <Typography color="text.secondary" mb={1}>Itens inclusos</Typography>
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {normalizePlanProductKeys(user?.access?.productKeys ?? user?.planProductKeysSnapshot).map((key) => (
+                  <Chip key={key} size="small" label={productPlanLabel(key, user?.planProductLabelsSnapshot)} variant="outlined" sx={{ fontWeight: 800 }} />
+                ))}
+                {(user?.planIncludedItemsSnapshot ?? []).map((label) => (
+                  <Chip key={label} size="small" label={label} variant="outlined" sx={{ fontWeight: 800 }} />
+                ))}
+              </Stack>
+            </Box>
+            <Box display="flex" justifyContent="flex-end" pt={1}>
+              <Button component={Link} to="/app/billing" variant="contained">
+                Ver planos e contratação
+              </Button>
+            </Box>
+          </Stack>
+        </Paper>
+
+        <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1.5} alignItems="flex-start">
+              <AttachMoneyIcon color="primary" sx={{ mt: 0.35 }} />
+              <Box>
+                <Typography variant="h5" fontWeight={950}>{t("profileCurrencyTitle")}</Typography>
+                <Typography color="text.secondary">
+                  {t("profileCurrencyText")}
+                </Typography>
+              </Box>
             </Stack>
-          </Box>
-          <Box display="flex" justifyContent="flex-end" pt={1}>
-            <Button component={Link} to="/app/billing" variant="contained">
-              Ver planos e contratação
-            </Button>
-          </Box>
-        </Stack>
-      </Paper>
 
-      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
-        <Stack spacing={2.5}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <PrivacyTipIcon color="primary" />
-            <Box>
-              <Typography variant="h5" fontWeight={950}>{t("privacyLgpd")}</Typography>
-              <Typography color="text.secondary">
-                {t("privacyLgpdText")}
-              </Typography>
+            <FormControl fullWidth>
+              <InputLabel id="profile-currency-label">{t("currency")}</InputLabel>
+              <Select
+                labelId="profile-currency-label"
+                label={t("currency")}
+                value={draftCurrency}
+                onChange={(event) => setDraftCurrency(event.target.value as AppCurrency)}
+              >
+                {(Object.keys(currencyNames) as AppCurrency[]).map((item) => (
+                  <MenuItem key={item} value={item}>
+                    {currencySymbols[item]} {item} - {currencyNames[item]}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Alert severity="info" sx={{ borderRadius: 3 }}>
+              {t("profileCurrencyPreview")} <strong>{formatMoneyWithCurrency(1234.56, draftCurrency)}</strong>
+            </Alert>
+
+            <Box display="flex" justifyContent="flex-end">
+              <Button
+                variant="contained"
+                onClick={saveCurrencyPreference}
+                disabled={draftCurrency === currency}
+              >
+                {t("savePreferences")}
+              </Button>
             </Box>
           </Stack>
+        </Paper>
 
-          <Box>
-            <Typography fontWeight={900}>{t("consent")}</Typography>
-            <Typography color="text.secondary">
-              {t("lgpdAccepted")}: {lgpdAcceptedLabel}
-              {user?.lgpdConsentVersion ? ` · ${t("version")} ${user.lgpdConsentVersion}` : ""}
+        <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
+          <Stack spacing={2.5}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <PrivacyTipIcon color="primary" />
+              <Box>
+                <Typography variant="h5" fontWeight={950}>{t("privacyLgpd")}</Typography>
+                <Typography color="text.secondary">
+                  {t("privacyLgpdText")}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Box>
+              <Typography fontWeight={900}>{t("consent")}</Typography>
+              <Typography color="text.secondary">
+                {t("lgpdAccepted")}: {lgpdAcceptedLabel}
+                {user?.lgpdConsentVersion ? ` · ${t("version")} ${user.lgpdConsentVersion}` : ""}
+              </Typography>
+            </Box>
+
+            <FormControlLabel
+              control={<Checkbox checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} />}
+              label={t("registerMarketingConsent")}
+            />
+
+            <Box display="flex" justifyContent="flex-end">
+              <LoadingActionButton variant="outlined" onClick={savePrivacyConsent} loading={privacySaving} loadingLabel={t("saving")}>
+                {t("savePreferences")}
+              </LoadingActionButton>
+            </Box>
+
+            <Divider />
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <LoadingActionButton variant="outlined" startIcon={<DownloadIcon />} onClick={exportMyData} loading={exporting} loadingLabel={t("generating")}>
+                {t("exportMyData")}
+              </LoadingActionButton>
+              <Button color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteModalOpen(true)}>
+                {t("deleteMyAccount")}
+              </Button>
+            </Stack>
+
+            <Typography variant="caption" color="text.secondary">
+              {t("profileExportNote")}
             </Typography>
-          </Box>
-
-          <FormControlLabel
-            control={<Checkbox checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} />}
-            label={t("registerMarketingConsent")}
-          />
-
-          <Box display="flex" justifyContent="flex-end">
-            <LoadingActionButton variant="outlined" onClick={savePrivacyConsent} loading={privacySaving} loadingLabel={t("saving")}>
-              {t("savePreferences")}
-            </LoadingActionButton>
-          </Box>
-
-          <Divider />
-
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <LoadingActionButton variant="outlined" startIcon={<DownloadIcon />} onClick={exportMyData} loading={exporting} loadingLabel={t("generating")}>
-              {t("exportMyData")}
-            </LoadingActionButton>
-            <Button color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteModalOpen(true)}>
-              {t("deleteMyAccount")}
-            </Button>
           </Stack>
-
-          <Typography variant="caption" color="text.secondary">
-            {t("profileExportNote")}
-          </Typography>
-        </Stack>
-      </Paper>
+        </Paper>
+      </Box>
 
       <AppDialog
         open={deleteModalOpen}

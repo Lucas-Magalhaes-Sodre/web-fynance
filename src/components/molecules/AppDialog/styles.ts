@@ -10,7 +10,15 @@ import Typography from "@mui/material/Typography";
 import styled from "styled-components";
 
 export const Header = styled(DialogTitle)`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   padding-bottom: 8px;
+`;
+
+export const TitleContent = styled(Box)`
+  min-width: 0;
 `;
 
 export const Eyebrow = styled(Typography)`

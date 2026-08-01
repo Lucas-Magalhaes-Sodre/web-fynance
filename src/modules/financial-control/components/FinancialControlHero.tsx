@@ -6,6 +6,7 @@ import Typography from "@mui/material/Typography";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import type { EntryType } from "@/interfaces/financial";
+import { FinancialControlGuideDialog } from "./FinancialControlGuideDialog";
 import type { SavingAction } from "./SavingMovementDialog";
 import * as S from "./styles";
 
@@ -63,6 +64,7 @@ export function FinancialControlHero({
           <Typography color="text.secondary" fontSize={15}>
             {t("controlSubtitle")}
           </Typography>
+          <FinancialControlGuideDialog />
         </Box>
         <S.HeroActionsGrid>
           <S.HeroActionButton
