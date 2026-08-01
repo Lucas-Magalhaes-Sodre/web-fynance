@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import type { FinancialItem, FinancialItemType } from '@/interfaces/financial';
 import { currencyToNumber, digitsToCurrency, formatMoney } from '@/utils/format';
 import { AppDialog, AppDialogStyles as S } from '@/components/molecules/AppDialog';
+import { AppDateField } from '@/components/molecules/AppDateField';
 import { LoadingActionButton } from '@/components/molecules/LoadingActionButton';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { typeLabel } from '@/i18n/display';
@@ -108,8 +109,8 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
               </MenuItem>
             ))}
           </TextField>
-          <TextField label={t('entryPaymentDebitDate')} type="date" required InputLabelProps={{ shrink: true }} value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
-          <TextField label={t('dueDateIfAny')} type="date" InputLabelProps={{ shrink: true }} value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} />
+          <AppDateField label={t('entryPaymentDebitDate')} required value={form.date} onChange={(value) => setForm({ ...form, date: value })} />
+          <AppDateField label={t('dueDateIfAny')} value={form.dueDate} onChange={(value) => setForm({ ...form, dueDate: value })} />
         </S.FormStack>
     </AppDialog>
   );

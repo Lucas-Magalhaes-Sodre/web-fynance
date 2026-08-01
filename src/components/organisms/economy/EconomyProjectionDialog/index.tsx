@@ -15,6 +15,7 @@ import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import type { SavingsProjection } from "@/interfaces/financial";
 import { getSavingsProjection } from "@/services/financialControl";
 import { financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
@@ -67,14 +68,12 @@ export function EconomyProjectionDialog({ open, onClose }: EconomyProjectionDial
         <Typography color="text.secondary">
           {t("futureBalanceSimulationText")}
         </Typography>
-        <TextField
+        <AppDateField
           label={t("selectFutureDate")}
-          type="date"
-          InputLabelProps={{ shrink: true }}
           value={targetDate}
-          error={isInvalidDate}
           helperText={isInvalidDate ? t("dateMustBeFuture") : " "}
-          onChange={(event) => setTargetDate(event.target.value)}
+          onChange={setTargetDate}
+          textFieldProps={{ error: isInvalidDate }}
         />
 
         {loading ? <Skeleton variant="rounded" height={110} /> : null}

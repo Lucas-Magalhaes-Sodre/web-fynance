@@ -24,6 +24,7 @@ import {
   type SavingPayload,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import {
   SavingMovementDialog,
@@ -477,21 +478,17 @@ export function EconomyPage() {
                 {t("savingsHistory")}
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                <TextField
+                <AppDateField
                   label={t("start")}
-                  type="date"
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
                   value={periodStart}
-                  onChange={(event) => setPeriodStart(event.target.value)}
+                  onChange={setPeriodStart}
+                  textFieldProps={{ size: "small" }}
                 />
-                <TextField
+                <AppDateField
                   label={t("end")}
-                  type="date"
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
                   value={periodEnd}
-                  onChange={(event) => setPeriodEnd(event.target.value)}
+                  onChange={setPeriodEnd}
+                  textFieldProps={{ size: "small" }}
                 />
               </Stack>
             </Stack>

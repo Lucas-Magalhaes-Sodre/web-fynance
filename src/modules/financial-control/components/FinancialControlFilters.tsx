@@ -8,6 +8,7 @@ import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { monthsByLanguage } from "@/i18n/display";
 import type { ViewMode } from "./types";
 import * as S from "./styles";
@@ -71,36 +72,26 @@ export function FinancialControlFilters({
         </Tabs>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           {mode === "day" ? (
-            <TextField
-              size="small"
+            <AppDateField
               label={t("dayToView")}
-              type="date"
-              InputLabelProps={{ shrink: true }}
               value={date}
-              onChange={(event) => onDateChange(event.target.value)}
+              onChange={onDateChange}
+              textFieldProps={{ size: "small" }}
             />
           ) : null}
           {mode === "week" ? (
             <>
-              <TextField
-                size="small"
+              <AppDateField
                 label={t("weekStart")}
-                type="date"
-                InputLabelProps={{ shrink: true }}
                 value={week.startDate}
-                onChange={(event) =>
-                  onWeekChange({ ...week, startDate: event.target.value })
-                }
+                onChange={(value) => onWeekChange({ ...week, startDate: value })}
+                textFieldProps={{ size: "small" }}
               />
-              <TextField
-                size="small"
+              <AppDateField
                 label={t("weekEnd")}
-                type="date"
-                InputLabelProps={{ shrink: true }}
                 value={week.endDate}
-                onChange={(event) =>
-                  onWeekChange({ ...week, endDate: event.target.value })
-                }
+                onChange={(value) => onWeekChange({ ...week, endDate: value })}
+                textFieldProps={{ size: "small" }}
               />
             </>
           ) : null}

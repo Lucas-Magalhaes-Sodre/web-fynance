@@ -26,6 +26,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type ChangeEvent, useEffect, useState } from "react";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import {
   normalizePlanProductKeys,
@@ -1610,30 +1611,26 @@ export function AdminSubscriptionsPage() {
             ))}
           </TextField>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              type="date"
+            <AppDateField
               label="Início"
               value={couponForm.startsAt}
-              onChange={(event) =>
+              onChange={(value) =>
                 setCouponForm((current) => ({
                   ...current,
-                  startsAt: event.target.value,
+                  startsAt: value,
                 }))
               }
-              InputLabelProps={{ shrink: true }}
               fullWidth
             />
-            <TextField
-              type="date"
+            <AppDateField
               label="Fim"
               value={couponForm.expiresAt}
-              onChange={(event) =>
+              onChange={(value) =>
                 setCouponForm((current) => ({
                   ...current,
-                  expiresAt: event.target.value,
+                  expiresAt: value,
                 }))
               }
-              InputLabelProps={{ shrink: true }}
               fullWidth
             />
           </Stack>

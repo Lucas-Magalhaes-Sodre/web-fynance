@@ -22,6 +22,7 @@ import Typography from "@mui/material/Typography";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { StatCard } from "@/components/molecules/StatCard";
@@ -627,12 +628,10 @@ export function BirthdaysPage() {
             required
             fullWidth
           />
-          <TextField
+          <AppDateField
             label={t("birthdayDate")}
-            type="date"
             value={form.date}
-            onChange={(event) => setForm({ ...form, date: event.target.value })}
-            InputLabelProps={{ shrink: true }}
+            onChange={(value) => setForm({ ...form, date: value })}
             required
             fullWidth
           />
