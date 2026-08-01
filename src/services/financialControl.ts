@@ -370,6 +370,9 @@ export async function updateEntryValue(id: string, payload: {
   periodType: PeriodType;
   endMonth?: number;
   description?: string | null;
+  paidWithCreditCard?: boolean;
+  creditCardId?: string | null;
+  creditCardInstallments?: number | null;
 }) {
   const { data } = await api.patch(`/financial-items/${id}/value`, payload);
   return data;

@@ -2,6 +2,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
@@ -460,6 +461,8 @@ export function YearSpreadsheet({
     tone,
     isCategory = false,
     isTotal = false,
+    linkedValue = 0,
+    linkedNotes = [],
     onClick,
     fillCell,
     key,
@@ -470,6 +473,8 @@ export function YearSpreadsheet({
     tone: EntryType;
     isCategory?: boolean;
     isTotal?: boolean;
+    linkedValue?: number;
+    linkedNotes?: string[];
     onClick?: () => void;
     fillCell?: SpreadsheetCellEdit;
     key?: string | number;
@@ -484,6 +489,9 @@ export function YearSpreadsheet({
       fillCell!.month > fillDrag!.month &&
       fillCell!.month <= fillHover!.month;
     const displayValue = isFillPreview ? fillDrag?.value ?? value : value;
+    const hasLinkedValue = !isCategory && linkedValue > 0;
+    const visibleValue = displayValue > 0 || !hasLinkedValue ? displayValue : linkedValue;
+    const cleanNotes = [...notes, ...linkedNotes].filter(Boolean);
 
     return (
       <TableCell
@@ -555,8 +563,34 @@ export function YearSpreadsheet({
             : undefined,
         }}
       >
-        {noteMarker(notes)}
-        {formatMoney(displayValue)}
+        {noteMarker(cleanNotes)}
+        <Tooltip
+          title={
+            hasLinkedValue
+              ? linkedNotes.join("\n") || "Valor planejado pago no cartão. Não entra no total desta categoria."
+              : ""
+          }
+          disableHoverListener={!hasLinkedValue}
+        >
+          <Box
+            component="span"
+            sx={
+              hasLinkedValue && displayValue <= 0
+                ? {
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    opacity: 0.58,
+                    textDecoration: "line-through",
+                    textDecorationThickness: "2px",
+                  }
+                : { display: "inline-flex", alignItems: "center", gap: 0.5 }
+            }
+          >
+            {hasLinkedValue ? <CreditCardIcon sx={{ fontSize: 13 }} /> : null}
+            {formatMoney(visibleValue)}
+          </Box>
+        </Tooltip>
         {fillCell ? (
           <Tooltip title="Clique e arraste para copiar" placement="top" arrow>
             <Box
@@ -751,6 +785,8 @@ export function YearSpreadsheet({
             key: monthItem.value,
             value: child.months[monthItem.value] ?? 0,
             notes: child.notes[monthItem.value] ?? [],
+            linkedValue: child.linkedMonths?.[monthItem.value] ?? 0,
+            linkedNotes: child.linkedInfo?.[monthItem.value] ?? [],
             color,
             tone: type,
             onClick: () =>
@@ -759,15 +795,18 @@ export function YearSpreadsheet({
                 name: child.name,
                 month: monthItem.value,
                 type,
-                value: child.months[monthItem.value] ?? 0,
+                value: (child.months[monthItem.value] ?? 0) || (child.linkedMonths?.[monthItem.value] ?? 0),
+                linkedValue: child.linkedMonths?.[monthItem.value] ?? 0,
               }),
-            fillCell: {
-              category: child.category,
-              name: child.name,
-              month: monthItem.value,
-              type,
-              value: child.months[monthItem.value] ?? 0,
-            },
+            fillCell: child.linkedMonths?.[monthItem.value]
+              ? undefined
+              : {
+                  category: child.category,
+                  name: child.name,
+                  month: monthItem.value,
+                  type,
+                  value: child.months[monthItem.value] ?? 0,
+                },
           }),
         )}
         <TableCell
@@ -780,7 +819,16 @@ export function YearSpreadsheet({
             ...totalColumnSx,
           }}
         >
-          {formatMoney(child.total)}
+          {child.total > 0 || !child.linkedTotal ? (
+            formatMoney(child.total)
+          ) : (
+            <Tooltip title="Total planejado pago no cartão. Não entra no total desta categoria.">
+              <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, opacity: 0.58, textDecoration: "line-through", textDecorationThickness: "2px" }}>
+                <CreditCardIcon sx={{ fontSize: 13 }} />
+                {formatMoney(child.linkedTotal)}
+              </Box>
+            </Tooltip>
+          )}
         </TableCell>
       </TableRow>
     ));

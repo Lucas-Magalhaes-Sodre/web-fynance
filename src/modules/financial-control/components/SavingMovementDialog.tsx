@@ -15,6 +15,7 @@ import type {
 } from "@/interfaces/financial";
 import { currencyToNumber, digitsToCurrency, financeColors, formatMoney } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
@@ -319,14 +320,12 @@ export function SavingMovementDialog({
 
         {isWithdraw ? (
           <>
-            <TextField
+            <AppDateField
               label={t("date")}
-              type="date"
               required
-              InputLabelProps={{ shrink: true }}
               value={form.date}
-              onChange={(event) => updateForm({ date: event.target.value })}
-              sx={{ "& input": { py: 1.65 } }}
+              onChange={(value) => updateForm({ date: value })}
+              textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
             />
             <TextField
               label={t("optionalNote")}
@@ -497,26 +496,22 @@ export function SavingMovementDialog({
                     ) : null}
 
                     {form.recurrenceType === "YEARLY" ? (
-                      <TextField
+                      <AppDateField
                         label={t("annualSavingDate")}
-                        type="date"
                         required
-                        InputLabelProps={{ shrink: true }}
                         value={form.date}
-                        onChange={(event) => updateForm({ date: event.target.value })}
-                        sx={{ "& input": { py: 1.65 } }}
+                        onChange={(value) => updateForm({ date: value })}
+                        textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
                       />
                     ) : null}
                   </>
                 ) : (
-                  <TextField
+                  <AppDateField
                     label={t("savingDate")}
-                    type="date"
                     required
-                    InputLabelProps={{ shrink: true }}
                     value={form.date}
-                    onChange={(event) => updateForm({ date: event.target.value })}
-                    sx={{ "& input": { py: 1.65 } }}
+                    onChange={(value) => updateForm({ date: value })}
+                    textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
                   />
                 )}
               </Stack>

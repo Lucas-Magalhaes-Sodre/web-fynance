@@ -39,6 +39,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
@@ -695,7 +696,7 @@ export function CreditCardsPage() {
                         <TextField fullWidth label={t("installments")} type="number" value={purchaseForm.installments} onChange={(event) => setPurchaseForm({ ...purchaseForm, installments: event.target.value })} inputProps={{ min: 1, max: 240 }} required />
                       </Grid>
                       <Grid item xs={6}>
-                        <TextField fullWidth label={t("date")} type="date" value={purchaseForm.purchaseDate} onChange={(event) => setPurchaseForm({ ...purchaseForm, purchaseDate: event.target.value })} InputLabelProps={{ shrink: true }} required />
+                        <AppDateField fullWidth label={t("date")} value={purchaseForm.purchaseDate} onChange={(value) => setPurchaseForm({ ...purchaseForm, purchaseDate: value })} required />
                       </Grid>
                       <Grid item xs={12}>
                         <TextField fullWidth label={t("note")} value={purchaseForm.description} onChange={(event) => setPurchaseForm({ ...purchaseForm, description: event.target.value })} />

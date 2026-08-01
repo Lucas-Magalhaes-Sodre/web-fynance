@@ -26,6 +26,7 @@ import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/atoms/EmptyState";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { StatCard } from "@/components/molecules/StatCard";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import type { FinancialItem } from "@/interfaces/financial";
@@ -514,7 +515,7 @@ export function VacationCalculatorPage() {
             <Typography variant="h5" fontWeight={950}>Dados das férias</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={4}>
-                <TextField label="Data de início" type="date" helperText="Primeiro dia das férias." InputLabelProps={{ shrink: true }} value={vacationStartDate} onChange={(event) => setVacationStartDate(event.target.value)} fullWidth />
+                <AppDateField label="Data de início" helperText="Primeiro dia das férias." value={vacationStartDate} onChange={setVacationStartDate} fullWidth />
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField label="Quantidade de dias" type="number" helperText="Informe entre 1 e 30 dias." value={vacationDays} onChange={(event) => setVacationDays(Number(event.target.value || 1))} fullWidth />

@@ -312,7 +312,14 @@ export function FinancialControlPage() {
           months: Object.fromEntries(
             monthValues.map((monthValue) => [monthValue, 0]),
           ) as Record<number, number>,
+          linkedMonths: Object.fromEntries(
+            monthValues.map((monthValue) => [monthValue, 0]),
+          ) as Record<number, number>,
+          linkedInfo: Object.fromEntries(
+            monthValues.map((monthValue) => [monthValue, []]),
+          ) as Record<number, string[]>,
           total: 0,
+          linkedTotal: 0,
           notes: Object.fromEntries(
             monthValues.map((monthValue) => [monthValue, []]),
           ) as Record<number, string[]>,
@@ -320,8 +327,21 @@ export function FinancialControlPage() {
       }
       const row = rowMap.get(key);
       if (!row) continue;
-      row.months[item.month] += item.amount;
-      row.total += item.amount;
+      if (item.excludedFromTotals) {
+        const linkedAmount = item.linkedCreditCardAmount ?? item.amount;
+        row.linkedMonths = row.linkedMonths ?? {};
+        row.linkedInfo = row.linkedInfo ?? {};
+        row.linkedMonths[item.month] = (row.linkedMonths[item.month] ?? 0) + linkedAmount;
+        row.linkedTotal = (row.linkedTotal ?? 0) + linkedAmount;
+        const installments = item.linkedCreditCardInstallments ?? 1;
+        row.linkedInfo[item.month] = [
+          ...(row.linkedInfo[item.month] ?? []),
+          `Planejado em ${item.category}. Pago no cartão${installments > 1 ? ` em ${installments}x` : ""}.`,
+        ];
+      } else {
+        row.months[item.month] += item.amount;
+        row.total += item.amount;
+      }
       if (item.description?.trim())
         row.notes[item.month].push(item.description.trim());
     }
@@ -1002,6 +1022,9 @@ export function FinancialControlPage() {
     amount: number;
     scope: ValueUpdateScope;
     description?: string | null;
+    paidWithCreditCard?: boolean;
+    creditCardId?: string | null;
+    creditCardInstallments?: number | null;
   }) {
     if (!cellEdit) return;
     if (cellEdit.type === "INVESTMENT") {
@@ -1035,6 +1058,9 @@ export function FinancialControlPage() {
         scope: payload.scope,
         periodType: "MONTH",
         description: payload.description,
+        paidWithCreditCard: payload.paidWithCreditCard,
+        creditCardId: payload.creditCardId,
+        creditCardInstallments: payload.creditCardInstallments,
       });
       setCellEdit(null);
       await loadData();
@@ -1103,6 +1129,9 @@ export function FinancialControlPage() {
     ? yearData?.monthlySummary.find(
         (summary) => summary.month === cellEdit.month,
       )
+    : null;
+  const editedCellItem = cellEdit && cellEdit.type !== "INVESTMENT"
+    ? findCellItem(cellEdit.category, cellEdit.name, cellEdit.month, cellEdit.type)
     : null;
 
   const calendarCells = useMemo(() => {
@@ -1347,6 +1376,9 @@ export function FinancialControlPage() {
           currentMonthIncome={editedMonthSummary?.totalIncome ?? 0}
           currentMonthExpense={editedMonthSummary?.totalExpense ?? 0}
           currentMonthSavings={editedMonthSummary?.totalSavings ?? 0}
+          initialPaidWithCreditCard={Boolean(editedCellItem?.excludedFromTotals)}
+          initialCreditCardId={editedCellItem?.linkedCreditCardId ?? ""}
+          initialCreditCardInstallments={editedCellItem?.linkedCreditCardInstallments ?? 1}
           saving={cellSaving}
           onClose={() => setCellEdit(null)}
           onSubmit={saveCellValue}

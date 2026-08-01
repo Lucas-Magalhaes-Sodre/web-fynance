@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import { ChangeEvent } from "react";
 import type { FinancialGoalStatus } from "@/interfaces/financial";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { digitsToCurrency } from "@/utils/format";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -103,25 +104,21 @@ export function FinancialGoalFormDialog({
         />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
-            <TextField
+            <AppDateField
               label={t("start")}
-              type="date"
               value={form.startDate}
-              onChange={(event) => updateForm({ startDate: event.target.value })}
-              InputLabelProps={{ shrink: true }}
+              onChange={(value) => updateForm({ startDate: value })}
               fullWidth
-              sx={{ "& input": { py: 1.65 } }}
+              textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
+            <AppDateField
               label={t("deadline")}
-              type="date"
               value={form.targetDate}
-              onChange={(event) => updateForm({ targetDate: event.target.value })}
-              InputLabelProps={{ shrink: true }}
+              onChange={(value) => updateForm({ targetDate: value })}
               fullWidth
-              sx={{ "& input": { py: 1.65 } }}
+              textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
             />
           </Grid>
         </Grid>

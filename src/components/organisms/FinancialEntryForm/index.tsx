@@ -1,12 +1,18 @@
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { FormEvent, useEffect, useState } from "react";
-import type { FinancialEntryPayload } from "@/services/financialControl";
+import {
+  createCreditCard,
+  listCreditCards,
+  type FinancialEntryPayload,
+} from "@/services/financialControl";
 import type {
   EntryType,
   FinancialCategory,
@@ -15,6 +21,7 @@ import type {
 } from "@/interfaces/financial";
 import { financeColors, isoDate } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
@@ -62,6 +69,11 @@ function normalizeCategoryName(name: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-BR")
     .trim();
+}
+
+function isCreditCardCategoryName(name: string) {
+  const normalized = normalizeCategoryName(name);
+  return normalized === "cartao" || normalized === "cartoes" || normalized === "cartao de credito" || normalized === "cartoes de credito";
 }
 
 type FormState = {
@@ -152,6 +164,8 @@ export function FinancialEntryForm({
     notifyMessage: "",
   });
   const [saving, setSaving] = useState(false);
+  const [creditCardOptions, setCreditCardOptions] = useState<string[]>([]);
+  const [loadingCreditCards, setLoadingCreditCards] = useState(false);
 
   const isIncome = form.type === "INCOME";
   const modalTitle = item
@@ -190,6 +204,7 @@ export function FinancialEntryForm({
       ),
   );
   const selectedCategoryExists = availableCategories.some((category) => category.name === form.category);
+  const isCreditCardExpense = !isIncome && isCreditCardCategoryName(form.category);
   const invalidCustomRecurrenceRange =
     form.isFixed &&
     form.recurrenceType === "MONTHLY" &&
@@ -248,6 +263,31 @@ export function FinancialEntryForm({
     });
   }, [item, defaultType, defaultDate, open]);
 
+  useEffect(() => {
+    if (!open || !isCreditCardExpense) {
+      setCreditCardOptions([]);
+      return;
+    }
+
+    let active = true;
+    setLoadingCreditCards(true);
+    listCreditCards()
+      .then((overview) => {
+        if (!active) return;
+        setCreditCardOptions(overview.cards.map((card) => card.name));
+      })
+      .catch(() => {
+        if (active) setCreditCardOptions([]);
+      })
+      .finally(() => {
+        if (active) setLoadingCreditCards(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isCreditCardExpense, open]);
+
   function updateRecurring(checked: boolean) {
     setForm({
       ...form,
@@ -279,11 +319,29 @@ export function FinancialEntryForm({
     const date = new Date(`${form.date}T00:00:00`);
     const isRecurring = form.isFixed && form.recurrenceType !== "NONE";
     const isRecurringExpense = isRecurring && !isIncome;
+    const trimmedName = form.name.trim();
 
     setSaving(true);
     try {
+      if (isCreditCardExpense && !item) {
+        const existingCard = creditCardOptions.some(
+          (cardName) => normalizeCategoryName(cardName) === normalizeCategoryName(trimmedName),
+        );
+        if (!existingCard) {
+          const dueDay = form.dueDay
+            ? Number(form.dueDay)
+            : new Date(`${form.date}T00:00:00`).getDate();
+          await createCreditCard({
+            name: trimmedName,
+            dueDay: Math.min(31, Math.max(1, dueDay)),
+            creditLimit: null,
+            color: financeColors.expense,
+          });
+        }
+      }
+
       await onSubmit({
-        name: form.name.trim(),
+        name: trimmedName,
         description: form.description || null,
         amount,
         type: form.type,
@@ -386,19 +444,48 @@ export function FinancialEntryForm({
             ) : null}
           </TextField>
 
-          <TextField
-            label={nameLabel}
-            required
-            value={form.name}
-            onChange={(event) =>
-              setForm({ ...form, name: event.target.value })
-            }
-            helperText={
-              isIncome
-                ? t("incomeExample")
-                : t("expenseExample")
-            }
-          />
+          {!isCreditCardExpense ? (
+            <TextField
+              label={nameLabel}
+              required
+              value={form.name}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
+              helperText={
+                isIncome
+                  ? t("incomeExample")
+                  : t("expenseExample")
+              }
+            />
+          ) : (
+            <Autocomplete
+              freeSolo
+              options={creditCardOptions}
+              loading={loadingCreditCards}
+              value={form.name}
+              inputValue={form.name}
+              onInputChange={(_, value) => setForm({ ...form, name: value })}
+              onChange={(_, value) => setForm({ ...form, name: value ?? "" })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t("creditCard")}
+                  required
+                  helperText={t("creditCardExpenseHelper")}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {loadingCreditCards ? <CircularProgress color="inherit" size={18} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          )}
 
           <TextField
             label={amountLabel}
@@ -584,32 +671,24 @@ export function FinancialEntryForm({
                   ) : null}
 
                   {form.recurrenceType === "YEARLY" ? (
-                    <TextField
+                    <AppDateField
                       label={
                         isIncome
                           ? t("annualIncomeDate")
                           : t("annualExpenseDate")
                       }
-                      type="date"
                       required
-                      InputLabelProps={{ shrink: true }}
                       value={form.date}
-                      onChange={(event) =>
-                        setForm({ ...form, date: event.target.value })
-                      }
+                      onChange={(value) => setForm({ ...form, date: value })}
                     />
                   ) : null}
                 </>
               ) : (
-                <TextField
+                <AppDateField
                   label={singleDateLabel}
-                  type="date"
                   required
-                  InputLabelProps={{ shrink: true }}
                   value={form.date}
-                  onChange={(event) =>
-                    setForm({ ...form, date: event.target.value })
-                  }
+                  onChange={(value) => setForm({ ...form, date: value })}
                 />
               )}
             </Stack>
