@@ -484,7 +484,7 @@ export function FinancialControlPage() {
       void updateFinancialTablePreferences({
         groupsSeparated,
         tableScale,
-        categoryColumnWidth,
+        categoryColumnWidth: Math.round(categoryColumnWidth),
         categoryGroupsExpanded: incomeRowsExpanded && expenseRowsExpanded && investmentRowsExpanded,
         subitemsExpanded: allCategoryRowsExpanded,
       }).catch(() => undefined);

@@ -251,7 +251,7 @@ export function YearSpreadsheet({
   const printFooterLabel = `${t("generatedBy")} ${t("appName")} • ${printUserLabel} • ${t("year")}: ${year} • ${t("issuedAt")}: ${issuedAtLabel}`;
 
   function resizeCategoryColumn(width: number) {
-    onCategoryColumnWidthChange(Math.min(420, Math.max(132, width)));
+    onCategoryColumnWidthChange(Math.round(Math.min(420, Math.max(132, width))));
   }
 
   function startCategoryColumnResize(event: ReactPointerEvent<HTMLElement>) {
