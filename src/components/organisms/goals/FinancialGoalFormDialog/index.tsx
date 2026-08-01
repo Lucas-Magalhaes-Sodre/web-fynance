@@ -11,7 +11,7 @@ import type { FinancialGoalStatus } from "@/interfaces/financial";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
-import { digitsToCurrency } from "@/utils/format";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { usePreferences } from "@/contexts/PreferencesContext";
 
 export type GoalFormState = {
@@ -90,16 +90,16 @@ export function FinancialGoalFormDialog({
           onChange={(event) => updateForm({ title: event.target.value })}
           fullWidth
         />
-        <TextField
+        <MoneyTextField
           label={t("targetValue")}
           value={form.targetAmount}
-          onChange={(event) => updateForm({ targetAmount: digitsToCurrency(event.target.value) })}
+          onValueChange={(targetAmount) => updateForm({ targetAmount })}
           fullWidth
         />
-        <TextField
+        <MoneyTextField
           label={t("currentValue")}
           value={form.currentAmount}
-          onChange={(event) => updateForm({ currentAmount: digitsToCurrency(event.target.value) })}
+          onValueChange={(currentAmount) => updateForm({ currentAmount })}
           fullWidth
         />
         <Grid container spacing={2}>

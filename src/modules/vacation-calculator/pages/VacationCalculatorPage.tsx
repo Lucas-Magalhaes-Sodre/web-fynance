@@ -27,6 +27,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDateField } from "@/components/molecules/AppDateField";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { StatCard } from "@/components/molecules/StatCard";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import type { FinancialItem } from "@/interfaces/financial";
@@ -439,13 +440,13 @@ export function VacationCalculatorPage() {
                   </Stack>
                 ) : (
                   <Stack spacing={2}>
-                    <TextField
+                    <MoneyTextField
                       label={salaryInputMode === "NET" ? "Salário líquido mensal" : "Salário bruto mensal"}
                       placeholder="R$ 3.000,00"
                       helperText={salaryInputMode === "NET" ? "Informe quanto normalmente cai na sua conta no mês." : "Informe seu salário bruto antes dos descontos."}
                       value={centsToCurrencyInput(salaryInputMode === "NET" ? monthlySalaryCents : grossSalaryCents)}
-                      onChange={(event) => {
-                        const value = currencyToCents(event.target.value);
+                      onValueChange={(nextValue) => {
+                        const value = currencyToCents(nextValue);
                         if (salaryInputMode === "NET") setMonthlySalaryCents(value);
                         else {
                           setGrossSalaryCents(value);
@@ -461,13 +462,13 @@ export function VacationCalculatorPage() {
                           <TextField label="Dependentes" type="number" helperText="Opcional." value={dependents} onChange={(event) => setDependents(Number(event.target.value || 0))} fullWidth />
                         </Grid>
                         <Grid item xs={12} md={3}>
-                          <TextField label="Pensão" helperText="Opcional." value={centsToCurrencyInput(pensionCents)} onChange={(event) => setPensionCents(currencyToCents(event.target.value))} fullWidth />
+                          <MoneyTextField label="Pensão" helperText="Opcional." value={centsToCurrencyInput(pensionCents)} onValueChange={(value) => setPensionCents(currencyToCents(value))} fullWidth />
                         </Grid>
                         <Grid item xs={12} md={3}>
-                          <TextField label="Descontos fixos" helperText="Descontos mensais conhecidos." value={centsToCurrencyInput(fixedDiscountsCents)} onChange={(event) => setFixedDiscountsCents(currencyToCents(event.target.value))} fullWidth />
+                          <MoneyTextField label="Descontos fixos" helperText="Descontos mensais conhecidos." value={centsToCurrencyInput(fixedDiscountsCents)} onValueChange={(value) => setFixedDiscountsCents(currencyToCents(value))} fullWidth />
                         </Grid>
                         <Grid item xs={12} md={3}>
-                          <TextField label="Benefícios" helperText="Ex.: vale, plano, coparticipação." value={centsToCurrencyInput(benefitsCents)} onChange={(event) => setBenefitsCents(currencyToCents(event.target.value))} fullWidth />
+                          <MoneyTextField label="Benefícios" helperText="Ex.: vale, plano, coparticipação." value={centsToCurrencyInput(benefitsCents)} onValueChange={(value) => setBenefitsCents(currencyToCents(value))} fullWidth />
                         </Grid>
                       </Grid>
                     ) : null}
@@ -489,7 +490,7 @@ export function VacationCalculatorPage() {
                             <Stack spacing={1.5}>
                               <Typography fontWeight={950}>Pagamento {index + 1}</Typography>
                               <TextField label="Descrição" helperText="Ex.: Adiantamento, Salário." value={payment.description} onChange={(event) => updatePayment(index, { description: event.target.value })} />
-                              <TextField label="Valor" helperText="Valor deste pagamento." value={centsToCurrencyInput(payment.amountCents)} onChange={(event) => updatePayment(index, { amountCents: currencyToCents(event.target.value) })} />
+                              <MoneyTextField label="Valor" helperText="Valor deste pagamento." value={centsToCurrencyInput(payment.amountCents)} onValueChange={(value) => updatePayment(index, { amountCents: currencyToCents(value) })} />
                               <TextField label="Dia do mês" type="number" helperText="Dia em que costuma receber." value={payment.day} onChange={(event) => updatePayment(index, { day: Number(event.target.value || 1) })} />
                             </Stack>
                           </Paper>

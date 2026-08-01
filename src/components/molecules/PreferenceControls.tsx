@@ -51,7 +51,13 @@ export function PreferenceControls({ compact = false }: { compact?: boolean }) {
   const isDark = themeMode === 'dark';
 
   return (
-    <Stack direction={compact ? 'column' : 'row'} spacing={1} alignItems="center">
+    <Stack
+      direction={compact ? 'column' : 'row'}
+      spacing={1}
+      alignItems="center"
+      justifyContent={compact ? 'center' : 'flex-end'}
+      sx={{ flexWrap: compact ? 'nowrap' : 'wrap' }}
+    >
       <Tooltip title={isDark ? t('themeDark') : t('themeLight')}>
         <Box
           sx={{

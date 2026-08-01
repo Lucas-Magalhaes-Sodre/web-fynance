@@ -15,6 +15,7 @@ import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { FeedbackSnackbar } from "@/components/molecules/FeedbackSnackbar";
 import { FinancialItemForm } from "@/components/organisms/FinancialItemForm";
 import type { FinancialItem, FinancialItemType } from "@/interfaces/financial";
 import { formatDate, formatMoney, typeLabels } from "@/utils/format";
@@ -29,6 +30,7 @@ export function FinancialItemsPage({ title, description, type }: Props) {
   const [items, setItems] = useState<FinancialItem[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FinancialItem | null>(null);
+  const [notice, setNotice] = useState("");
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const isIncomePage = type.includes("INCOME");
   const dateHeader = isIncomePage ? "Data do recebimento" : "Data da saida";
@@ -52,6 +54,7 @@ export function FinancialItemsPage({ title, description, type }: Props) {
     if (!confirmed) return;
     await api.delete(`/financial-items/${item.id}`);
     await loadItems();
+    setNotice("Lançamento excluído com sucesso.");
   }
 
   return (
@@ -161,13 +164,18 @@ export function FinancialItemsPage({ title, description, type }: Props) {
         onClose={() => setFormOpen(false)}
         onSubmit={async (data) => {
           const payload = { ...data, dueDate: data.dueDate || null };
-          if (editingItem)
+          if (editingItem) {
             await api.put(`/financial-items/${editingItem.id}`, payload);
-          else await api.post("/financial-items", payload);
+            setNotice("Lançamento atualizado com sucesso.");
+          } else {
+            await api.post("/financial-items", payload);
+            setNotice("Lançamento criado com sucesso.");
+          }
           await loadItems();
         }}
       />
       {confirmDialog}
+      <FeedbackSnackbar message={notice} onClose={() => setNotice("")} />
     </Stack>
   );
 }

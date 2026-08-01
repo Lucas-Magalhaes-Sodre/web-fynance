@@ -21,10 +21,12 @@ import {
   listSavings,
   transferSaving,
   updateSaving,
+  updateSavingsGroup,
   type SavingPayload,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import {
   SavingMovementDialog,
@@ -43,10 +45,11 @@ import type {
   FinancialCategory,
   FinancialGoal,
   Saving,
+  SavingsOverviewItem,
   SavingsExtractMode,
   SavingsOverview,
 } from "@/interfaces/financial";
-import { currencyToNumber, digitsToCurrency, financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
+import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
 import { dateForMonthlyOccurrence } from "@/modules/financial-control/components/helpers";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { translateCategoryName } from "@/i18n/display";
@@ -164,6 +167,11 @@ export function EconomyPage() {
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
   const [editingSaving, setEditingSaving] = useState<Saving | null>(null);
+  const [editingSavingsGroup, setEditingSavingsGroup] = useState<{
+    category: string;
+    title: string;
+    currentSavedBalance: number;
+  } | null>(null);
   const [detailSaving, setDetailSaving] = useState<Saving | null>(null);
   const [form, setForm] = useState<SavingMovementFormState>(initialForm);
   const [periodStart, setPeriodStart] = useState(daysAgo(30));
@@ -212,7 +220,7 @@ export function EconomyPage() {
   const currentSavings = useMemo(
     () =>
       savings
-        .filter((saving) => saving.amount > 0)
+        .filter((saving) => saving.amount !== 0)
         .filter((saving) => {
           const key = saving.date.slice(0, 10);
           return key >= periodStart && key <= periodEnd;
@@ -275,6 +283,7 @@ export function EconomyPage() {
 
   function openCreate(action: SavingAction = "REGISTER") {
     setEditingSaving(null);
+    setEditingSavingsGroup(null);
     const firstBalance = availableSavings[0];
     setForm({
       ...initialForm,
@@ -305,6 +314,7 @@ export function EconomyPage() {
 
   function openEdit(saving: Saving) {
     setEditingSaving(saving);
+    setEditingSavingsGroup(null);
     setForm({
       title: saving.title,
       action: "REGISTER",
@@ -332,17 +342,70 @@ export function EconomyPage() {
     setFormOpen(true);
   }
 
+  function groupItem(category: string, title: string): SavingsOverviewItem | undefined {
+    return overview?.categories
+      .find((item) => item.name === category)
+      ?.items.find((item) => item.name === title);
+  }
+
+  function savingWithOverviewBalance(saving: Saving, item?: SavingsOverviewItem): Saving {
+    if (!item) return saving;
+    return {
+      ...saving,
+      amount: item.currentSavedBalance,
+      color: item.color ?? saving.color,
+      hasYield: item.hasYield,
+      yieldRateMonthly: item.yieldRateMonthly ?? saving.yieldRateMonthly,
+    };
+  }
+
+  function openEditSavingsGroup(category: string, title: string, savingIds: string[]) {
+    const saving = savings.find((item) => savingIds.includes(item.id));
+    if (!saving) return;
+    const item = groupItem(category, title);
+    const balance = item?.currentSavedBalance ?? saving.amount;
+    const mergedSaving = savingWithOverviewBalance(saving, item);
+    setEditingSaving(null);
+    setEditingSavingsGroup({ category, title, currentSavedBalance: balance });
+    setForm({
+      title: mergedSaving.title,
+      action: "REGISTER",
+      category: mergedSaving.category,
+      color: mergedSaving.color ?? "#D4A017",
+      description: mergedSaving.description ?? "",
+      amount: formatMoney(balance),
+      date: isoDate(),
+      dueDay: String(new Date().getDate()),
+      isInitialBalance: true,
+      isFixed: false,
+      recurrenceType: "NONE",
+      recurrenceStartMonth: String(new Date().getMonth() + 1),
+      recurrenceStartYear: String(new Date().getFullYear()),
+      recurrenceEndMonth: String(new Date().getMonth() + 1),
+      recurrenceEndYear: String(new Date().getFullYear()),
+      goalId: mergedSaving.goalId ?? "",
+      hasYield: mergedSaving.hasYield ?? false,
+      yieldRateMonthly: mergedSaving.yieldRateMonthly ? String(mergedSaving.yieldRateMonthly) : "",
+      notify: false,
+      notifyOffsetDays: "0",
+      notifyTime: "09:00",
+      notifyMessage: "",
+    });
+    setFormOpen(true);
+  }
+
   function openSavingFromBox(_category: string, _title: string, savingIds: string[], mode: "edit" | "details") {
     const saving = savings.find((item) => savingIds.includes(item.id));
     if (!saving) return;
-    if (mode === "edit") openEdit(saving);
-    else setDetailSaving(saving);
+    const item = groupItem(_category, _title);
+    if (mode === "edit") openEditSavingsGroup(_category, _title, savingIds);
+    else setDetailSaving(savingWithOverviewBalance(saving, item));
   }
 
   async function saveSaving() {
     if (savingForm) return;
     const payload = toPayload(form);
-    if (!payload.title || payload.amount <= 0 || Number.isNaN(payload.amount))
+    if (!payload.title || Number.isNaN(payload.amount) || (!editingSavingsGroup && payload.amount <= 0))
       return;
 
     setSavingForm(true);
@@ -364,6 +427,20 @@ export function EconomyPage() {
         setNotice(t("savingWithdrawn"));
       } else if (editingSaving) {
         await updateSaving(editingSaving.id, payload);
+        setNotice(t("savingUpdated"));
+      } else if (editingSavingsGroup) {
+        await updateSavingsGroup({
+          category: editingSavingsGroup.category,
+          title: editingSavingsGroup.title,
+          nextCategory: payload.category,
+          nextTitle: payload.title,
+          color: payload.color,
+          description: payload.description,
+          goalId: payload.goalId,
+          hasYield: payload.hasYield,
+          yieldRateMonthly: payload.yieldRateMonthly,
+          targetBalance: payload.amount,
+        });
         setNotice(t("savingUpdated"));
       } else {
         const createdSaving = await createSaving(payload);
@@ -510,6 +587,7 @@ export function EconomyPage() {
         categories={categories}
         availableSavings={availableSavings}
         saving={savingForm}
+        balanceAdjustmentMode={Boolean(editingSavingsGroup)}
         onClose={() => setFormOpen(false)}
         onSave={saveSaving}
         onFormChange={setForm}
@@ -593,10 +671,10 @@ export function EconomyPage() {
                 <Typography fontWeight={950}>{t("simulation")}</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <TextField
+                    <MoneyTextField
                       label={t("monthlyContribution")}
                       value={detailSimulation.monthly}
-                      onChange={(event) => setDetailSimulation((current) => ({ ...current, monthly: digitsToCurrency(event.target.value) }))}
+                      onValueChange={(monthly) => setDetailSimulation((current) => ({ ...current, monthly }))}
                       fullWidth
                     />
                   </Grid>
@@ -630,10 +708,10 @@ export function EconomyPage() {
         <Stack spacing={2}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <TextField label={t("initialValue")} value={simulation.initial} onChange={(event) => setSimulation((current) => ({ ...current, initial: digitsToCurrency(event.target.value) }))} fullWidth />
+              <MoneyTextField label={t("initialValue")} value={simulation.initial} onValueChange={(initial) => setSimulation((current) => ({ ...current, initial }))} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label={t("monthlyContribution")} value={simulation.monthly} onChange={(event) => setSimulation((current) => ({ ...current, monthly: digitsToCurrency(event.target.value) }))} fullWidth />
+              <MoneyTextField label={t("monthlyContribution")} value={simulation.monthly} onValueChange={(monthly) => setSimulation((current) => ({ ...current, monthly }))} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label={t("timeInMonths")} type="number" value={simulation.months} onChange={(event) => setSimulation((current) => ({ ...current, months: event.target.value }))} fullWidth />

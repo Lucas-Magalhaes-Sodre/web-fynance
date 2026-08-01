@@ -40,7 +40,9 @@ import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
+import { FeedbackSnackbar } from "@/components/molecules/FeedbackSnackbar";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import {
@@ -54,7 +56,7 @@ import {
   type CreditCardPurchasePayload,
 } from "@/services/financialControl";
 import type { CreditCard, CreditCardPurchase } from "@/interfaces/financial";
-import { currencyToNumber, digitsToCurrency, financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
+import { currencyToNumber, financeColors, formatDate, formatMoney, isoDate } from "@/utils/format";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { monthsByLanguage } from "@/i18n/display";
 
@@ -146,6 +148,7 @@ export function CreditCardsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const { confirm, dialog } = useConfirmDialog();
 
   const selectedCard = useMemo(
@@ -256,6 +259,7 @@ export function CreditCardsPage() {
       const card = editingCard
         ? await updateCreditCard(editingCard.id, payload)
         : await createCreditCard(payload);
+      setNotice(editingCard ? "Cartão atualizado com sucesso." : "Cartão criado com sucesso.");
       resetCardForm();
       await loadCards("");
       setSelectedCardId(card.id);
@@ -276,6 +280,7 @@ export function CreditCardsPage() {
     if (!confirmed) return;
     await updateCreditCard(card.id, { isActive: !card.isActive });
     await loadCards("");
+    setNotice(card.isActive ? "Cartão inativado com sucesso." : "Cartão reativado com sucesso.");
   }
 
   async function savePurchase(event: FormEvent) {
@@ -292,6 +297,7 @@ export function CreditCardsPage() {
       } else {
         await createCreditCardPurchase(payload);
       }
+      setNotice(editingPurchase ? "Compra atualizada com sucesso." : "Compra adicionada com sucesso.");
       resetPurchaseForm();
       await loadCards(cardFilter);
     } finally {
@@ -315,6 +321,7 @@ export function CreditCardsPage() {
     if (!confirmed) return;
     await deleteCreditCardPurchase(purchase.id, { deleteAllInstallments: true });
     await loadCards(cardFilter);
+    setNotice("Compra excluída com sucesso.");
   }
 
   async function confirmPurchaseDelete() {
@@ -331,6 +338,7 @@ export function CreditCardsPage() {
       setDeletingPurchase(null);
       setDeleteAllInstallments(false);
       await loadCards(cardFilter);
+      setNotice("Compra excluída com sucesso.");
     } finally {
       setSaving(false);
     }
@@ -507,10 +515,10 @@ export function CreditCardsPage() {
         <Stack component="form" id="credit-card-form" spacing={2} onSubmit={saveCard}>
           <TextField label={t("cardName")} value={cardForm.name} onChange={(event) => setCardForm({ ...cardForm, name: event.target.value })} required />
           <TextField label={t("monthlyDue")} type="number" value={cardForm.dueDay} onChange={(event) => setCardForm({ ...cardForm, dueDay: event.target.value })} inputProps={{ min: 1, max: 31 }} required />
-          <TextField
+          <MoneyTextField
             label={t("cardLimit")}
             value={cardForm.creditLimit}
-            onChange={(event) => setCardForm({ ...cardForm, creditLimit: digitsToCurrency(event.target.value) })}
+            onValueChange={(creditLimit) => setCardForm({ ...cardForm, creditLimit })}
             helperText={t("optional")}
           />
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -684,11 +692,11 @@ export function CreditCardsPage() {
                         <TextField fullWidth label={t("expenseName")} value={purchaseForm.title} onChange={(event) => setPurchaseForm({ ...purchaseForm, title: event.target.value })} required />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <TextField
+                        <MoneyTextField
                           fullWidth
                           label={purchaseForm.amountMode === "TOTAL" ? t("totalValue") : t("installmentValue")}
                           value={purchaseForm.amount}
-                          onChange={(event) => setPurchaseForm({ ...purchaseForm, amount: digitsToCurrency(event.target.value) })}
+                          onValueChange={(amount) => setPurchaseForm({ ...purchaseForm, amount })}
                           required
                         />
                       </Grid>
@@ -830,6 +838,7 @@ export function CreditCardsPage() {
         </Stack>
       </AppDialog>
       {dialog}
+      <FeedbackSnackbar message={notice} onClose={() => setNotice("")} />
     </Stack>
   );
 }

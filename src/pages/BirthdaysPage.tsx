@@ -27,6 +27,8 @@ import { LoadingActionButton } from "@/components/molecules/LoadingActionButton"
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import { StatCard } from "@/components/molecules/StatCard";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { FeedbackSnackbar } from "@/components/molecules/FeedbackSnackbar";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { FinancialRemindersDialog } from "@/components/organisms/FinancialRemindersDialog";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import type { FinancialItem } from "@/interfaces/financial";
@@ -38,7 +40,7 @@ import {
   updateEntry,
   type FinancialEntryPayload,
 } from "@/services/financialControl";
-import { currencyToNumber, digitsToCurrency, financeColors, formatMoney } from "@/utils/format";
+import { currencyToNumber, financeColors, formatMoney } from "@/utils/format";
 import { realCurrentYear } from "@/modules/financial-control/components/constants";
 import { monthsByLanguage } from "@/i18n/display";
 
@@ -89,6 +91,7 @@ export function BirthdaysPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingBirthday, setEditingBirthday] = useState<FinancialItem | null>(null);
   const [reminderItem, setReminderItem] = useState<FinancialItem | null>(null);
@@ -204,8 +207,13 @@ export function BirthdaysPage() {
     setSaving(true);
     setError("");
     try {
-      if (editingBirthday) await updateEntry(editingBirthday.id, birthdayPayload());
-      else await createEntry(birthdayPayload());
+      if (editingBirthday) {
+        await updateEntry(editingBirthday.id, birthdayPayload());
+        setNotice("Aniversário atualizado com sucesso.");
+      } else {
+        await createEntry(birthdayPayload());
+        setNotice("Aniversário criado com sucesso.");
+      }
       setFormOpen(false);
       await loadBirthdays();
     } catch {
@@ -226,6 +234,7 @@ export function BirthdaysPage() {
     if (!confirmed) return;
     await deleteEntry(item.id);
     await loadBirthdays();
+    setNotice("Aniversário excluído com sucesso.");
   }
 
   return (
@@ -624,10 +633,10 @@ export function BirthdaysPage() {
             required
             fullWidth
           />
-          <TextField
+          <MoneyTextField
             label={t("birthdayGiftValue")}
             value={form.amount}
-            onChange={(event) => setForm({ ...form, amount: digitsToCurrency(event.target.value) })}
+            onValueChange={(amount) => setForm({ ...form, amount })}
             required
             fullWidth
           />
@@ -656,6 +665,7 @@ export function BirthdaysPage() {
       />
 
       {confirmDialog}
+      <FeedbackSnackbar message={notice} onClose={() => setNotice("")} />
     </Stack>
   );
 }

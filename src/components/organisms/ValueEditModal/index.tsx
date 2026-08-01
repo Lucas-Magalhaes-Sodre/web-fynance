@@ -9,9 +9,10 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { CreditCard, EntryType, ValueUpdateScope } from '@/interfaces/financial';
-import { balanceColor, currencyToNumber, digitsToCurrency, financeColors, formatMoney, months } from '@/utils/format';
+import { balanceColor, currencyToNumber, financeColors, formatMoney, months } from '@/utils/format';
 import { AppDialog, AppDialogStyles as S } from '@/components/molecules/AppDialog';
 import { LoadingActionButton } from '@/components/molecules/LoadingActionButton';
+import { MoneyTextField } from '@/components/molecules/MoneyTextField';
 import { listCreditCards } from '@/services/financialControl';
 
 type Props = {
@@ -152,7 +153,7 @@ export function ValueEditModal({
               {months[month - 1]} de {year} • {type === 'INCOME' ? 'Receita' : type === 'EXPENSE' ? 'Despesa' : 'Economia'}
             </Typography>
           </Stack>
-          <TextField label="Novo valor" required value={amount} onChange={(event) => setAmount(digitsToCurrency(event.target.value))} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
+          <MoneyTextField label="Novo valor" required value={amount} onValueChange={setAmount} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
           <TextField label="Descrição opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
           {type === 'EXPENSE' ? (
             <S.PreviewPanel spacing={1.5}>

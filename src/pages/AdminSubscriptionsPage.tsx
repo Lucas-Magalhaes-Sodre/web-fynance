@@ -24,9 +24,11 @@ import TableRow from "@mui/material/TableRow";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { type ChangeEvent, useEffect, useState } from "react";
 import { AppDialog } from "@/components/molecules/AppDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
+import { FeedbackSnackbar } from "@/components/molecules/FeedbackSnackbar";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import {
   normalizePlanProductKeys,
@@ -65,7 +67,6 @@ import {
 } from "@/services/billing";
 import {
   currencyToNumber,
-  digitsToCurrency,
   formatDate,
   formatMoney,
 } from "@/utils/format";
@@ -157,13 +158,16 @@ export function AdminSubscriptionsPage() {
     total: 0,
     totalPages: 1,
   });
-  const [adminTab, setAdminTab] = useState<"PLANS" | "COUPONS" | "USERS">(
+  const [adminTab, setAdminTab] = useState<"PLANS" | "COUPONS" | "USERS" | "SETTINGS">(
     "PLANS",
   );
   const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [coupons, setCoupons] = useState<BillingCoupon[]>([]);
   const [overview, setOverview] = useState<AdminBillingOverview | null>(null);
   const [defaultTrialDays, setDefaultTrialDays] = useState("14");
+  const [contactEmails, setContactEmails] = useState("");
+  const [contactPhones, setContactPhones] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
   const [daysByUser, setDaysByUser] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -212,6 +216,7 @@ export function AdminSubscriptionsPage() {
     billingPlanId: "",
   });
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   async function loadUsers(
     page = usersPagination.page,
@@ -242,6 +247,9 @@ export function AdminSubscriptionsPage() {
       ]);
     setOverview(overviewResult);
     setDefaultTrialDays(String(settingsResult.defaultTrialDays));
+    setContactEmails(settingsResult.contactEmails.join("\n"));
+    setContactPhones(settingsResult.contactPhones.join("\n"));
+    setContactMessage(settingsResult.contactMessage ?? "");
     setPlans(plansResult);
     setCoupons(couponsResult);
     await loadUsers(1, usersPagination.pageSize);
@@ -260,6 +268,7 @@ export function AdminSubscriptionsPage() {
         loadUsers(),
         getAdminBillingOverview().then(setOverview),
       ]);
+      setNotice("Teste renovado com sucesso.");
     } catch {
       setError("Não foi possível renovar o teste agora.");
     } finally {
@@ -283,6 +292,7 @@ export function AdminSubscriptionsPage() {
         loadUsers(),
         getAdminBillingOverview().then(setOverview),
       ]);
+      setNotice("Status do usuário atualizado com sucesso.");
     } catch {
       setError("Não foi possível alterar o status.");
     } finally {
@@ -303,6 +313,7 @@ export function AdminSubscriptionsPage() {
         loadUsers(),
         getAdminBillingOverview().then(setOverview),
       ]);
+      setNotice("Perfil do usuário atualizado com sucesso.");
     } catch {
       setError("Não foi possível alterar o perfil do usuário.");
     } finally {
@@ -315,9 +326,18 @@ export function AdminSubscriptionsPage() {
     setSavingSettings(true);
     try {
       const days = Math.max(0, Number(defaultTrialDays) || 0);
-      const settings = await updateAdminSettings({ defaultTrialDays: days });
+      const settings = await updateAdminSettings({
+        defaultTrialDays: days,
+        contactEmails: contactEmails.split(/[\n,;]/).map((item) => item.trim()).filter(Boolean),
+        contactPhones: contactPhones.split(/[\n,;]/).map((item) => item.trim()).filter(Boolean),
+        contactMessage: contactMessage.trim(),
+      });
       setDefaultTrialDays(String(settings.defaultTrialDays));
+      setContactEmails(settings.contactEmails.join("\n"));
+      setContactPhones(settings.contactPhones.join("\n"));
+      setContactMessage(settings.contactMessage ?? "");
       await load();
+      setNotice("Configurações salvas com sucesso.");
     } catch {
       setError("Não foi possível salvar as configurações.");
     } finally {
@@ -384,8 +404,10 @@ export function AdminSubscriptionsPage() {
       };
       if (editingPlan) {
         await updateAdminBillingPlan(editingPlan.id, payload);
+        setNotice("Plano atualizado com sucesso.");
       } else {
         await createAdminBillingPlan(payload);
+        setNotice("Plano criado com sucesso.");
       }
       setPlanModalOpen(false);
       await load();
@@ -401,6 +423,7 @@ export function AdminSubscriptionsPage() {
     try {
       await deactivateAdminBillingPlan(planId);
       await load();
+      setNotice("Plano desativado com sucesso.");
     } finally {
       setSavingPlan(false);
     }
@@ -460,8 +483,10 @@ export function AdminSubscriptionsPage() {
       };
       if (editingCoupon) {
         await updateAdminBillingCoupon(editingCoupon.id, payload);
+        setNotice("Cupom atualizado com sucesso.");
       } else {
         await createAdminBillingCoupon(payload);
+        setNotice("Cupom criado com sucesso.");
       }
       setCouponModalOpen(false);
       setCoupons(await listAdminBillingCoupons());
@@ -477,6 +502,7 @@ export function AdminSubscriptionsPage() {
     try {
       await deactivateAdminBillingCoupon(couponId);
       setCoupons(await listAdminBillingCoupons());
+      setNotice("Cupom desativado com sucesso.");
     } finally {
       setSavingCoupon(false);
     }
@@ -496,6 +522,7 @@ export function AdminSubscriptionsPage() {
       setPlans(
         await reorderAdminBillingPlans(nextPlans.map((plan) => plan.id)),
       );
+      setNotice("Ordem dos planos salva com sucesso.");
     } catch {
       setError("Não foi possível salvar a ordem dos planos.");
       setPlans(await listAdminBillingPlans());
@@ -545,6 +572,7 @@ export function AdminSubscriptionsPage() {
         loadUsers(),
         getAdminBillingOverview().then(setOverview),
       ]);
+      setNotice("Usuário anonimizado com sucesso.");
     } catch (error: any) {
       setError(
         error.response?.data?.message ??
@@ -643,6 +671,7 @@ export function AdminSubscriptionsPage() {
           <Tab value="PLANS" label="Planos" />
           <Tab value="COUPONS" label="Cupons" />
           <Tab value="USERS" label="Usuários" />
+          <Tab value="SETTINGS" label="Configurações" />
         </Tabs>
       </Paper>
 
@@ -1200,6 +1229,59 @@ export function AdminSubscriptionsPage() {
         </Paper>
       ) : null}
 
+      {adminTab === "SETTINGS" ? (
+        <Paper className="soft-card" sx={{ p: 2.5, borderRadius: 4 }}>
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography variant="h5" fontWeight={950}>
+                Rodapé da área logada
+              </Typography>
+              <Typography color="text.secondary">
+                Configure os contatos que aparecerão no rodapé para usuários logados.
+              </Typography>
+            </Box>
+            <TextField
+              label="E-mails de contato"
+              value={contactEmails}
+              onChange={(event) => setContactEmails(event.target.value)}
+              helperText="Informe um e-mail por linha, vírgula ou ponto e vírgula. Máximo de 5."
+              multiline
+              minRows={2}
+              fullWidth
+            />
+            <TextField
+              label="Telefones de contato"
+              value={contactPhones}
+              onChange={(event) => setContactPhones(event.target.value)}
+              helperText="Informe um telefone por linha, vírgula ou ponto e vírgula. Máximo de 5."
+              multiline
+              minRows={2}
+              fullWidth
+            />
+            <TextField
+              label="Mensagem curta"
+              value={contactMessage}
+              onChange={(event) => setContactMessage(event.target.value)}
+              helperText="Opcional. Ex.: Atendimento em dias úteis, das 9h às 18h."
+              inputProps={{ maxLength: 180 }}
+              multiline
+              minRows={2}
+              fullWidth
+            />
+            <Box display="flex" justifyContent="flex-end">
+              <LoadingActionButton
+                variant="contained"
+                onClick={saveSettings}
+                loading={savingSettings}
+                loadingLabel="Salvando..."
+              >
+                Salvar contatos
+              </LoadingActionButton>
+            </Box>
+          </Stack>
+        </Paper>
+      ) : null}
+
       <AppDialog
         open={planModalOpen}
         onClose={() => setPlanModalOpen(false)}
@@ -1245,25 +1327,25 @@ export function AdminSubscriptionsPage() {
             minRows={2}
           />
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
+            <MoneyTextField
               label="Valor cheio/antigo"
               value={planForm.originalPrice}
-              onChange={(event) =>
+              onValueChange={(originalPrice) =>
                 setPlanForm((current) => ({
                   ...current,
-                  originalPrice: digitsToCurrency(event.target.value),
+                  originalPrice,
                 }))
               }
               helperText="Opcional. Aparece riscado quando for maior que o valor real."
               fullWidth
             />
-            <TextField
+            <MoneyTextField
               label="Valor real do plano"
               value={planForm.price}
-              onChange={(event) =>
+              onValueChange={(price) =>
                 setPlanForm((current) => ({
                   ...current,
-                  price: digitsToCurrency(event.target.value),
+                  price,
                 }))
               }
               fullWidth
@@ -1574,6 +1656,19 @@ export function AdminSubscriptionsPage() {
               <MenuItem value="PERCENT">Percentual</MenuItem>
               <MenuItem value="FIXED">Valor fixo</MenuItem>
             </TextField>
+            {couponForm.discountType === "FIXED" ? (
+            <MoneyTextField
+              label="Valor"
+              value={couponForm.discountValue}
+              onValueChange={(discountValue) =>
+                setCouponForm((current) => ({
+                  ...current,
+                  discountValue,
+                }))
+              }
+              fullWidth
+            />
+            ) : (
             <TextField
               label={
                 couponForm.discountType === "PERCENT" ? "Percentual" : "Valor"
@@ -1583,13 +1678,12 @@ export function AdminSubscriptionsPage() {
                 setCouponForm((current) => ({
                   ...current,
                   discountValue:
-                    current.discountType === "FIXED"
-                      ? digitsToCurrency(event.target.value)
-                      : event.target.value,
+                    event.target.value,
                 }))
               }
               fullWidth
             />
+            )}
           </Stack>
           <TextField
             select
@@ -1731,6 +1825,7 @@ export function AdminSubscriptionsPage() {
           />
         </Stack>
       </AppDialog>
+      <FeedbackSnackbar message={notice} onClose={() => setNotice("")} />
     </Stack>
   );
 }

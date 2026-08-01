@@ -96,6 +96,9 @@ export type AdminBillingOverview = {
 
 export type AdminSettings = {
   defaultTrialDays: number;
+  contactEmails: string[];
+  contactPhones: string[];
+  contactMessage: string;
 };
 
 export async function getBillingStatus() {

@@ -32,6 +32,7 @@ import {
 import { FinancialGoalCard } from '@/components/organisms/goals/FinancialGoalCard';
 import { StatCard } from '@/components/molecules/StatCard';
 import { AppDialog } from '@/components/molecules/AppDialog';
+import { FeedbackSnackbar } from '@/components/molecules/FeedbackSnackbar';
 import { PageHelpButton } from '@/components/molecules/PageHelpButton';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import type { FinancialGoal, FinancialGoalStatus, GoalSavingsPage } from '@/interfaces/financial';
@@ -80,6 +81,7 @@ export function FinancialGoalsPage() {
   const [goalSavingsPage, setGoalSavingsPage] = useState<GoalSavingsPage | null>(null);
   const [goalSavingsLoading, setGoalSavingsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
@@ -172,8 +174,13 @@ export function FinancialGoalsPage() {
 
     setSavingGoal(true);
     try {
-      if (editingGoal) await updateFinancialGoal(editingGoal.id, payload);
-      else await createFinancialGoal(payload);
+      if (editingGoal) {
+        await updateFinancialGoal(editingGoal.id, payload);
+        setNotice('Meta atualizada com sucesso.');
+      } else {
+        await createFinancialGoal(payload);
+        setNotice('Meta criada com sucesso.');
+      }
 
       setFormOpen(false);
       await loadGoals();
@@ -194,6 +201,7 @@ export function FinancialGoalsPage() {
     try {
       await deleteFinancialGoal(goal.id);
       await loadGoals();
+      setNotice('Meta excluída com sucesso.');
     } finally {
       setDeletingGoalId('');
     }
@@ -433,6 +441,7 @@ export function FinancialGoalsPage() {
         ) : null}
       </AppDialog>
       {confirmDialog}
+      <FeedbackSnackbar message={notice} onClose={() => setNotice('')} />
     </Stack>
   );
 }

@@ -22,6 +22,7 @@ import type {
   Saving,
   SavingsExtract,
   SavingsExtractMode,
+  SavingsGroupUpdateResult,
   SavingsMovementType,
   SavingsOverview,
   SavingsProjection,
@@ -54,6 +55,10 @@ export type FinancialEntryPayload = {
     endMonth: number;
     endYear: number;
   };
+};
+
+export type CreatedFinancialEntry = FinancialItem & {
+  generatedItems?: FinancialItem[];
 };
 
 export type FinancialCategoryPayload = {
@@ -98,6 +103,19 @@ export type SavingTransferPayload = {
   month?: number;
   year?: number;
   goalId?: string | null;
+};
+
+export type SavingsGroupUpdatePayload = {
+  category: string;
+  title: string;
+  nextCategory?: string;
+  nextTitle?: string;
+  color?: string;
+  description?: string | null;
+  goalId?: string | null;
+  hasYield?: boolean;
+  yieldRateMonthly?: number | null;
+  targetBalance?: number;
 };
 
 export type FinancialTablePreferences = {
@@ -229,8 +247,11 @@ export async function getFinancialCalendar(month: number, year: number) {
 }
 
 export async function createEntry(payload: FinancialEntryPayload) {
-  const { data } = await api.post<{ item: FinancialItem }>('/financial-items', payload);
-  return data.item;
+  const { data } = await api.post<{ item: FinancialItem; items?: FinancialItem[] }>('/financial-items', payload);
+  return {
+    ...data.item,
+    generatedItems: data.items ?? [data.item],
+  } satisfies CreatedFinancialEntry;
 }
 
 export async function copyFinancialCategory(payload: {
@@ -408,6 +429,11 @@ export async function deleteSaving(id: string) {
 
 export async function deleteSavingsGroup(params: { category: string; title?: string }) {
   const { data } = await api.delete<{ deletedCount: number }>('/savings/group', { params });
+  return data;
+}
+
+export async function updateSavingsGroup(payload: SavingsGroupUpdatePayload) {
+  const { data } = await api.put<SavingsGroupUpdateResult>('/savings/group', payload);
   return data;
 }
 
