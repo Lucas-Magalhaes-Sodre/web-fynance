@@ -106,6 +106,11 @@ export type FinancialItem = {
   isFixed: boolean;
   recurrenceType: RecurrenceType;
   recurrenceGroupId?: string | null;
+  excludedFromTotals?: boolean;
+  linkedCreditCardId?: string | null;
+  linkedCreditCardPurchaseId?: string | null;
+  linkedCreditCardInstallments?: number | null;
+  linkedCreditCardAmount?: number | null;
   date: string;
   month: number;
   year: number;
