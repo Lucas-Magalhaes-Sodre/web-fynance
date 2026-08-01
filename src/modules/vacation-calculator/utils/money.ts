@@ -1,13 +1,12 @@
+import { currencyDigits, formatMoney } from "@/utils/format";
+
 export function currencyToCents(value: string) {
-  const digits = value.replace(/\D/g, "");
+  const digits = currencyDigits(value);
   return digits ? Number(digits) : 0;
 }
 
 export function centsToCurrency(valueCents: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(valueCents / 100);
+  return formatMoney(valueCents / 100);
 }
 
 export function centsToCurrencyInput(valueCents: number) {
@@ -18,4 +17,3 @@ export function centsToCurrencyInput(valueCents: number) {
 export function formatCents(valueCents: number) {
   return centsToCurrency(valueCents);
 }
-

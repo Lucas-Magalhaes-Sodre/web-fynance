@@ -13,10 +13,11 @@ import type {
   Saving,
   SavingTransferDirection,
 } from "@/interfaces/financial";
-import { currencyToNumber, digitsToCurrency, financeColors, formatMoney } from "@/utils/format";
+import { currencyToNumber, financeColors, formatMoney } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
 
@@ -81,7 +82,7 @@ const monthOptions = [
 ];
 
 const currentYear = new Date().getFullYear();
-const yearOptions = Array.from({ length: 11 }, (_, index) => currentYear - 5 + index);
+const yearOptions = Array.from({ length: 81 }, (_, index) => currentYear - 40 + index);
 
 type SavingMovementDialogProps = {
   open: boolean;
@@ -90,6 +91,7 @@ type SavingMovementDialogProps = {
   categories: FinancialCategory[];
   availableSavings?: Saving[];
   saving: boolean;
+  balanceAdjustmentMode?: boolean;
   onClose: () => void;
   onSave: () => void;
   onFormChange: (form: SavingMovementFormState) => void;
@@ -102,6 +104,7 @@ export function SavingMovementDialog({
   categories,
   availableSavings = [],
   saving,
+  balanceAdjustmentMode = false,
   onClose,
   onSave,
   onFormChange,
@@ -176,7 +179,7 @@ export function SavingMovementDialog({
     !isWithdraw &&
     form.isFixed &&
     form.recurrenceType === "MONTHLY" &&
-    Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <
+    Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <=
       Number(form.recurrenceStartYear) * 12 + Number(form.recurrenceStartMonth);
   const invalidWithdraw =
     isWithdraw &&
@@ -188,7 +191,7 @@ export function SavingMovementDialog({
       open={open}
       onClose={onClose}
       eyebrow={t("savings")}
-      title={isWithdraw ? t("withdrawSavingTitle") : t("addSaving")}
+      title={isWithdraw ? t("withdrawSavingTitle") : balanceAdjustmentMode ? "Editar caixinha" : t("addSaving")}
       titleAccent={isWithdraw ? financeColors.negative : financeColors.saving}
       actions={
         <>
@@ -198,7 +201,7 @@ export function SavingMovementDialog({
             disabled={
               !form.title.trim() ||
               !form.category.trim() ||
-              currencyToNumber(form.amount) <= 0 ||
+              (!balanceAdjustmentMode && currencyToNumber(form.amount) <= 0) ||
               invalidCustomRecurrenceRange ||
               invalidWithdraw
             }
@@ -216,12 +219,14 @@ export function SavingMovementDialog({
         <Typography color="text.secondary">
           {isWithdraw
             ? t("withdrawSavingText")
-            : isInitialBalance
+            : balanceAdjustmentMode
+              ? "Atualize os dados da caixinha. O saldo informado aqui representa o total atual guardado; se ele mudar, o sistema cria apenas um ajuste de saldo, sem alterar os depósitos já registrados no Controle financeiro."
+              : isInitialBalance
               ? "Cadastre um valor que voce ja tinha guardado antes de usar o sistema. Ele entra no saldo das economias e metas, mas nao impacta o controle financeiro de nenhum mes."
               : t("addSavingText")}
         </Typography>
 
-        {!isWithdraw ? (
+        {!isWithdraw && !balanceAdjustmentMode ? (
           <Box
             sx={{
               p: 1.5,
@@ -311,11 +316,11 @@ export function SavingMovementDialog({
           />
         )}
 
-        <TextField
-          label={isWithdraw ? t("amountToWithdraw") : t("value")}
+        <MoneyTextField
+          label={isWithdraw ? t("amountToWithdraw") : balanceAdjustmentMode ? "Saldo total da caixinha" : t("value")}
           required
           value={form.amount}
-          onChange={(event) => updateForm({ amount: digitsToCurrency(event.target.value) })}
+          onValueChange={(amount) => updateForm({ amount })}
         />
 
         {isWithdraw ? (

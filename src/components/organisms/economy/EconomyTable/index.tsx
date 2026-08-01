@@ -51,14 +51,14 @@ export function EconomyTable({
             <TableRow key={saving.id} hover>
               <TableCell>{saving.title}</TableCell>
               <TableCell>{translateCategoryName(saving.category, language)}</TableCell>
-              <TableCell>{saving.isInitialBalance ? "Saldo inicial" : formatDate(saving.date)}</TableCell>
+              <TableCell>{saving.isInitialBalance ? "Ajuste de saldo" : formatDate(saving.date)}</TableCell>
               <TableCell>
                 {goals.find((goal) => goal.id === saving.goalId)?.title ?? "-"}
               </TableCell>
               <TableCell>{saving.description || "-"}</TableCell>
               <TableCell
                 align="right"
-                sx={{ color: financeColors.saving, fontWeight: 900 }}
+                sx={{ color: saving.amount < 0 ? financeColors.negative : financeColors.saving, fontWeight: 900 }}
               >
                 {formatMoney(saving.amount)}
               </TableCell>

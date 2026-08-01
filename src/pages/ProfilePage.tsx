@@ -1,4 +1,5 @@
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DownloadIcon from "@mui/icons-material/Download";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
@@ -8,8 +9,12 @@ import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
+import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Select from "@mui/material/Select";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -23,11 +28,11 @@ import { AppDialog } from "@/components/molecules/AppDialog";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { normalizePlanProductKeys, productPlanLabel } from "@/constants/planProducts";
 import { usePreferences } from "@/contexts/PreferencesContext";
-import { formatDate, formatMoney } from "@/utils/format";
+import { currencyNames, currencySymbols, formatDate, formatMoney, formatMoneyWithCurrency, type AppCurrency } from "@/utils/format";
 
 export function ProfilePage() {
   const { user, refreshUser, signOut } = useAuth();
-  const { t } = usePreferences();
+  const { currency, setCurrency, t } = usePreferences();
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -39,6 +44,7 @@ export function ProfilePage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
+  const [draftCurrency, setDraftCurrency] = useState<AppCurrency>(currency);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState("");
@@ -53,6 +59,10 @@ export function ProfilePage() {
     });
     setMarketingConsent(Boolean(user?.marketingConsent));
   }, [user]);
+
+  useEffect(() => {
+    setDraftCurrency(currency);
+  }, [currency]);
 
   async function saveProfile() {
     if (!form.name.trim()) return;
@@ -85,6 +95,13 @@ export function ProfilePage() {
     } finally {
       setPrivacySaving(false);
     }
+  }
+
+  function saveCurrencyPreference() {
+    if (draftCurrency === currency) return;
+    setCurrency(draftCurrency);
+    setNotice(t("currencyUpdated"));
+    setError("");
   }
 
   async function exportMyData() {
@@ -162,6 +179,50 @@ export function ProfilePage() {
             <LoadingActionButton variant="contained" onClick={saveProfile} disabled={!form.name.trim()} loading={saving} loadingLabel={t("saving")}>
               {t("saveProfile")}
             </LoadingActionButton>
+          </Box>
+        </Stack>
+      </Paper>
+
+      <Paper className="soft-card" sx={{ p: 3, borderRadius: 4, maxWidth: 760 }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1.5} alignItems="flex-start">
+            <AttachMoneyIcon color="primary" sx={{ mt: 0.35 }} />
+            <Box>
+              <Typography variant="h5" fontWeight={950}>{t("profileCurrencyTitle")}</Typography>
+              <Typography color="text.secondary">
+                {t("profileCurrencyText")}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <FormControl fullWidth>
+            <InputLabel id="profile-currency-label">{t("currency")}</InputLabel>
+            <Select
+              labelId="profile-currency-label"
+              label={t("currency")}
+              value={draftCurrency}
+              onChange={(event) => setDraftCurrency(event.target.value as AppCurrency)}
+            >
+              {(Object.keys(currencyNames) as AppCurrency[]).map((item) => (
+                <MenuItem key={item} value={item}>
+                  {currencySymbols[item]} {item} - {currencyNames[item]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Alert severity="info" sx={{ borderRadius: 3 }}>
+            {t("profileCurrencyPreview")} <strong>{formatMoneyWithCurrency(1234.56, draftCurrency)}</strong>
+          </Alert>
+
+          <Box display="flex" justifyContent="flex-end">
+            <Button
+              variant="contained"
+              onClick={saveCurrencyPreference}
+              disabled={draftCurrency === currency}
+            >
+              {t("savePreferences")}
+            </Button>
           </Box>
         </Stack>
       </Paper>

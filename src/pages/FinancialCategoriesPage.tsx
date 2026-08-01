@@ -27,6 +27,7 @@ import {
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/atoms/EmptyState";
+import { FeedbackSnackbar } from "@/components/molecules/FeedbackSnackbar";
 import { PageHelpButton } from "@/components/molecules/PageHelpButton";
 import {
   CategoryFormDialog,
@@ -91,6 +92,7 @@ export function FinancialCategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const { confirm, dialog } = useConfirmDialog();
 
   const visibleCategories = useMemo(
@@ -159,6 +161,7 @@ export function FinancialCategoriesPage() {
       resetForm(form.type);
       setCreating(false);
       await loadCategories();
+      setNotice("Categoria criada com sucesso.");
     } finally {
       setSaving(false);
     }
@@ -173,6 +176,7 @@ export function FinancialCategoriesPage() {
       await updateFinancialCategory(editing.id, editForm);
       setEditing(null);
       await loadCategories();
+      setNotice("Categoria atualizada com sucesso.");
     } finally {
       setSaving(false);
     }
@@ -189,6 +193,7 @@ export function FinancialCategoriesPage() {
     await deleteFinancialCategory(category.id);
     if (editing?.id === category.id) setEditing(null);
     await loadCategories();
+    setNotice("Categoria excluída com sucesso.");
   }
 
   return (
@@ -327,6 +332,7 @@ export function FinancialCategoriesPage() {
         lockIdentity={Boolean(editing && isProtectedSavingsCategory(editing))}
       />
       {dialog}
+      <FeedbackSnackbar message={notice} onClose={() => setNotice("")} />
     </Stack>
   );
 }

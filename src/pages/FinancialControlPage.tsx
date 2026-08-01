@@ -49,7 +49,6 @@ import { FinancialSummaryChart } from "@/modules/financial-control/components/Fi
 import {
   categoryKey,
   dateForMonthlyOccurrence,
-  monthCursorValue,
   normalizedCategoryKey,
 } from "@/modules/financial-control/components/helpers";
 import { MonthCalendarView } from "@/modules/financial-control/components/MonthCalendarView";
@@ -73,6 +72,7 @@ import { YearSpreadsheet } from "@/modules/financial-control/components/YearSpre
 import { PeriodSummaryCards } from "@/components/organisms/PeriodSummaryCards";
 import { ValueEditModal } from "@/components/organisms/ValueEditModal";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { FeedbackSnackbar } from "@/components/molecules/FeedbackSnackbar";
 import type {
   DayControl,
   EntryType,
@@ -190,6 +190,7 @@ export function FinancialControlPage() {
   const [weekData, setWeekData] = useState<WeekControl | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [savingFormOpen, setSavingFormOpen] = useState(false);
   const [savingForm, setSavingForm] =
@@ -651,6 +652,7 @@ export function FinancialControlPage() {
       setSavingFormOpen(false);
       await loadData();
       await loadAvailableSavings();
+      setNotice(savingForm.action === "REGISTER" ? "Economia registrada com sucesso." : "Resgate realizado com sucesso.");
     } finally {
       setSavingTransferSaving(false);
     }
@@ -669,61 +671,13 @@ export function FinancialControlPage() {
   }
 
   async function saveEntry(payload: FinancialEntryPayload, reminder?: FinancialEntryReminderDraft) {
-    if (editingItem) await updateEntry(editingItem.id, payload);
-    else if (
-      payload.recurrenceType === "MONTHLY" &&
-      payload.recurrenceGeneration
-    ) {
-      const generation = payload.recurrenceGeneration;
-      const startMonth =
-        generation.mode === "ALL_YEAR" ? 1 : generation.startMonth;
-      const startYear = generation.startYear;
-      const endMonth = generation.endMonth;
-      const endYear = generation.endYear;
-      const startCursor = monthCursorValue(startYear, startMonth);
-      const endCursor = monthCursorValue(endYear, endMonth);
-      const dueDay =
-        payload.dueDay ?? new Date(`${payload.date}T00:00:00`).getDate();
-
-      if (endCursor < startCursor) {
-        throw new Error(
-          "Período final da recorrência anterior ao período inicial.",
-        );
-      }
-
-      const requests: Promise<FinancialItem>[] = [];
-      for (let cursor = startCursor; cursor <= endCursor; cursor += 1) {
-        const occurrenceYear = Math.floor((cursor - 1) / 12);
-        const occurrenceMonth = ((cursor - 1) % 12) + 1;
-        const occurrenceDate = dateForMonthlyOccurrence(
-          occurrenceYear,
-          occurrenceMonth,
-          dueDay,
-        );
-        const isExpense = payload.type === "EXPENSE";
-        const { recurrenceGeneration: _recurrenceGeneration, ...entryPayload } =
-          payload;
-
-        requests.push(
-          createEntry({
-            ...entryPayload,
-            date: occurrenceDate,
-            month: occurrenceMonth,
-            year: occurrenceYear,
-            dueDate: isExpense ? occurrenceDate : null,
-            paymentDate: isExpense ? null : occurrenceDate,
-            status: isExpense ? "PENDENTE" : "PAGO",
-            isFixed: true,
-            recurrenceType: "MONTHLY",
-          }),
-        );
-      }
-
-      const createdItems = await Promise.all(requests);
-      await Promise.all(createdItems.map((item) => createEntryReminder(item, reminder)));
+    if (editingItem) {
+      await updateEntry(editingItem.id, payload);
+      setNotice("Lançamento atualizado com sucesso.");
     } else {
       const createdItem = await createEntry(payload);
-      await createEntryReminder(createdItem, reminder);
+      await Promise.all((createdItem.generatedItems ?? [createdItem]).map((item) => createEntryReminder(item, reminder)));
+      setNotice("Lançamento criado com sucesso.");
     }
     await loadData();
   }
@@ -738,6 +692,7 @@ export function FinancialControlPage() {
     if (!confirmed) return;
     await deleteEntry(item.id);
     await loadData();
+    setNotice("Lançamento excluído com sucesso.");
   }
 
   async function markItemPaid(item: FinancialItem) {
@@ -792,6 +747,7 @@ export function FinancialControlPage() {
       ),
     );
     await loadData();
+    setNotice(payableItems.length === 1 ? "Conta marcada como paga." : "Contas marcadas como pagas.");
   }
 
   async function markCalendarDayPaid(day: FinancialCalendarDay) {
@@ -801,6 +757,7 @@ export function FinancialControlPage() {
   async function markItemPending(item: FinancialItem) {
     await updateEntryPaymentStatus(item.id, { status: "PENDENTE" });
     await loadData();
+    setNotice("Conta marcada como pendente.");
   }
 
   function itemPayload(
@@ -838,6 +795,7 @@ export function FinancialControlPage() {
       );
       setLineEdit(null);
       await loadData();
+      setNotice("Linha renomeada com sucesso.");
     } finally {
       setLineSaving(false);
     }
@@ -858,6 +816,7 @@ export function FinancialControlPage() {
     const items = lineItems(category, name, type);
     await Promise.all(items.map((item) => deleteEntry(item.id)));
     await loadData();
+    setNotice("Linha excluída com sucesso.");
   }
 
   async function removeInvestmentItemLine(category: string, name: string) {
@@ -876,6 +835,7 @@ export function FinancialControlPage() {
     );
     await Promise.all(savings.map((saving) => deleteSaving(saving.id)));
     await Promise.all([loadData(), loadAvailableSavings()]);
+    setNotice("Subitem de economia excluído com sucesso.");
   }
 
   async function submitCopyCategory() {
@@ -908,6 +868,7 @@ export function FinancialControlPage() {
       setCopyDialogOpen(false);
       setCopyCategory(null);
       await loadData();
+      setNotice("Dados copiados com sucesso.");
     } finally {
       setCopySaving(false);
     }
@@ -938,6 +899,7 @@ export function FinancialControlPage() {
       setBulkDeleteCategory(null);
       setBulkDeleteSelectedSubItems([]);
       await Promise.all([loadData(), loadAvailableSavings()]);
+      setNotice("Dados excluídos com sucesso.");
     } finally {
       setBulkDeleting(false);
     }
@@ -1035,6 +997,7 @@ export function FinancialControlPage() {
         await saveInvestmentCellValue(payload);
         setCellEdit(null);
         await Promise.all([loadData(), loadAvailableSavings()]);
+        setNotice("Valor atualizado com sucesso.");
       } finally {
         setCellSaving(false);
       }
@@ -1068,6 +1031,7 @@ export function FinancialControlPage() {
       });
       setCellEdit(null);
       await loadData();
+      setNotice("Valor atualizado com sucesso.");
     } finally {
       setCellSaving(false);
     }
@@ -1110,6 +1074,7 @@ export function FinancialControlPage() {
       });
       setFillConfirmation(null);
       await loadData();
+      setNotice("Valores copiados com sucesso.");
     } finally {
       setCellSaving(false);
     }
@@ -1733,6 +1698,7 @@ export function FinancialControlPage() {
         </Stack>
       </AppDialog>
       {confirmDialog}
+      <FeedbackSnackbar message={notice} onClose={() => setNotice("")} />
     </Stack>
   );
 }

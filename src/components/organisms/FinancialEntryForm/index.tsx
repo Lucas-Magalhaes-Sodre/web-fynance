@@ -19,10 +19,11 @@ import type {
   FinancialItem,
   RecurrenceType,
 } from "@/interfaces/financial";
-import { financeColors, isoDate } from "@/utils/format";
+import { currencyToNumber, financeColors, formatMoney, isoDate } from "@/utils/format";
 import { AppDialog, AppDialogStyles as S } from "@/components/molecules/AppDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
+import { MoneyTextField } from "@/components/molecules/MoneyTextField";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
 
@@ -60,7 +61,7 @@ const monthOptions = [
 ];
 
 const currentYear = new Date().getFullYear();
-const yearOptions = Array.from({ length: 11 }, (_, index) => currentYear - 5 + index);
+const yearOptions = Array.from({ length: 81 }, (_, index) => currentYear - 40 + index);
 const SAVINGS_REDEMPTION_INCOME_CATEGORY = "Resgate de economia";
 
 function normalizeCategoryName(name: string) {
@@ -114,24 +115,6 @@ type Props = {
     reminder?: FinancialEntryReminderDraft,
   ) => Promise<void>;
 };
-
-function formatCurrencyInput(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function digitsToCurrency(value: string) {
-  const cents = value.replace(/\D/g, "");
-  if (!cents) return "";
-  return formatCurrencyInput(Number(cents) / 100);
-}
-
-function currencyToNumber(value: string) {
-  const cents = value.replace(/\D/g, "");
-  return cents ? Number(cents) / 100 : 0;
-}
 
 export function FinancialEntryForm({
   open,
@@ -208,7 +191,7 @@ export function FinancialEntryForm({
   const invalidCustomRecurrenceRange =
     form.isFixed &&
     form.recurrenceType === "MONTHLY" &&
-    Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <
+    Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <=
       Number(form.recurrenceStartYear) * 12 + Number(form.recurrenceStartMonth);
 
   useEffect(() => {
@@ -219,7 +202,7 @@ export function FinancialEntryForm({
       setForm({
         name: item.name ?? item.title ?? "",
         description: item.description ?? "",
-        amount: formatCurrencyInput(item.amount),
+        amount: formatMoney(item.amount),
         type: normalizedType,
         category: item.category ?? "Outros",
         date: (item.paymentDate ?? item.dueDate ?? item.date).slice(0, 10),
@@ -320,6 +303,7 @@ export function FinancialEntryForm({
     const isRecurring = form.isFixed && form.recurrenceType !== "NONE";
     const isRecurringExpense = isRecurring && !isIncome;
     const trimmedName = form.name.trim();
+    if (invalidCustomRecurrenceRange) return;
 
     setSaving(true);
     try {
@@ -487,15 +471,12 @@ export function FinancialEntryForm({
             />
           )}
 
-          <TextField
+          <MoneyTextField
             label={amountLabel}
             required
             inputMode="decimal"
             value={form.amount}
-            onChange={(event) =>
-              setForm({ ...form, amount: digitsToCurrency(event.target.value) })
-            }
-            onFocus={(event) => event.target.select()}
+            onValueChange={(amount) => setForm({ ...form, amount })}
           />
 
           <S.HighlightPanel

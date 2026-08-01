@@ -3,10 +3,11 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import { FormEvent, useEffect, useState } from 'react';
 import type { FinancialItem, FinancialItemType } from '@/interfaces/financial';
-import { currencyToNumber, digitsToCurrency, formatMoney } from '@/utils/format';
+import { currencyToNumber, formatMoney } from '@/utils/format';
 import { AppDialog, AppDialogStyles as S } from '@/components/molecules/AppDialog';
 import { AppDateField } from '@/components/molecules/AppDateField';
 import { LoadingActionButton } from '@/components/molecules/LoadingActionButton';
+import { MoneyTextField } from '@/components/molecules/MoneyTextField';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { typeLabel } from '@/i18n/display';
 
@@ -96,11 +97,11 @@ export function FinancialItemForm({ open, defaultType, item, onClose, onSubmit }
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
           />
-          <TextField
+          <MoneyTextField
             label={t('amountInBrl')}
             required
             value={form.amount}
-            onChange={(event) => setForm({ ...form, amount: digitsToCurrency(event.target.value) })}
+            onValueChange={(amount) => setForm({ ...form, amount })}
           />
           <TextField select label={t('recordType')} value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as FinancialItemType })}>
             {(['INCOME', 'EXPENSE'] as FinancialItemType[]).map((value) => (

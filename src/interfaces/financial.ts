@@ -163,6 +163,14 @@ export type SavingsOverviewItem = {
   savingIds: string[];
 };
 
+export type SavingsGroupUpdateResult = {
+  updatedCount: number;
+  adjustment?: Saving | null;
+  previousBalance: number;
+  targetBalance?: number | null;
+  delta: number;
+};
+
 export type SavingsOverviewCategory = {
   id: string;
   name: string;
@@ -192,6 +200,7 @@ export type SavingsExtractItem = {
   description?: string | null;
   registeredAt: string;
   movementDate: string;
+  isInitialBalance?: boolean;
 };
 
 export type SavingsExtract = {
