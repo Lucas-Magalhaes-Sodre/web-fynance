@@ -108,11 +108,14 @@ export function BirthdaysPage() {
   const nextBirthday = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+    if (year < currentYear) return null;
+    if (year > currentYear) return sortedBirthdays[0] ?? null;
     return sortedBirthdays.find((item) => {
       const parts = birthdayDateParts(item.date);
       return new Date(parts.year, parts.month - 1, parts.day) >= today;
-    }) ?? sortedBirthdays[0] ?? null;
-  }, [sortedBirthdays]);
+    }) ?? null;
+  }, [sortedBirthdays, year]);
   const groupedByMonth = useMemo(() => {
     return months.map((label, index) => ({
       label,

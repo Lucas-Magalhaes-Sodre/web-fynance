@@ -36,6 +36,8 @@ type Props = {
     paidWithCreditCard?: boolean;
     creditCardId?: string | null;
     creditCardInstallments?: number | null;
+    creditCardFirstInstallmentMonth?: number | null;
+    creditCardFirstInstallmentYear?: number | null;
   }) => Promise<void>;
 };
 
@@ -62,6 +64,8 @@ export function ValueEditModal({
   const [paidWithCreditCard, setPaidWithCreditCard] = useState(initialPaidWithCreditCard);
   const [creditCardId, setCreditCardId] = useState(initialCreditCardId ?? '');
   const [creditCardInstallments, setCreditCardInstallments] = useState(String(initialCreditCardInstallments || 1));
+  const [firstInstallmentMonth, setFirstInstallmentMonth] = useState(String(month));
+  const [firstInstallmentYear, setFirstInstallmentYear] = useState(String(year));
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
 
   useEffect(() => {
@@ -71,7 +75,9 @@ export function ValueEditModal({
     setPaidWithCreditCard(initialPaidWithCreditCard);
     setCreditCardId(initialCreditCardId ?? '');
     setCreditCardInstallments(String(initialCreditCardInstallments || 1));
-  }, [currentValue, initialCreditCardId, initialCreditCardInstallments, initialPaidWithCreditCard, open]);
+    setFirstInstallmentMonth(String(month));
+    setFirstInstallmentYear(String(year));
+  }, [currentValue, initialCreditCardId, initialCreditCardInstallments, initialPaidWithCreditCard, month, open, year]);
 
   useEffect(() => {
     if (!open || type !== 'EXPENSE') return;
@@ -89,6 +95,10 @@ export function ValueEditModal({
   }, [month, open, type, year]);
 
   const numericAmount = currencyToNumber(amount) || 0;
+  const installmentCount = Math.max(1, Number(creditCardInstallments || 1));
+  const installmentAmount = installmentCount > 0 ? numericAmount / installmentCount : numericAmount;
+  const selectedCreditCard = creditCards.find((card) => card.id === creditCardId);
+  const firstInstallmentLabel = `${months[Number(firstInstallmentMonth || month) - 1] ?? months[month - 1]} de ${firstInstallmentYear || year}`;
   const currentAmountInTotals = initialPaidWithCreditCard ? 0 : currentValue;
   const nextAmountInTotals = paidWithCreditCard ? 0 : numericAmount;
   const delta = nextAmountInTotals - currentAmountInTotals;
@@ -109,6 +119,8 @@ export function ValueEditModal({
       paidWithCreditCard: type === 'EXPENSE' ? paidWithCreditCard : undefined,
       creditCardId: paidWithCreditCard ? creditCardId : null,
       creditCardInstallments: paidWithCreditCard ? Number(creditCardInstallments || 1) : null,
+      creditCardFirstInstallmentMonth: paidWithCreditCard ? Number(firstInstallmentMonth || month) : null,
+      creditCardFirstInstallmentYear: paidWithCreditCard ? Number(firstInstallmentYear || year) : null,
     });
   }
 
@@ -169,31 +181,79 @@ export function ValueEditModal({
                       <MenuItem key={card.id} value={card.id}>{card.name}</MenuItem>
                     ))}
                   </TextField>
-                  <TextField
-                    label="Parcelas"
-                    type="number"
-                    value={creditCardInstallments}
-                    onChange={(event) => setCreditCardInstallments(event.target.value)}
-                    inputProps={{ min: 1, max: 240 }}
-                    required
-                  />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <TextField
+                      label="Parcelas"
+                      type="number"
+                      value={creditCardInstallments}
+                      onChange={(event) => setCreditCardInstallments(event.target.value)}
+                      inputProps={{ min: 1, max: 240 }}
+                      required
+                      fullWidth
+                    />
+                    <TextField
+                      select
+                      label="Mês da 1ª parcela"
+                      value={firstInstallmentMonth}
+                      onChange={(event) => setFirstInstallmentMonth(event.target.value)}
+                      required
+                      fullWidth
+                    >
+                      {months.map((label, index) => (
+                        <MenuItem key={label} value={String(index + 1)}>{label}</MenuItem>
+                      ))}
+                    </TextField>
+                    <TextField
+                      label="Ano da 1ª parcela"
+                      type="number"
+                      value={firstInstallmentYear}
+                      onChange={(event) => setFirstInstallmentYear(event.target.value)}
+                      inputProps={{ min: 1900, max: 3000 }}
+                      required
+                      fullWidth
+                    />
+                  </Stack>
                 </Stack>
               ) : null}
             </S.PreviewPanel>
           ) : null}
-          <RadioGroup value={paidWithCreditCard ? 'ONLY_THIS_PERIOD' : scope} onChange={(event) => setScope(event.target.value as ValueUpdateScope)}>
-            <FormControlLabel value="ONLY_THIS_PERIOD" control={<Radio />} label="Alterar somente este mês" />
-            <FormControlLabel value="FROM_THIS_PERIOD_FORWARD" disabled={paidWithCreditCard} control={<Radio />} label="Alterar deste mês em diante" />
-            <FormControlLabel value="ALL_YEAR" disabled={paidWithCreditCard} control={<Radio />} label="Alterar todos os meses do ano" />
-          </RadioGroup>
-          <S.PreviewPanel spacing={1.2}>
-            <Typography fontWeight={900}>Preview do impacto</Typography>
-            <Typography color={type === 'INCOME' ? financeColors.income : type === 'EXPENSE' ? financeColors.expense : financeColors.saving}>Diferenca no mês: {formatMoney(delta)}</Typography>
-            <Typography color={financeColors.income}>Novo total de receitas: {formatMoney(preview.income)}</Typography>
-            <Typography color={financeColors.expense}>Novo total de despesas: {formatMoney(preview.expense)}</Typography>
-            <Typography color={financeColors.saving}>Novo total de economias: {formatMoney(preview.savings)}</Typography>
-            <Typography fontWeight={950} color={balanceColor(preview.balance)}>Novo saldo do mês: {formatMoney(preview.balance)}</Typography>
-          </S.PreviewPanel>
+          {paidWithCreditCard ? (
+            <Typography variant="body2" color="text.secondary">
+              Essa configuração será aplicada somente a esta célula.
+            </Typography>
+          ) : (
+            <RadioGroup value={scope} onChange={(event) => setScope(event.target.value as ValueUpdateScope)}>
+              <FormControlLabel value="ONLY_THIS_PERIOD" control={<Radio />} label="Alterar somente este mês" />
+              <FormControlLabel value="FROM_THIS_PERIOD_FORWARD" control={<Radio />} label="Alterar deste mês em diante" />
+              <FormControlLabel value="ALL_YEAR" control={<Radio />} label="Alterar todos os meses do ano" />
+            </RadioGroup>
+          )}
+          {paidWithCreditCard ? (
+            <S.PreviewPanel spacing={1.2}>
+              <Typography fontWeight={900}>Resumo do lançamento no cartão</Typography>
+              <Typography color="text.secondary">
+                Na categoria original, este valor ficará apenas como referência e não entrará no total real.
+              </Typography>
+              <Typography color={financeColors.expense}>
+                Valor planejado fora do total direto: {formatMoney(numericAmount)}
+              </Typography>
+              <Typography color={financeColors.expense}>
+                Lançamento no cartão: {formatMoney(numericAmount)} em {installmentCount}x de {formatMoney(installmentAmount)}
+              </Typography>
+              <Typography color="text.secondary">
+                Cartão: {selectedCreditCard?.name ?? "selecione um cartão"} • Primeira parcela: {firstInstallmentLabel}
+              </Typography>
+            </S.PreviewPanel>
+          ) : (
+            <S.PreviewPanel spacing={1.2}>
+              <Typography fontWeight={900}>Preview do impacto</Typography>
+              <Typography color={type === 'INCOME' ? financeColors.income : type === 'EXPENSE' ? financeColors.expense : financeColors.saving}>Diferenca no mês: {formatMoney(delta)}</Typography>
+              <Typography color={financeColors.income}>Novo total de receitas: {formatMoney(preview.income)}</Typography>
+              <Typography color={financeColors.expense}>Novo total de despesas: {formatMoney(preview.expense)}</Typography>
+              <Typography color={financeColors.saving}>Novo total de economias: {formatMoney(preview.savings)}</Typography>
+              <Typography fontWeight={950} color={balanceColor(preview.balance)}>Novo saldo do mês: {formatMoney(preview.balance)}</Typography>
+            </S.PreviewPanel>
+          )}
         </S.FormStack>
     </AppDialog>
   );
