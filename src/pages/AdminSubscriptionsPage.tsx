@@ -158,13 +158,16 @@ export function AdminSubscriptionsPage() {
     total: 0,
     totalPages: 1,
   });
-  const [adminTab, setAdminTab] = useState<"PLANS" | "COUPONS" | "USERS">(
+  const [adminTab, setAdminTab] = useState<"PLANS" | "COUPONS" | "USERS" | "SETTINGS">(
     "PLANS",
   );
   const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [coupons, setCoupons] = useState<BillingCoupon[]>([]);
   const [overview, setOverview] = useState<AdminBillingOverview | null>(null);
   const [defaultTrialDays, setDefaultTrialDays] = useState("14");
+  const [contactEmails, setContactEmails] = useState("");
+  const [contactPhones, setContactPhones] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
   const [daysByUser, setDaysByUser] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -244,6 +247,9 @@ export function AdminSubscriptionsPage() {
       ]);
     setOverview(overviewResult);
     setDefaultTrialDays(String(settingsResult.defaultTrialDays));
+    setContactEmails(settingsResult.contactEmails.join("\n"));
+    setContactPhones(settingsResult.contactPhones.join("\n"));
+    setContactMessage(settingsResult.contactMessage ?? "");
     setPlans(plansResult);
     setCoupons(couponsResult);
     await loadUsers(1, usersPagination.pageSize);
@@ -320,8 +326,16 @@ export function AdminSubscriptionsPage() {
     setSavingSettings(true);
     try {
       const days = Math.max(0, Number(defaultTrialDays) || 0);
-      const settings = await updateAdminSettings({ defaultTrialDays: days });
+      const settings = await updateAdminSettings({
+        defaultTrialDays: days,
+        contactEmails: contactEmails.split(/[\n,;]/).map((item) => item.trim()).filter(Boolean),
+        contactPhones: contactPhones.split(/[\n,;]/).map((item) => item.trim()).filter(Boolean),
+        contactMessage: contactMessage.trim(),
+      });
       setDefaultTrialDays(String(settings.defaultTrialDays));
+      setContactEmails(settings.contactEmails.join("\n"));
+      setContactPhones(settings.contactPhones.join("\n"));
+      setContactMessage(settings.contactMessage ?? "");
       await load();
       setNotice("Configurações salvas com sucesso.");
     } catch {
@@ -657,6 +671,7 @@ export function AdminSubscriptionsPage() {
           <Tab value="PLANS" label="Planos" />
           <Tab value="COUPONS" label="Cupons" />
           <Tab value="USERS" label="Usuários" />
+          <Tab value="SETTINGS" label="Configurações" />
         </Tabs>
       </Paper>
 
@@ -1211,6 +1226,59 @@ export function AdminSubscriptionsPage() {
               `${from}-${to} de ${count}`
             }
           />
+        </Paper>
+      ) : null}
+
+      {adminTab === "SETTINGS" ? (
+        <Paper className="soft-card" sx={{ p: 2.5, borderRadius: 4 }}>
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography variant="h5" fontWeight={950}>
+                Rodapé da área logada
+              </Typography>
+              <Typography color="text.secondary">
+                Configure os contatos que aparecerão no rodapé para usuários logados.
+              </Typography>
+            </Box>
+            <TextField
+              label="E-mails de contato"
+              value={contactEmails}
+              onChange={(event) => setContactEmails(event.target.value)}
+              helperText="Informe um e-mail por linha, vírgula ou ponto e vírgula. Máximo de 5."
+              multiline
+              minRows={2}
+              fullWidth
+            />
+            <TextField
+              label="Telefones de contato"
+              value={contactPhones}
+              onChange={(event) => setContactPhones(event.target.value)}
+              helperText="Informe um telefone por linha, vírgula ou ponto e vírgula. Máximo de 5."
+              multiline
+              minRows={2}
+              fullWidth
+            />
+            <TextField
+              label="Mensagem curta"
+              value={contactMessage}
+              onChange={(event) => setContactMessage(event.target.value)}
+              helperText="Opcional. Ex.: Atendimento em dias úteis, das 9h às 18h."
+              inputProps={{ maxLength: 180 }}
+              multiline
+              minRows={2}
+              fullWidth
+            />
+            <Box display="flex" justifyContent="flex-end">
+              <LoadingActionButton
+                variant="contained"
+                onClick={saveSettings}
+                loading={savingSettings}
+                loadingLabel="Salvando..."
+              >
+                Salvar contatos
+              </LoadingActionButton>
+            </Box>
+          </Stack>
         </Paper>
       ) : null}
 

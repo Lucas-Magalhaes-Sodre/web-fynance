@@ -34,6 +34,7 @@ import { PreferenceControls } from '@/components/molecules/PreferenceControls';
 import { WebReminderNotifier } from '@/components/organisms/WebReminderNotifier';
 import type { PlanProductKey } from '@/constants/planProducts';
 import { userCanAccessProduct } from '@/routes/ProductAccessRoute';
+import { getBillingPublicSettings, type AdminSettings } from '@/services/billing';
 
 const drawerWidth = 280;
 const collapsedDrawerWidth = 76;
@@ -46,6 +47,7 @@ export function AppLayout() {
   const [open, setOpen] = useState(() => localStorage.getItem('@minha-receita:menu-open') !== 'false');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [appSettings, setAppSettings] = useState<AdminSettings | null>(null);
   const currentWidth = open ? drawerWidth : collapsedDrawerWidth;
   const trialInfo = useMemo(() => {
     if (!user || user.role === 'ADMIN' || user.access?.hasPaidAccess || !user.trialEndsAt) return null;
@@ -91,6 +93,21 @@ export function AppLayout() {
     localStorage.setItem(key, 'true');
     setTrialModalOpen(true);
   }, [trialInfo, user?.id]);
+
+  useEffect(() => {
+    let active = true;
+    getBillingPublicSettings()
+      .then((settings) => {
+        if (active) setAppSettings(settings);
+      })
+      .catch(() => {
+        if (active) setAppSettings(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function goToBilling() {
     setTrialModalOpen(false);
@@ -221,6 +238,8 @@ export function AppLayout() {
       <Box
         component="main"
         minHeight="100vh"
+        display="flex"
+        flexDirection="column"
         px={{ xs: 2, md: 3 }}
         py={{ xs: 2, md: 2.5 }}
         pl={{ xs: 11, md: 12 }}
@@ -249,7 +268,150 @@ export function AppLayout() {
               : `Faltam ${trialInfo.daysLeft} dia${trialInfo.daysLeft === 1 ? '' : 's'} para acabar (${trialInfo.endsAt}).`}
           </Alert>
         ) : null}
-        <Outlet />
+        <Box flex={1}>
+          <Outlet />
+        </Box>
+        <Box
+          component="footer"
+          mt={{ xs: 4, md: 5 }}
+          sx={{
+            color: 'text.secondary'
+          }}
+        >
+          <Box
+            sx={{
+              p: { xs: 2, md: 2.5 },
+              borderRadius: 4,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              boxShadow: '0 10px 28px rgba(15,23,42,0.06)'
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1.25}>
+                <Box className="premium-gradient" width={34} height={34} borderRadius={2.5} display="grid" flexShrink={0} sx={{ placeItems: 'center', color: 'white' }}>
+                  <AccountBalanceWalletIcon fontSize="small" />
+                </Box>
+                <Box minWidth={0}>
+                  <Typography fontWeight={950} color="text.primary" lineHeight={1.15}>
+                    {t('appName')}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Área do usuário
+                  </Typography>
+                </Box>
+              </Box>
+
+            <Box
+              display="grid"
+              gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
+              gap={{ xs: 2.5, md: 4 }}
+              mt={2.25}
+              pt={2.25}
+              borderTop="1px solid"
+              borderColor="divider"
+            >
+              <Box>
+                <Typography fontWeight={900} color="text.primary" mb={0.75}>
+                  Links importantes
+                </Typography>
+                <Box display="flex" flexWrap="wrap" gap={{ xs: 0.75, sm: 1.25 }}>
+                  {[
+                    { label: 'Meu perfil', action: () => navigate('/app/profile') },
+                    { label: 'Planos', action: () => navigate('/app/billing') },
+                  ].map((item) => (
+                    <Button
+                      key={item.label}
+                      size="small"
+                      variant="text"
+                      onClick={item.action}
+                      sx={{ px: 0.5, minWidth: 0, fontWeight: 900 }}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                  {[
+                    { label: 'Termos', href: '/legal/terms' },
+                    { label: 'Privacidade', href: '/legal/privacy' },
+                  ].map((item) => (
+                    <Button
+                      key={item.label}
+                      size="small"
+                      variant="text"
+                      component="a"
+                      href={item.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      sx={{ px: 0.5, minWidth: 0, fontWeight: 900 }}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography fontWeight={900} color="text.primary" mb={0.75}>
+                  Contatos
+                </Typography>
+                {appSettings?.contactMessage ? (
+                  <Typography variant="body2" mb={1}>
+                    {appSettings.contactMessage}
+                  </Typography>
+                ) : null}
+                <Box display="flex" flexWrap="wrap" gap={{ xs: 0.75, sm: 1.25 }}>
+                  {(appSettings?.contactEmails ?? []).map((email) => (
+                    <Typography
+                      key={email}
+                      variant="body2"
+                      component="a"
+                      href={`mailto:${email}`}
+                      sx={{
+                        color: 'primary.main',
+                        textDecoration: 'none',
+                        fontWeight: 850,
+                        wordBreak: 'break-word',
+                        '&:hover': { textDecoration: 'underline' }
+                      }}
+                    >
+                      {email}
+                    </Typography>
+                  ))}
+                  {(appSettings?.contactPhones ?? []).map((phone) => (
+                    <Typography
+                      key={phone}
+                      variant="body2"
+                      component="a"
+                      href={`tel:${phone.replace(/\D/g, '')}`}
+                      sx={{
+                        color: 'primary.main',
+                        textDecoration: 'none',
+                        fontWeight: 850,
+                        '&:hover': { textDecoration: 'underline' }
+                      }}
+                    >
+                      {phone}
+                    </Typography>
+                  ))}
+                  {!appSettings?.contactEmails.length && !appSettings?.contactPhones.length ? (
+                    <Typography variant="body2">
+                      Contatos disponíveis em breve.
+                    </Typography>
+                  ) : null}
+                </Box>
+              </Box>
+            </Box>
+
+            <Box mt={2.25} pt={2} borderTop="1px solid" borderColor="divider">
+              <Typography variant="body2">
+                © {new Date().getFullYear()} Deluket Finance. Organização financeira com privacidade, segurança e controle dos seus dados.
+              </Typography>
+              <Typography variant="caption" display="block" mt={0.75}>
+                Seus dados financeiros são separados por usuário e você pode consultar, exportar ou solicitar exclusão pelo perfil.
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       </Box>
       <Dialog open={trialModalOpen} onClose={() => setTrialModalOpen(false)} maxWidth="xs" fullWidth>
         <Box p={3}>
