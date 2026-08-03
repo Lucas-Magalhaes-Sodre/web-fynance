@@ -72,6 +72,7 @@ const initialForm: SavingMovementFormState = {
   recurrenceStartYear: String(today.getFullYear()),
   recurrenceEndMonth: "12",
   recurrenceEndYear: String(today.getFullYear()),
+  recurrenceEndDate: isoDate(),
   goalId: "",
   hasYield: false,
   yieldRateMonthly: "",
@@ -91,9 +92,26 @@ function reminderDate(baseDate: string, offsetDays: number, time: string) {
   return date.toISOString();
 }
 
+function formWeekdayFromDate(value: Date) {
+  const day = value.getDay();
+  return day === 0 ? 7 : day;
+}
+
+function firstSelectedWeekdayOnOrAfter(dateValue: string, weekdayValue: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  const targetWeekday = Number(weekdayValue || formWeekdayFromDate(date));
+  const offset = (targetWeekday - formWeekdayFromDate(date) + 7) % 7;
+  date.setDate(date.getDate() + offset);
+  return isoDate(date);
+}
+
 function toPayload(form: SavingMovementFormState): SavingPayload {
   const date = new Date(`${form.date}T00:00:00`);
   const selectedDay = form.dueDay ? Number(form.dueDay) : date.getDate();
+  const weeklyStartDate =
+    form.isFixed && form.recurrenceType === "WEEKLY"
+      ? firstSelectedWeekdayOnOrAfter(form.date, form.dueDay)
+      : form.date;
   const recurringDate =
     form.isFixed && form.recurrenceType === "MONTHLY"
       ? dateForMonthlyOccurrence(
@@ -101,7 +119,7 @@ function toPayload(form: SavingMovementFormState): SavingPayload {
           Number(form.recurrenceStartMonth),
           selectedDay,
         )
-      : form.date;
+      : weeklyStartDate;
   const payloadDate = new Date(`${recurringDate}T00:00:00`);
   return {
     title: form.title.trim(),
@@ -116,13 +134,15 @@ function toPayload(form: SavingMovementFormState): SavingPayload {
     isFixed: form.isFixed,
     recurrenceType: form.isFixed ? form.recurrenceType : "NONE",
     recurrenceGeneration:
-      form.isFixed && form.recurrenceType === "MONTHLY"
+      form.isFixed
         ? {
             mode: "CUSTOM",
             startMonth: Number(form.recurrenceStartMonth),
             startYear: Number(form.recurrenceStartYear),
             endMonth: Number(form.recurrenceEndMonth),
             endYear: Number(form.recurrenceEndYear),
+            startDate: recurringDate,
+            endDate: form.recurrenceType === "MONTHLY" ? undefined : form.recurrenceEndDate,
           }
         : undefined,
     goalId: form.goalId || null,
@@ -299,6 +319,7 @@ export function EconomyPage() {
       recurrenceStartMonth: String(new Date().getMonth() + 1),
       recurrenceStartYear: String(new Date().getFullYear()),
       recurrenceEndYear: String(new Date().getFullYear()),
+      recurrenceEndDate: isoDate(),
       isFixed: false,
       recurrenceType: "NONE",
       goalId: "",
@@ -331,6 +352,7 @@ export function EconomyPage() {
       recurrenceStartYear: String(saving.year),
       recurrenceEndMonth: String(saving.month),
       recurrenceEndYear: String(saving.year),
+      recurrenceEndDate: saving.date.slice(0, 10),
       goalId: saving.goalId ?? "",
       hasYield: saving.hasYield ?? false,
       yieldRateMonthly: saving.yieldRateMonthly ? String(saving.yieldRateMonthly) : "",
@@ -383,6 +405,7 @@ export function EconomyPage() {
       recurrenceStartYear: String(new Date().getFullYear()),
       recurrenceEndMonth: String(new Date().getMonth() + 1),
       recurrenceEndYear: String(new Date().getFullYear()),
+      recurrenceEndDate: isoDate(),
       goalId: mergedSaving.goalId ?? "",
       hasYield: mergedSaving.hasYield ?? false,
       yieldRateMonthly: mergedSaving.yieldRateMonthly ? String(mergedSaving.yieldRateMonthly) : "",

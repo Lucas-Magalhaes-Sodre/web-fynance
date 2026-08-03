@@ -39,6 +39,7 @@ export type SavingMovementFormState = {
   recurrenceStartYear: string;
   recurrenceEndMonth: string;
   recurrenceEndYear: string;
+  recurrenceEndDate: string;
   goalId: string;
   hasYield: boolean;
   yieldRateMonthly: string;
@@ -83,6 +84,23 @@ const monthOptions = [
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 81 }, (_, index) => currentYear - 40 + index);
+
+function localIsoDate(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function formWeekdayFromDate(value: Date) {
+  const day = value.getDay();
+  return day === 0 ? 7 : day;
+}
+
+function firstSelectedWeekdayOnOrAfter(dateValue: string, weekdayValue: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  const targetWeekday = Number(weekdayValue || formWeekdayFromDate(date));
+  const offset = (targetWeekday - formWeekdayFromDate(date) + 7) % 7;
+  date.setDate(date.getDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
 
 type SavingMovementDialogProps = {
   open: boolean;
@@ -175,15 +193,38 @@ export function SavingMovementDialog({
     withdrawOptions.find((option) => option.category === form.category && option.title === form.title)?.amount ?? 0;
   const requestedAmount = currencyToNumber(form.amount) || 0;
   const balanceAfterWithdraw = selectedWithdrawBalance - requestedAmount;
+  const withdrawAmountExceeded = isWithdraw && requestedAmount > selectedWithdrawBalance;
+  const today = new Date();
+  const withdrawMinDate = localIsoDate(today.getFullYear(), today.getMonth() + 1, 1);
+  const withdrawMaxDate = localIsoDate(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(),
+  );
   const invalidCustomRecurrenceRange =
     !isWithdraw &&
     form.isFixed &&
     form.recurrenceType === "MONTHLY" &&
     Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <=
       Number(form.recurrenceStartYear) * 12 + Number(form.recurrenceStartMonth);
+  const recurrenceStartDateForValidation =
+    form.recurrenceType === "WEEKLY"
+      ? firstSelectedWeekdayOnOrAfter(form.date, form.dueDay)
+      : form.date;
+  const invalidDateRecurrenceRange =
+    !isWithdraw &&
+    form.isFixed &&
+    form.recurrenceType !== "NONE" &&
+    form.recurrenceType !== "MONTHLY" &&
+    new Date(`${form.recurrenceEndDate}T00:00:00`) < new Date(`${recurrenceStartDateForValidation}T00:00:00`);
+  const invalidRecurringDay =
+    !isWithdraw &&
+    form.isFixed &&
+    (form.recurrenceType === "WEEKLY" || form.recurrenceType === "MONTHLY") &&
+    !form.dueDay;
   const invalidWithdraw =
     isWithdraw &&
-    (!form.title.trim() || requestedAmount <= 0 || requestedAmount > selectedWithdrawBalance);
+    (!form.title.trim() || requestedAmount <= 0 || withdrawAmountExceeded);
   const selectedGoal = goals.find((goal) => goal.id === form.goalId);
 
   return (
@@ -203,6 +244,8 @@ export function SavingMovementDialog({
               !form.category.trim() ||
               (!balanceAdjustmentMode && currencyToNumber(form.amount) <= 0) ||
               invalidCustomRecurrenceRange ||
+              invalidDateRecurrenceRange ||
+              invalidRecurringDay ||
               invalidWithdraw
             }
             onClick={onSave}
@@ -302,7 +345,7 @@ export function SavingMovementDialog({
           >
             {withdrawSubitems.map((option) => (
               <MenuItem key={`${option.category}:${option.title}`} value={option.title}>
-                {option.title} - {formatMoney(option.amount)}
+                {option.title} - disponível {formatMoney(option.amount)}
               </MenuItem>
             ))}
           </TextField>
@@ -316,11 +359,33 @@ export function SavingMovementDialog({
           />
         )}
 
+        {isWithdraw ? (
+          <S.HighlightPanel
+            $panelBorderColor="rgba(20,184,166,0.22)"
+            $panelBackground="rgba(20,184,166,0.08)"
+          >
+            <Typography color="text.secondary">
+              Disponível para resgate em <strong>{form.title || "selecione um subitem"}</strong>:{" "}
+              <strong>{formatMoney(selectedWithdrawBalance)}</strong>
+            </Typography>
+          </S.HighlightPanel>
+        ) : null}
+
         <MoneyTextField
           label={isWithdraw ? t("amountToWithdraw") : balanceAdjustmentMode ? "Saldo total da caixinha" : t("value")}
           required
           value={form.amount}
           onValueChange={(amount) => updateForm({ amount })}
+          helperText={
+            isWithdraw
+              ? withdrawAmountExceeded
+                ? `O valor de resgate não pode passar do saldo disponível: ${formatMoney(selectedWithdrawBalance)}.`
+                : selectedWithdrawBalance > 0
+                  ? `Disponível para resgate neste subitem: ${formatMoney(selectedWithdrawBalance)}.`
+                  : "Selecione uma caixinha com saldo já depositado para resgatar."
+              : undefined
+          }
+          error={withdrawAmountExceeded}
         />
 
         {isWithdraw ? (
@@ -330,6 +395,9 @@ export function SavingMovementDialog({
               required
               value={form.date}
               onChange={(value) => updateForm({ date: value })}
+              minDate={withdrawMinDate}
+              maxDate={withdrawMaxDate}
+              helperText="Resgates reais ficam limitados ao mês atual."
               textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
             />
             <TextField
@@ -400,19 +468,42 @@ export function SavingMovementDialog({
                     </TextField>
 
                     {form.recurrenceType === "WEEKLY" ? (
-                      <TextField
-                        select
-                        label={t("savingWeekDay")}
-                        required
-                        value={form.dueDay}
-                        onChange={(event) => updateForm({ dueDay: event.target.value })}
-                      >
-                        {weekDayItems.map((day) => (
-                          <MenuItem key={day.value} value={day.value}>
-                            {day.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                      <>
+                        <TextField
+                          select
+                          label={t("savingWeekDay")}
+                          required
+                          value={form.dueDay}
+                          onChange={(event) => updateForm({ dueDay: event.target.value })}
+                          helperText="A data inicial será ajustada para o primeiro dia da semana selecionado dentro do período."
+                        >
+                          {weekDayItems.map((day) => (
+                            <MenuItem key={day.value} value={day.value}>
+                              {day.label}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                        <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                          <AppDateField
+                            label="Data inicial"
+                            required
+                            value={form.date}
+                            onChange={(value) => updateForm({ date: value })}
+                            textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
+                          />
+                          <AppDateField
+                            label="Data final"
+                            required
+                            value={form.recurrenceEndDate}
+                            onChange={(value) => updateForm({ recurrenceEndDate: value })}
+                            helperText={invalidDateRecurrenceRange ? t("endAfterStart") : " "}
+                            textFieldProps={{
+                              sx: { "& input": { py: 1.65 } },
+                              error: invalidDateRecurrenceRange,
+                            }}
+                          />
+                        </S.ColorFieldStack>
+                      </>
                     ) : null}
 
                     {form.recurrenceType === "MONTHLY" ? (
@@ -501,13 +592,49 @@ export function SavingMovementDialog({
                     ) : null}
 
                     {form.recurrenceType === "YEARLY" ? (
-                      <AppDateField
-                        label={t("annualSavingDate")}
-                        required
-                        value={form.date}
-                        onChange={(value) => updateForm({ date: value })}
-                        textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
-                      />
+                      <>
+                        <AppDateField
+                          label={t("annualSavingDate")}
+                          required
+                          value={form.date}
+                          onChange={(value) => updateForm({ date: value })}
+                          textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
+                        />
+                        <AppDateField
+                          label="Data final"
+                          required
+                          value={form.recurrenceEndDate}
+                          onChange={(value) => updateForm({ recurrenceEndDate: value })}
+                          helperText={invalidDateRecurrenceRange ? t("endAfterStart") : " "}
+                          textFieldProps={{
+                            sx: { "& input": { py: 1.65 } },
+                            error: invalidDateRecurrenceRange,
+                          }}
+                        />
+                      </>
+                    ) : null}
+
+                    {form.recurrenceType === "DAILY" ? (
+                      <S.ColorFieldStack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                        <AppDateField
+                          label="Data inicial"
+                          required
+                          value={form.date}
+                          onChange={(value) => updateForm({ date: value })}
+                          textFieldProps={{ sx: { "& input": { py: 1.65 } } }}
+                        />
+                        <AppDateField
+                          label="Data final"
+                          required
+                          value={form.recurrenceEndDate}
+                          onChange={(value) => updateForm({ recurrenceEndDate: value })}
+                          helperText={invalidDateRecurrenceRange ? t("endAfterStart") : " "}
+                          textFieldProps={{
+                            sx: { "& input": { py: 1.65 } },
+                            error: invalidDateRecurrenceRange,
+                          }}
+                        />
+                      </S.ColorFieldStack>
                     ) : null}
                   </>
                 ) : (

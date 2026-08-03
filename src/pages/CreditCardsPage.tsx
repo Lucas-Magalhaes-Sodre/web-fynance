@@ -8,6 +8,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
@@ -121,6 +122,10 @@ function usageText(card: CreditCard, noLimitLabel: string) {
 function usageTextForAmount(card: CreditCard, amount: number, noLimitLabel: string) {
   if (!card.creditLimit) return noLimitLabel;
   return `${formatMoney(amount)} de ${formatMoney(card.creditLimit)}`;
+}
+
+function isLimitExceeded(card: CreditCard) {
+  return Boolean(card.creditLimit && card.usedAmount > card.creditLimit);
 }
 
 function isValidHexColor(value: string) {
@@ -408,7 +413,9 @@ export function CreditCardsPage() {
             </Tabs>
           </Paper>
           <Grid container spacing={2}>
-          {visibleCards.map((card) => (
+          {visibleCards.map((card) => {
+            const limitExceeded = isLimitExceeded(card);
+            return (
             <Grid item xs={12} md={6} xl={4} key={card.id}>
               <Paper
                 sx={{
@@ -466,7 +473,14 @@ export function CreditCardsPage() {
                     </Stack>
                     <Stack direction="row" justifyContent="space-between" spacing={1}>
                       <Typography sx={{ color: "rgba(255,255,255,0.74)" }}>{t("usedLimit")}</Typography>
-                      <Typography fontWeight={850}>{usageText(card, t("noLimit"))}</Typography>
+                      <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="flex-end">
+                        {limitExceeded ? (
+                          <Tooltip title="O valor usado está maior que o limite informado. Provavelmente o limite cadastrado está incorreto. Clique no lápis do cartão para alterar o limite.">
+                            <WarningAmberIcon sx={{ color: "#FACC15", fontSize: 20, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }} />
+                          </Tooltip>
+                        ) : null}
+                        <Typography fontWeight={850}>{usageText(card, t("noLimit"))}</Typography>
+                      </Stack>
                     </Stack>
                     <LinearProgress
                       variant="determinate"
@@ -488,7 +502,8 @@ export function CreditCardsPage() {
                 </Stack>
               </Paper>
             </Grid>
-          ))}
+          );
+          })}
           {!visibleCards.length ? (
             <Grid item xs={12}>
               <EmptyState message={cardTab === "ACTIVE" ? t("noActiveCard") : t("noInactiveCard")} />

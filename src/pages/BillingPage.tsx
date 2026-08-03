@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import { normalizePlanProductKeys, productPlanLabel } from '@/constants/planProducts';
 import { useAuth } from '@/contexts/AuthContext';
 import { createCheckout, getBillingPublicSettings, getBillingStatus, listBillingPlans, validateBillingCoupon, type BillingPlan, type BillingStatus, type CouponValidationResult } from '@/services/billing';
+import { getMyReferralProgram, type ReferralProgram } from '@/services/referrals';
 import { formatDate, formatMoney } from '@/utils/format';
 
 export function BillingPage() {
@@ -24,16 +25,19 @@ export function BillingPage() {
   const [couponByPlan, setCouponByPlan] = useState<Record<string, string>>({});
   const [validatedCouponByPlan, setValidatedCouponByPlan] = useState<Record<string, CouponValidationResult | undefined>>({});
   const [legalAcceptedByPlan, setLegalAcceptedByPlan] = useState<Record<string, boolean>>({});
+  const [useReferralCreditByPlan, setUseReferralCreditByPlan] = useState<Record<string, boolean>>({});
+  const [referral, setReferral] = useState<ReferralProgram | null>(null);
   const [couponLoadingPlan, setCouponLoadingPlan] = useState<string | null>(null);
   const [defaultTrialDays, setDefaultTrialDays] = useState<number | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   async function load() {
-    const [billingResult, settingsResult, plansResult] = await Promise.all([getBillingStatus(), getBillingPublicSettings(), listBillingPlans()]);
+    const [billingResult, settingsResult, plansResult, referralResult] = await Promise.all([getBillingStatus(), getBillingPublicSettings(), listBillingPlans(), getMyReferralProgram().catch(() => null)]);
     setBilling(billingResult);
     setDefaultTrialDays(settingsResult.defaultTrialDays);
     setPlans(plansResult);
+    setReferral(referralResult);
   }
 
   useEffect(() => {
@@ -52,6 +56,7 @@ export function BillingPage() {
         provider: 'MERCADO_PAGO',
         planId,
         couponCode: validatedCouponByPlan[planId]?.code,
+        useReferralCredit: Boolean(useReferralCreditByPlan[planId]),
         legalAccepted: true
       });
       window.location.href = checkout.url;
@@ -154,6 +159,23 @@ export function BillingPage() {
                     <Typography>
                       Desconto de {formatMoney(validatedCouponByPlan[item.id]?.discountAmount ?? 0)}. Total: {formatMoney(validatedCouponByPlan[item.id]?.finalPrice ?? item.price)}
                     </Typography>
+                  </Paper>
+                ) : null}
+                {referral?.payout.preference === 'CREDIT' && (referral.summary.availableCreditAmount ?? 0) > 0 ? (
+                  <Paper sx={{ p: 1.5, borderRadius: 3, bgcolor: 'action.hover', boxShadow: 'none' }}>
+                    <FormControlLabel
+                      control={(
+                        <Checkbox
+                          checked={Boolean(useReferralCreditByPlan[item.id])}
+                          onChange={(event) => setUseReferralCreditByPlan((current) => ({ ...current, [item.id]: event.target.checked }))}
+                        />
+                      )}
+                      label={(
+                        <Typography variant="body2">
+                          Usar até {formatMoney(Math.min(referral.summary.availableCreditAmount, validatedCouponByPlan[item.id]?.finalPrice ?? item.price))} de comissão como desconto neste plano.
+                        </Typography>
+                      )}
+                    />
                   </Paper>
                 ) : null}
                 <Typography color="text.secondary">{item.description}</Typography>

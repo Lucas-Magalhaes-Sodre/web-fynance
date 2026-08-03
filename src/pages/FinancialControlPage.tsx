@@ -123,6 +123,7 @@ const initialSavingForm: SavingMovementFormState = {
   recurrenceStartYear: String(new Date().getFullYear()),
   recurrenceEndMonth: "12",
   recurrenceEndYear: String(new Date().getFullYear()),
+  recurrenceEndDate: isoDate(),
   goalId: "",
   hasYield: false,
   yieldRateMonthly: "",
@@ -275,7 +276,10 @@ export function FinancialControlPage() {
   }, [categories]);
 
   const availableSavings = useMemo(() => {
-    const balances = allSavings.reduce<Record<string, Saving>>((acc, saving) => {
+    const todayKey = isoDate();
+    const balances = allSavings
+      .filter((saving) => saving.date.slice(0, 10) <= todayKey)
+      .reduce<Record<string, Saving>>((acc, saving) => {
       const key = `${saving.category}|||${saving.title}`;
       if (!acc[key]) acc[key] = { ...saving, amount: 0 };
       acc[key].amount += saving.amount;
@@ -562,6 +566,7 @@ export function FinancialControlPage() {
       recurrenceStartMonth: String(new Date(`${baseDate}T00:00:00`).getMonth() + 1),
       recurrenceStartYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
       recurrenceEndYear: String(new Date(`${baseDate}T00:00:00`).getFullYear()),
+      recurrenceEndDate: baseDate,
       dueDay: String(new Date(`${baseDate}T00:00:00`).getDate()),
       isInitialBalance: false,
       title: action === "WITHDRAW_TO_BALANCE" ? firstBalance?.title ?? "" : "",

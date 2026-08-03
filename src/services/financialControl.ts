@@ -54,6 +54,8 @@ export type FinancialEntryPayload = {
     startYear: number;
     endMonth: number;
     endYear: number;
+    startDate?: string;
+    endDate?: string;
   };
 };
 
@@ -86,6 +88,8 @@ export type SavingPayload = {
     startYear: number;
     endMonth: number;
     endYear: number;
+    startDate?: string;
+    endDate?: string;
   };
   goalId?: string | null;
   hasYield?: boolean;

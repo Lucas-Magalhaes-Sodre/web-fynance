@@ -1,7 +1,12 @@
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
+import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import PaidIcon from "@mui/icons-material/Paid";
 import Paper from "@mui/material/Paper";
+import ShareIcon from "@mui/icons-material/Share";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -61,6 +66,7 @@ import {
   formatMoney,
 } from "@/utils/format";
 import { monthsByLanguage, translateCategoryName } from "@/i18n/display";
+import { getMyReferralProgram, listMarketingBanners, type MarketingBanner, type ReferralProgram } from "@/services/referrals";
 
 function formatCompactMoney(value: number) {
   if (Math.abs(value) >= 1000) {
@@ -69,6 +75,12 @@ function formatCompactMoney(value: number) {
     })}k`;
   }
   return formatMoney(value);
+}
+
+function formatReferralRule(type?: "PERCENT" | "FIXED", value?: number) {
+  if (value === undefined || value === null) return "5%";
+  if (type === "FIXED") return formatMoney(value);
+  return `${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
 export function DashboardPage() {
@@ -93,13 +105,22 @@ export function DashboardPage() {
   );
   const [formOpen, setFormOpen] = useState(false);
   const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [banners, setBanners] = useState<MarketingBanner[]>([]);
+  const [referralProgram, setReferralProgram] = useState<ReferralProgram | null>(null);
 
   async function loadDashboard() {
     const today = new Date();
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
-    const { data } = await api.get("/financial-items/dashboard/summary");
+    const safe = async <T,>(promise: Promise<T>, fallback: T) => {
+      try {
+        return await promise;
+      } catch {
+        return fallback;
+      }
+    };
     const [
+      summary,
       nextSavingsSummary,
       nextPaymentSummary,
       nextGoals,
@@ -107,27 +128,38 @@ export function DashboardPage() {
       nextComparison,
       nextYearControl,
       nextDueReminders,
+      nextBanners,
+      nextReferralProgram,
     ] = await Promise.all([
-      getSavingsSummary(month, year),
-      getPaymentSummary({ month, year }),
-      listFinancialGoals({ status: "ACTIVE" }),
-      getFinancialInsights(month, year),
-      getFinancialComparison(month, year),
-      getYearControl(year),
-      listFinancialReminders({ status: "PENDING", dueOnly: true }),
+      safe(api.get("/financial-items/dashboard/summary").then(({ data }) => data), null),
+      safe(getSavingsSummary(month, year), null),
+      safe(getPaymentSummary({ month, year }), null),
+      safe(listFinancialGoals({ status: "ACTIVE" }), []),
+      safe(getFinancialInsights(month, year), []),
+      safe(getFinancialComparison(month, year), null),
+      safe(getYearControl(year), null),
+      safe(listFinancialReminders({ status: "PENDING", dueOnly: true }), []),
+      safe(listMarketingBanners("DASHBOARD"), []),
+      safe(getMyReferralProgram(), null),
     ]);
-    setTotals(data.totals);
-    setAnnualTotals({
-      totalIncome: nextYearControl.totals.totalIncome,
-      totalExpense: nextYearControl.totals.totalExpense,
-    });
-    setRecentItems(data.recentItems);
+    if (summary) {
+      setTotals(summary.totals);
+      setRecentItems(summary.recentItems);
+    }
+    if (nextYearControl) {
+      setAnnualTotals({
+        totalIncome: nextYearControl.totals.totalIncome,
+        totalExpense: nextYearControl.totals.totalExpense,
+      });
+    }
     setSavingsSummary(nextSavingsSummary);
     setPaymentSummary(nextPaymentSummary);
     setGoals(nextGoals);
     setInsights(nextInsights);
     setComparison(nextComparison);
     setDueReminders(nextDueReminders);
+    setBanners(nextBanners);
+    setReferralProgram(nextReferralProgram);
   }
 
   useEffect(() => {
@@ -162,6 +194,9 @@ export function DashboardPage() {
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonthName = monthsByLanguage[language][today.getMonth()];
+  const referralDiscountText = formatReferralRule(referralProgram?.coupon.discountType, referralProgram?.coupon.discountValue);
+  const referralCommissionText = formatReferralRule(referralProgram?.coupon.commissionType, referralProgram?.coupon.commissionValue);
+  const referralCouponExample = referralProgram?.coupon.code || "EXEMPLO5";
   const currentMonthFlowData = [
     {
       name: t("incomes"),
@@ -319,6 +354,196 @@ export function DashboardPage() {
           </div>
         </Stack>
       </Paper>
+
+      {banners.map((banner) => (
+        <Box
+          key={banner.id}
+          component={banner.ctaPath ? RouterLink : "div"}
+          to={banner.ctaPath || undefined}
+          sx={{ color: "inherit", textDecoration: "none", display: "block" }}
+        >
+          <Paper
+            sx={{
+              p: banner.variant === "PHOTO" ? { xs: 2.5, md: 3.25 } : { xs: 2, md: 2.25 },
+              minHeight: banner.variant === "PHOTO" ? { xs: 260, md: 320 } : undefined,
+              borderRadius: banner.variant === "PHOTO" ? 5 : 4,
+              border: "1px solid",
+              borderColor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(45,212,191,0.55)"
+                  : "rgba(15,118,110,0.28)",
+              background: (theme) =>
+                banner.variant === "PHOTO" && banner.imageUrl
+                  ? `linear-gradient(90deg, ${theme.palette.mode === "dark" ? "rgba(8,13,26,0.88)" : "rgba(255,255,255,0.9)"} 0%, ${theme.palette.mode === "dark" ? "rgba(8,13,26,0.68)" : "rgba(255,255,255,0.72)"} 45%, rgba(8,13,26,0.18) 100%), url("${banner.imageUrl}") center / cover no-repeat`
+                  : theme.palette.mode === "dark"
+                    ? "linear-gradient(135deg, rgba(20,184,166,0.24), rgba(37,99,235,0.18) 48%, rgba(8,13,26,0.92))"
+                    : "linear-gradient(135deg, rgba(204,251,241,0.98), rgba(219,234,254,0.96) 50%, rgba(255,255,255,0.94))",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 24px 70px rgba(20,184,166,0.14)"
+                  : "0 22px 60px rgba(15,118,110,0.14)",
+              cursor: banner.ctaPath ? "pointer" : "default",
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
+          {banner.variant !== "PHOTO" ? (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: { xs: "auto -70px -90px auto", md: "-110px -80px auto auto" },
+                width: { xs: 170, md: 220 },
+                height: { xs: 170, md: 220 },
+                borderRadius: "50%",
+                bgcolor: "rgba(45,212,191,0.18)",
+                filter: "blur(4px)",
+              }}
+            />
+          ) : null}
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={banner.variant === "PHOTO" ? { xs: 2.5, md: 4 } : { xs: 1.5, md: 2.5 }}
+            justifyContent="space-between"
+            alignItems={{ xs: "stretch", md: "center" }}
+            position="relative"
+          >
+            <Stack spacing={banner.variant === "PHOTO" ? 1.5 : 1} maxWidth={760}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box
+                  sx={{
+                    width: banner.variant === "PHOTO" ? 42 : 34,
+                    height: banner.variant === "PHOTO" ? 42 : 34,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "primary.contrastText",
+                    bgcolor: "primary.main",
+                    boxShadow: "0 12px 28px rgba(20,184,166,0.25)",
+                  }}
+                >
+                  <CardGiftcardIcon fontSize="small" />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="primary" fontWeight={950} textTransform="uppercase">
+                    {banner.variant === "PHOTO" ? "Novidade" : "Destaque"}
+                  </Typography>
+                  <Typography variant={banner.variant === "PHOTO" ? "h5" : "h6"} fontWeight={950}>{banner.title}</Typography>
+                </Box>
+              </Stack>
+              <Typography
+                color="text.secondary"
+                sx={{
+                  maxWidth: 720,
+                  fontSize: banner.variant === "PHOTO" ? undefined : 14,
+                  display: banner.variant === "PHOTO" ? undefined : "-webkit-box",
+                  WebkitLineClamp: banner.variant === "PHOTO" ? undefined : 2,
+                  WebkitBoxOrient: banner.variant === "PHOTO" ? undefined : "vertical",
+                  overflow: banner.variant === "PHOTO" ? undefined : "hidden",
+                }}
+              >
+                {banner.subtitle}
+              </Typography>
+              {banner.variant !== "PHOTO" ? (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip
+                  icon={<LocalOfferIcon />}
+                  label={`${referralDiscountText} de desconto para quem usar seu cupom`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 850, bgcolor: "rgba(255,255,255,0.08)" }}
+                />
+                <Chip
+                  icon={<PaidIcon />}
+                  label={`${referralCommissionText} de comissão para você`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 850, bgcolor: "rgba(255,255,255,0.08)" }}
+                />
+                <Chip
+                  icon={<ShareIcon />}
+                  label="Compartilhe com amigos e clientes"
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 850, bgcolor: "rgba(255,255,255,0.08)", display: { xs: "none", lg: "inline-flex" } }}
+                />
+                </Stack>
+              ) : null}
+              {banner.ctaLabel && banner.ctaPath ? (
+                <Box pt={banner.variant === "PHOTO" ? 0.5 : 0}>
+                  <Button
+                    component="span"
+                    variant="contained"
+                    startIcon={<ShareIcon />}
+                    sx={{
+                      px: banner.variant === "PHOTO" ? 2.5 : 2,
+                      py: banner.variant === "PHOTO" ? 1.15 : 0.75,
+                      borderRadius: 999,
+                      fontWeight: 950,
+                    }}
+                  >
+                    {banner.ctaLabel}
+                  </Button>
+                </Box>
+              ) : null}
+            </Stack>
+
+            {banner.variant !== "PHOTO" ? (
+              <Box
+              sx={{
+                minWidth: { md: 230 },
+                maxWidth: { xs: "100%", md: 260 },
+                p: 1.5,
+                borderRadius: 3,
+                border: "1px dashed",
+                borderColor: "primary.main",
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(3,7,18,0.45)"
+                    : "rgba(255,255,255,0.62)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={900}>
+                EXEMPLO DE CUPOM
+              </Typography>
+              <Typography variant="h5" fontWeight={950} letterSpacing={0}>
+                {referralCouponExample}
+              </Typography>
+              <Typography variant="caption" color="warning.main" fontWeight={900}>
+                Exemplo visual. Seu cupom real fica no perfil.
+              </Typography>
+              <Stack spacing={0.35} mt={0.75}>
+                <Typography fontWeight={900} fontSize={14}>
+                  Indicado ganha {referralDiscountText} de desconto.
+                </Typography>
+                <Typography color="text.secondary" fontSize={13}>
+                  Você recebe {referralCommissionText} de comissão após a contratação ser confirmada.
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mt={0.75}>
+                <Typography color="text.secondary" fontSize={13}>
+                  Ver no perfil
+                </Typography>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    bgcolor: "primary.main",
+                    color: "primary.contrastText",
+                  }}
+                >
+                  <PaidIcon fontSize="small" />
+                </Box>
+              </Stack>
+              </Box>
+            ) : null}
+          </Stack>
+          </Paper>
+        </Box>
+      ))}
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
