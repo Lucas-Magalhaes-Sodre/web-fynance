@@ -39,6 +39,39 @@ import { getBillingPublicSettings, type AdminSettings } from '@/services/billing
 const drawerWidth = 280;
 const collapsedDrawerWidth = 76;
 
+function accessDateLabel(date?: string | null) {
+  if (!date) return null;
+  const end = new Date(date);
+  if (Number.isNaN(end.getTime())) return null;
+
+  const today = new Date();
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const days = Math.ceil((endOnly.getTime() - todayOnly.getTime()) / 86400000);
+  const formatted = end.toLocaleDateString('pt-BR');
+  if (days < 0) return `expirou em ${formatted}`;
+  if (days === 0) return `expira hoje`;
+  if (days === 1) return `expira amanhã`;
+  return `expira em ${days} dias`;
+}
+
+function menuPlanLabel(user: ReturnType<typeof useAuth>['user']) {
+  if (!user) return '';
+  if (user.subscriptionPlan === 'LIFETIME') {
+    return user.planNameSnapshot ?? 'Plano vitalício';
+  }
+  if (user.subscriptionStatus === 'MANUAL' && user.manualAccessUntil) {
+    return `Liberação manual · ${accessDateLabel(user.manualAccessUntil)}`;
+  }
+  if ((user.access?.hasPaidAccess || user.subscriptionStatus === 'ACTIVE') && user.planNameSnapshot) {
+    return `${user.planNameSnapshot}${accessDateLabel(user.subscriptionCurrentPeriodEnd) ? ` · ${accessDateLabel(user.subscriptionCurrentPeriodEnd)}` : ''}`;
+  }
+  if (user.access?.hasTrialAccess || user.subscriptionStatus === 'TRIALING') {
+    return `Teste grátis${accessDateLabel(user.trialEndsAt) ? ` · ${accessDateLabel(user.trialEndsAt)}` : ''}`;
+  }
+  return `Sem plano${accessDateLabel(user.trialEndsAt) ? ` · ${accessDateLabel(user.trialEndsAt)}` : ''}`;
+}
+
 export function AppLayout() {
   const { user, signOut } = useAuth();
   const { t } = usePreferences();
@@ -49,6 +82,7 @@ export function AppLayout() {
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const [appSettings, setAppSettings] = useState<AdminSettings | null>(null);
   const currentWidth = open ? drawerWidth : collapsedDrawerWidth;
+  const planLabel = menuPlanLabel(user);
   const trialInfo = useMemo(() => {
     if (!user || user.role === 'ADMIN' || user.access?.hasPaidAccess || !user.trialEndsAt) return null;
     const end = new Date(user.trialEndsAt);
@@ -139,7 +173,15 @@ export function AppLayout() {
           }
         }}
       >
-        <Toolbar sx={{ gap: 1, justifyContent: open ? 'space-between' : 'center', px: open ? 1.5 : 1 }}>
+        <Toolbar
+          sx={{
+            gap: 1,
+            justifyContent: open ? 'space-between' : 'center',
+            alignItems: 'center',
+            px: open ? 1.5 : 1,
+            minHeight: open ? '88px !important' : undefined,
+          }}
+        >
           {open ? (
           <Box
             component="button"
@@ -152,7 +194,7 @@ export function AppLayout() {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1.25,
+              gap: 1,
               minWidth: 0,
               flex: 1,
               border: 0,
@@ -171,7 +213,7 @@ export function AppLayout() {
               },
             }}
           >
-            <Box className="premium-gradient" width={38} height={38} borderRadius={3} display="grid" flexShrink={0} sx={{ placeItems: 'center', color: 'white' }}>
+            <Box className="premium-gradient" width={36} height={36} borderRadius={3} display="grid" flexShrink={0} sx={{ placeItems: 'center', color: 'white' }}>
               <AccountBalanceWalletIcon fontSize="small" />
             </Box>
             <Box minWidth={0} flex={1}>
@@ -190,6 +232,26 @@ export function AppLayout() {
               <Typography className="user-name" variant="caption" color="text.secondary" noWrap>
                 {user?.name}
               </Typography>
+              {planLabel ? (
+                <Tooltip title={planLabel} placement="right">
+                  <Typography
+                    variant="caption"
+                    color="primary.main"
+                    sx={{
+                      display: '-webkit-box',
+                      fontWeight: 900,
+                      fontSize: 11,
+                      lineHeight: 1.18,
+                      overflow: 'hidden',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 2,
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    {planLabel}
+                  </Typography>
+                </Tooltip>
+              ) : null}
             </Box>
           </Box>
           ) : null}

@@ -18,9 +18,11 @@ const documents = {
       ['3. Planos dinâmicos', 'Os planos podem variar em nome, preço, valor promocional, duração, itens inclusos, benefícios e promoções ao longo do tempo. As condições aplicáveis são aquelas exibidas na tela de contratação no momento em que o usuário confirma o pagamento.'],
       ['4. Cobrança e acesso', 'Ao contratar um plano, o usuário autoriza a cobrança pelo provedor de pagamento selecionado. O acesso pago permanece conforme o prazo, status de pagamento, itens inclusos e condições do plano contratado.'],
       ['5. Alterações futuras', 'Mudanças futuras nos planos, preços, duração ou itens inclusos não alteram automaticamente o snapshot da contratação já realizada, salvo em nova contratação, renovação ou ajuste informado ao usuário quando aplicável.'],
-      ['6. Uso adequado', 'É proibido tentar acessar dados de outros usuários, explorar falhas, burlar controles de acesso, automatizar abuso da plataforma ou usar o sistema para finalidade ilegal.'],
-      ['7. Limitações', 'Embora o sistema busque precisão, valores, projeções e alertas dependem dos dados informados pelo usuário e podem exigir conferência manual.'],
-      ['8. Suspensão ou bloqueio', 'O acesso pode ser bloqueado em caso de inadimplência, suspeita de fraude, violação dos termos ou solicitação do próprio usuário.']
+      ['6. Programa de indicação', 'Quando disponível, o usuário pode compartilhar seu cupom de indicação. O indicado pode receber desconto na contratação, e o indicador pode gerar comissão após confirmação do pagamento. Comissões podem ser usadas como desconto em planos ou solicitadas para pagamento por PIX, conforme regras vigentes, saldo disponível e controles antifraude.'],
+      ['7. Comissões, PIX e descontos', 'Comissões para recebimento em dinheiro ficam disponíveis em até 14 dias após a confirmação do pagamento ou após mudança para recebimento por PIX, o que ocorrer por último. O saque mínimo é de R$ 20,00. O pagamento por PIX é manual, depende dos dados informados pelo usuário e será marcado como pago pelo administrador após conferência. O uso como desconto em planos pode ser imediato quando houver saldo disponível e não gera pagamento duplicado.'],
+      ['8. Uso adequado', 'É proibido tentar acessar dados de outros usuários, explorar falhas, burlar controles de acesso, automatizar abuso da plataforma ou usar o sistema para finalidade ilegal, inclusive criar autoindicações, contas falsas ou uso fraudulento de cupons.'],
+      ['9. Limitações', 'Embora o sistema busque precisão, valores, projeções, comissões e alertas dependem dos dados informados pelo usuário, confirmação de pagamentos e conferência administrativa quando aplicável.'],
+      ['10. Suspensão ou bloqueio', 'O acesso pode ser bloqueado em caso de inadimplência, suspeita de fraude, violação dos termos ou solicitação do próprio usuário. Comissões ligadas a compras canceladas, estornadas ou fraudulentas podem ser canceladas.']
     ]
   },
   privacy: {
@@ -28,10 +30,10 @@ const documents = {
     version: '2026-07-31',
     summary: 'Como o Deluket Finance trata dados pessoais em conformidade com a LGPD.',
     sections: [
-      ['1. Dados coletados', 'Podemos tratar nome, e-mail, telefone, cidade, ocupação, preferências, registros financeiros inseridos pelo usuário, dados de assinatura, consentimentos, logs técnicos e dados necessários para segurança.'],
+      ['1. Dados coletados', 'Podemos tratar nome, e-mail, telefone, cidade, ocupação, preferências, registros financeiros inseridos pelo usuário, dados de assinatura, consentimentos, logs técnicos, dados necessários para segurança e, quando o usuário optar por receber comissão em dinheiro, dados PIX informados voluntariamente.'],
       ['2. Finalidades', 'Usamos dados para criar e manter a conta, operar funcionalidades financeiras, processar assinatura, cumprir obrigações legais, prevenir fraude, melhorar o produto e comunicar informações relevantes.'],
       ['3. Bases legais', 'O tratamento pode ocorrer para execução de contrato, cumprimento de obrigação legal, legítimo interesse, prevenção a fraude e consentimento quando necessário.'],
-      ['4. Compartilhamento', 'Dados podem ser compartilhados com provedores essenciais, como hospedagem, banco de dados, autenticação, notificações e processadores de pagamento, sempre conforme a finalidade do serviço.'],
+      ['4. Compartilhamento', 'Dados podem ser compartilhados com provedores essenciais, como hospedagem, banco de dados, autenticação, notificações e processadores de pagamento, sempre conforme a finalidade do serviço. Dados PIX são usados para operacionalizar pagamento de comissão quando solicitado.'],
       ['5. Direitos do titular', 'O usuário pode solicitar acesso, correção, portabilidade, exclusão, informação sobre compartilhamento e revogação de consentimento, observados limites legais e contratuais.'],
       ['6. Segurança', 'Adotamos controles técnicos e organizacionais proporcionais, como autenticação, segregação por usuário, proteção de rotas administrativas e registro de ações relevantes.'],
       ['7. Retenção', 'Os dados são mantidos pelo tempo necessário para prestação do serviço, cumprimento de obrigações legais, defesa de direitos e auditoria.']

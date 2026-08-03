@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { CouponDiscountType, SubscriptionPlan, SubscriptionStatus, User, UserRole } from '@/interfaces/financial';
+import type { MarketingBanner, PixKeyType, ReferralCommission, ReferralCommissionStatus, ReferralCoupon } from './referrals';
 
 export type BillingStatus = Pick<
   User,
@@ -75,6 +76,7 @@ export type CouponValidationResult = {
   description?: string | null;
   discountType: CouponDiscountType;
   discountValue: number;
+  kind?: 'PROMOTIONAL' | 'REFERRAL';
   originalPrice: number;
   discountAmount: number;
   finalPrice: number;
@@ -121,10 +123,26 @@ export async function validateBillingCoupon(payload: { planId: string; couponCod
   return data.coupon;
 }
 
-export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRIPE'; planId: string; couponCode?: string; legalAccepted: true }) {
+export async function createCheckout(payload: { provider: 'MERCADO_PAGO' | 'STRIPE'; planId: string; couponCode?: string; useReferralCredit?: boolean; legalAccepted: true }) {
   const { data } = await api.post<{ checkout: { provider: string; planId: string; planName: string; url: string } }>('/billing/checkout', payload);
   return data.checkout;
 }
+
+export type ReferralWithdrawal = {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'REQUESTED' | 'PAID' | 'CANCELED';
+  pixKeyType: PixKeyType;
+  pixKey: string;
+  pixHolderName: string;
+  requestedAt: string;
+  paidAt?: string | null;
+  canceledAt?: string | null;
+  adminNotes?: string | null;
+  user?: { name: string; email: string };
+  settlementsCount?: number;
+};
 
 export async function listAdminSubscriptionUsers(params: {
   page?: number;
@@ -147,6 +165,7 @@ export async function updateAdminSubscriptionUser(
     trialEndsAt?: string | null;
     manualAccessUntil?: string | null;
     accessBlockedAt?: string | null;
+    subscriptionCurrentPeriodEnd?: string | null;
     subscriptionPlan?: SubscriptionPlan;
     role?: UserRole;
     note?: string;
@@ -206,6 +225,11 @@ export async function reorderAdminBillingPlans(planIds: string[]) {
   return data.plans;
 }
 
+export async function reorderAdminMarketingBanners(bannerIds: string[]) {
+  const { data } = await api.put<{ banners: MarketingBanner[] }>('/admin/marketing-banners/order', { bannerIds });
+  return data.banners;
+}
+
 export async function listAdminBillingCoupons() {
   const { data } = await api.get<{ coupons: BillingCoupon[] }>('/admin/subscriptions/coupons');
   return data.coupons;
@@ -224,4 +248,62 @@ export async function updateAdminBillingCoupon(couponId: string, payload: Omit<B
 export async function deactivateAdminBillingCoupon(couponId: string) {
   const { data } = await api.delete<{ coupon: BillingCoupon }>(`/admin/subscriptions/coupons/${couponId}`);
   return data.coupon;
+}
+
+export async function listAdminReferralCoupons() {
+  const { data } = await api.get<{ coupons: ReferralCoupon[] }>('/admin/referrals/coupons');
+  return data.coupons;
+}
+
+export async function updateAdminReferralCoupon(couponId: string, payload: {
+  code: string;
+  active: boolean;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  commissionType: CouponDiscountType;
+  commissionValue: number;
+  planCommissions?: Record<string, { type: CouponDiscountType; value: number }>;
+}) {
+  const { data } = await api.put<{ coupon: ReferralCoupon }>(`/admin/referrals/coupons/${couponId}`, payload);
+  return data.coupon;
+}
+
+export async function listAdminReferralCommissions() {
+  const { data } = await api.get<{ commissions: ReferralCommission[] }>('/admin/referrals/commissions');
+  return data.commissions;
+}
+
+export async function updateAdminReferralCommission(commissionId: string, payload: { status: ReferralCommissionStatus; notes?: string | null }) {
+  const { data } = await api.put<{ commission: ReferralCommission }>(`/admin/referrals/commissions/${commissionId}`, payload);
+  return data.commission;
+}
+
+export async function listAdminReferralWithdrawals() {
+  const { data } = await api.get<{ withdrawals: ReferralWithdrawal[] }>('/admin/referrals/withdrawals');
+  return data.withdrawals;
+}
+
+export async function updateAdminReferralWithdrawal(withdrawalId: string, payload: { status: 'PAID' | 'CANCELED'; adminNotes?: string | null }) {
+  const { data } = await api.put<{ withdrawal: ReferralWithdrawal }>(`/admin/referrals/withdrawals/${withdrawalId}`, payload);
+  return data.withdrawal;
+}
+
+export async function listAdminMarketingBanners() {
+  const { data } = await api.get<{ banners: MarketingBanner[] }>('/admin/marketing-banners');
+  return data.banners;
+}
+
+export async function createAdminMarketingBanner(payload: Omit<MarketingBanner, 'id' | 'key' | 'createdAt' | 'updatedAt'>) {
+  const { data } = await api.post<{ banner: MarketingBanner }>('/admin/marketing-banners', payload);
+  return data.banner;
+}
+
+export async function updateAdminMarketingBanner(bannerId: string, payload: Omit<MarketingBanner, 'id' | 'key' | 'createdAt' | 'updatedAt'>) {
+  const { data } = await api.put<{ banner: MarketingBanner }>(`/admin/marketing-banners/${bannerId}`, payload);
+  return data.banner;
+}
+
+export async function deleteAdminMarketingBanner(bannerId: string) {
+  const { data } = await api.delete<{ banner: MarketingBanner }>(`/admin/marketing-banners/${bannerId}`);
+  return data.banner;
 }
