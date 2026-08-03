@@ -8,6 +8,8 @@ import { listFinancialReminders, updateFinancialReminder } from "@/services/fina
 import { formatDateTime } from "@/utils/format";
 
 const notifiedStorageKey = "@minha-receita:web-reminders-notified";
+const reminderPollingVisibleMs = 10 * 60_000;
+const reminderPollingHiddenMs = 30 * 60_000;
 
 function readNotifiedIds() {
   try {
@@ -53,19 +55,45 @@ export function WebReminderNotifier() {
 
   useEffect(() => {
     let disposed = false;
+    let timer: number | undefined;
+    let checking = false;
+
+    function nextDelay() {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return reminderPollingHiddenMs;
+      }
+      return reminderPollingVisibleMs;
+    }
+
+    function scheduleNextCheck(delay = nextDelay()) {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(notifyDueReminders, delay);
+    }
 
     async function notifyDueReminders() {
+      if (disposed || checking) return;
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        scheduleNextCheck();
+        return;
+      }
+      checking = true;
       let reminders: FinancialReminder[] = [];
       try {
         reminders = await listFinancialReminders({ status: "PENDING", dueOnly: true });
       } catch {
+        checking = false;
+        scheduleNextCheck();
         return;
       }
+      checking = false;
       if (disposed) return;
 
       const notifiedIds = readNotifiedIds();
       const reminder = reminders.find((item) => !notifiedIds.has(reminderNotificationKey(item)));
-      if (!reminder) return;
+      if (!reminder) {
+        scheduleNextCheck();
+        return;
+      }
 
       notifiedIds.add(reminderNotificationKey(reminder));
       persistNotifiedIds(notifiedIds);
@@ -82,13 +110,20 @@ export function WebReminderNotifier() {
           tag: reminder.id,
         });
       }
+      scheduleNextCheck();
     }
 
     notifyDueReminders();
-    const interval = window.setInterval(notifyDueReminders, 30_000);
+    function checkWhenVisible() {
+      if (document.visibilityState === "visible") notifyDueReminders();
+    }
+    window.addEventListener("online", notifyDueReminders);
+    document.addEventListener("visibilitychange", checkWhenVisible);
     return () => {
       disposed = true;
-      window.clearInterval(interval);
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("online", notifyDueReminders);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
     };
   }, [t]);
 
