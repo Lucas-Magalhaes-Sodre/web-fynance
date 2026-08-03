@@ -212,6 +212,7 @@ export function FinancialControlPage() {
   >({});
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
   const [allSavings, setAllSavings] = useState<Saving[]>([]);
+  const [allSavingsLoaded, setAllSavingsLoaded] = useState(false);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [cellEdit, setCellEdit] = useState<SpreadsheetCellEdit | null>(null);
   const [cellSaving, setCellSaving] = useState(false);
@@ -275,9 +276,9 @@ export function FinancialControlPage() {
     return colorMap;
   }, [categories]);
 
-  const availableSavings = useMemo(() => {
+  function availableSavingsFromList(savings: Saving[]) {
     const todayKey = isoDate();
-    const balances = allSavings
+    const balances = savings
       .filter((saving) => saving.date.slice(0, 10) <= todayKey)
       .reduce<Record<string, Saving>>((acc, saving) => {
       const key = `${saving.category}|||${saving.title}`;
@@ -286,6 +287,10 @@ export function FinancialControlPage() {
       return acc;
     }, {});
     return Object.values(balances).filter((saving) => saving.amount > 0);
+  }
+
+  const availableSavings = useMemo(() => {
+    return availableSavingsFromList(allSavings);
   }, [allSavings]);
 
   function categoryColor(type: FinancialCategoryType, category: string) {
@@ -476,6 +481,8 @@ export function FinancialControlPage() {
       setAllSavings(await listSavings());
     } catch {
       setAllSavings([]);
+    } finally {
+      setAllSavingsLoaded(true);
     }
   }
 
@@ -485,7 +492,6 @@ export function FinancialControlPage() {
 
   useEffect(() => {
     loadCategories();
-    loadAvailableSavings();
     getFinancialTablePreferences()
       .then((preferences) => {
         setGroupsSeparated(preferences.groupsSeparated);
@@ -537,8 +543,21 @@ export function FinancialControlPage() {
     setFormOpen(true);
   }
 
-  function openSavingCreate(action: SavingAction = "REGISTER") {
-    const firstBalance = availableSavings[0];
+  async function openSavingCreate(action: SavingAction = "REGISTER") {
+    let nextAvailableSavings = availableSavings;
+    if (action === "WITHDRAW_TO_BALANCE" && !allSavingsLoaded) {
+      try {
+        const loadedSavings = await listSavings();
+        setAllSavings(loadedSavings);
+        nextAvailableSavings = availableSavingsFromList(loadedSavings);
+      } catch {
+        setAllSavings([]);
+        nextAvailableSavings = [];
+      } finally {
+        setAllSavingsLoaded(true);
+      }
+    }
+    const firstBalance = nextAvailableSavings[0];
     const baseDate =
       action === "WITHDRAW_TO_BALANCE"
         ? isoDate()

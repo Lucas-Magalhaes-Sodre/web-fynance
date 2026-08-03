@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '@/services/api';
 import type { User } from '@/interfaces/financial';
+import { unregisterWebPushSubscription } from '@/services/pushNotifications';
 
 type AuthContextValue = {
   user: User | null;
@@ -10,7 +11,7 @@ type AuthContextValue = {
   signInWithGoogle: (idToken: string, legalAccepted?: boolean) => Promise<void>;
   signUp: (name: string, email: string, password: string, marketingConsent?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext({} as AuthContextValue);
@@ -75,7 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
-  function signOut() {
+  async function signOut() {
+    try {
+      await unregisterWebPushSubscription();
+    } catch {
+      // O logout nao deve falhar se a remocao do token push nao responder.
+    }
     localStorage.removeItem('@minha-receita:token');
     setToken(null);
     setUser(null);

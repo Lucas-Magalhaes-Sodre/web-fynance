@@ -31,6 +31,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { PreferenceControls } from '@/components/molecules/PreferenceControls';
+import { WebPushRegistration } from '@/components/organisms/WebPushRegistration';
 import { WebReminderNotifier } from '@/components/organisms/WebReminderNotifier';
 import type { PlanProductKey } from '@/constants/planProducts';
 import { userCanAccessProduct } from '@/routes/ProductAccessRoute';
@@ -520,6 +521,7 @@ export function AppLayout() {
           </Box>
         </Box>
       </Dialog>
+      <WebPushRegistration />
       <WebReminderNotifier />
     </Box>
   );

@@ -130,6 +130,17 @@ const accessOptionLabels: Record<AdminAccessOption, string> = {
   LIFETIME: "Acesso vitalício",
 };
 
+type AdminTab = "PLANS" | "COUPONS" | "REFERRALS" | "BANNERS" | "USERS" | "SETTINGS";
+
+const initialLoadedTabs: Record<AdminTab, boolean> = {
+  PLANS: false,
+  COUPONS: false,
+  REFERRALS: false,
+  BANNERS: false,
+  USERS: false,
+  SETTINGS: false,
+};
+
 function couponDiscountFormValue(coupon: BillingCoupon) {
   return coupon.discountType === "FIXED"
     ? formatMoney(coupon.discountValue)
@@ -281,9 +292,9 @@ export function AdminSubscriptionsPage() {
     total: 0,
     totalPages: 1,
   });
-  const [adminTab, setAdminTab] = useState<"PLANS" | "COUPONS" | "REFERRALS" | "BANNERS" | "USERS" | "SETTINGS">(
-    "PLANS",
-  );
+  const [adminTab, setAdminTab] = useState<AdminTab>("PLANS");
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [loadedTabs, setLoadedTabs] = useState<Record<AdminTab, boolean>>(initialLoadedTabs);
   const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [coupons, setCoupons] = useState<BillingCoupon[]>([]);
   const [referralCoupons, setReferralCoupons] = useState<ReferralCoupon[]>([]);
@@ -398,53 +409,110 @@ export function AdminSubscriptionsPage() {
     setUsersPagination(usersResult.pagination);
   }
 
-  async function load() {
-    const safe = async <T,>(promise: Promise<T>, fallback: T) => {
-      try {
-        return await promise;
-      } catch {
-        return fallback;
-      }
-    };
-    const [
-      overviewResult,
-      settingsResult,
-      plansResult,
-      couponsResult,
-      referralCouponsResult,
-      referralCommissionsResult,
-      referralWithdrawalsResult,
-      marketingBannersResult,
-    ] =
-      await Promise.all([
-        safe(getAdminBillingOverview(), null),
-        safe(getAdminSettings(), null),
-        safe(listAdminBillingPlans(), []),
-        safe(listAdminBillingCoupons(), []),
-        safe(listAdminReferralCoupons(), []),
-        safe(listAdminReferralCommissions(), []),
-        safe(listAdminReferralWithdrawals(), []),
-        safe(listAdminMarketingBanners(), []),
-      ]);
+  function markTabLoaded(tab: AdminTab) {
+    setLoadedTabs((current) => ({ ...current, [tab]: true }));
+  }
+
+  async function safe<T>(promise: Promise<T>, fallback: T) {
+    try {
+      return await promise;
+    } catch {
+      return fallback;
+    }
+  }
+
+  async function loadOverview() {
+    const overviewResult = await safe(getAdminBillingOverview(), null);
     if (overviewResult) setOverview(overviewResult);
+  }
+
+  async function loadSettings() {
+    const settingsResult = await safe(getAdminSettings(), null);
     if (settingsResult) {
       setDefaultTrialDays(String(settingsResult.defaultTrialDays));
       setContactEmails(settingsResult.contactEmails.join("\n"));
       setContactPhones(settingsResult.contactPhones.join("\n"));
       setContactMessage(settingsResult.contactMessage ?? "");
     }
+  }
+
+  async function loadPlans() {
+    const plansResult = await safe(listAdminBillingPlans(), []);
     setPlans(plansResult);
-    setCoupons(couponsResult);
-    setReferralCoupons(referralCouponsResult);
-    setReferralCommissions(referralCommissionsResult);
-    setReferralWithdrawals(referralWithdrawalsResult);
-    setMarketingBanners(marketingBannersResult);
-    await loadUsers(1, usersPagination.pageSize);
+  }
+
+  async function loadInitial() {
+    await Promise.all([loadOverview(), loadSettings(), loadPlans()]);
+    setLoadedTabs((current) => ({
+      ...current,
+      PLANS: true,
+      SETTINGS: true,
+    }));
+    setInitialLoaded(true);
+  }
+
+  async function loadTabData(tab: AdminTab, force = false) {
+    if (!force && loadedTabs[tab]) return;
+
+    if (tab === "PLANS") {
+      await Promise.all([loadPlans(), loadSettings()]);
+      setLoadedTabs((current) => ({ ...current, PLANS: true, SETTINGS: true }));
+      return;
+    }
+
+    if (tab === "COUPONS") {
+      const [couponsResult, plansResult] = await Promise.all([
+        safe(listAdminBillingCoupons(), []),
+        plans.length ? Promise.resolve(plans) : safe(listAdminBillingPlans(), []),
+      ]);
+      setCoupons(couponsResult);
+      if (!plans.length) setPlans(plansResult);
+      markTabLoaded("COUPONS");
+      return;
+    }
+
+    if (tab === "REFERRALS") {
+      const [referralCouponsResult, referralCommissionsResult, referralWithdrawalsResult, plansResult] =
+        await Promise.all([
+          safe(listAdminReferralCoupons(), []),
+          safe(listAdminReferralCommissions(), []),
+          safe(listAdminReferralWithdrawals(), []),
+          plans.length ? Promise.resolve(plans) : safe(listAdminBillingPlans(), []),
+        ]);
+      setReferralCoupons(referralCouponsResult);
+      setReferralCommissions(referralCommissionsResult);
+      setReferralWithdrawals(referralWithdrawalsResult);
+      if (!plans.length) setPlans(plansResult);
+      markTabLoaded("REFERRALS");
+      return;
+    }
+
+    if (tab === "BANNERS") {
+      setMarketingBanners(await safe(listAdminMarketingBanners(), []));
+      markTabLoaded("BANNERS");
+      return;
+    }
+
+    if (tab === "USERS") {
+      const plansPromise = plans.length ? Promise.resolve(plans) : safe(listAdminBillingPlans(), []);
+      const [, plansResult] = await Promise.all([loadUsers(1, usersPagination.pageSize), plansPromise]);
+      if (!plans.length) setPlans(plansResult);
+      markTabLoaded("USERS");
+      return;
+    }
+
+    await loadSettings();
+    markTabLoaded("SETTINGS");
   }
 
   useEffect(() => {
-    load();
+    loadInitial();
   }, []);
+
+  useEffect(() => {
+    if (!initialLoaded) return;
+    loadTabData(adminTab);
+  }, [adminTab, initialLoaded]);
 
   function accessDaysForUser(user: AdminSubscriptionUser) {
     return Math.max(1, Number(daysByUser[user.id] || 14));
@@ -630,7 +698,7 @@ export function AdminSubscriptionsPage() {
       setContactEmails(settings.contactEmails.join("\n"));
       setContactPhones(settings.contactPhones.join("\n"));
       setContactMessage(settings.contactMessage ?? "");
-      await load();
+      await Promise.all([loadOverview(), loadPlans()]);
       setNotice("Configurações salvas com sucesso.");
     } catch {
       setError("Não foi possível salvar as configurações.");
@@ -704,7 +772,7 @@ export function AdminSubscriptionsPage() {
         setNotice("Plano criado com sucesso.");
       }
       setPlanModalOpen(false);
-      await load();
+      await Promise.all([loadPlans(), loadOverview()]);
     } catch {
       setError("Não foi possível salvar o plano.");
     } finally {
@@ -716,7 +784,7 @@ export function AdminSubscriptionsPage() {
     setSavingPlan(true);
     try {
       await deactivateAdminBillingPlan(planId);
-      await load();
+      await Promise.all([loadPlans(), loadOverview()]);
       setNotice("Plano desativado com sucesso.");
     } finally {
       setSavingPlan(false);
