@@ -77,6 +77,19 @@ function isCreditCardCategoryName(name: string) {
   return normalized === "cartao" || normalized === "cartoes" || normalized === "cartao de credito" || normalized === "cartoes de credito";
 }
 
+function formWeekdayFromDate(value: Date) {
+  const day = value.getDay();
+  return day === 0 ? 7 : day;
+}
+
+function firstSelectedWeekdayOnOrAfter(dateValue: string, weekdayValue: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  const targetWeekday = Number(weekdayValue || formWeekdayFromDate(date));
+  const offset = (targetWeekday - formWeekdayFromDate(date) + 7) % 7;
+  date.setDate(date.getDate() + offset);
+  return isoDate(date);
+}
+
 type FormState = {
   name: string;
   description: string;
@@ -91,6 +104,7 @@ type FormState = {
   recurrenceStartYear: string;
   recurrenceEndMonth: string;
   recurrenceEndYear: string;
+  recurrenceEndDate: string;
   notify: boolean;
   notifyOffsetDays: string;
   notifyTime: string;
@@ -141,6 +155,7 @@ export function FinancialEntryForm({
     recurrenceStartYear: String(initialDate.getFullYear()),
     recurrenceEndMonth: "12",
     recurrenceEndYear: String(initialDate.getFullYear()),
+    recurrenceEndDate: defaultDate,
     notify: false,
     notifyOffsetDays: "0",
     notifyTime: "09:00",
@@ -188,11 +203,24 @@ export function FinancialEntryForm({
   );
   const selectedCategoryExists = availableCategories.some((category) => category.name === form.category);
   const isCreditCardExpense = !isIncome && isCreditCardCategoryName(form.category);
+  const recurrenceStartDateForValidation =
+    form.recurrenceType === "WEEKLY"
+      ? firstSelectedWeekdayOnOrAfter(form.date, form.dueDay)
+      : form.date;
   const invalidCustomRecurrenceRange =
     form.isFixed &&
     form.recurrenceType === "MONTHLY" &&
     Number(form.recurrenceEndYear) * 12 + Number(form.recurrenceEndMonth) <=
       Number(form.recurrenceStartYear) * 12 + Number(form.recurrenceStartMonth);
+  const invalidDateRecurrenceRange =
+    form.isFixed &&
+    form.recurrenceType !== "NONE" &&
+    form.recurrenceType !== "MONTHLY" &&
+    new Date(`${form.recurrenceEndDate}T00:00:00`) < new Date(`${recurrenceStartDateForValidation}T00:00:00`);
+  const invalidRecurringDay =
+    form.isFixed &&
+    (form.recurrenceType === "WEEKLY" || form.recurrenceType === "MONTHLY") &&
+    !form.dueDay;
 
   useEffect(() => {
     if (item) {
@@ -216,6 +244,7 @@ export function FinancialEntryForm({
         recurrenceStartYear: String(new Date(item.date).getFullYear()),
         recurrenceEndMonth: "12",
         recurrenceEndYear: String(new Date(item.date).getFullYear()),
+        recurrenceEndDate: (item.paymentDate ?? item.dueDate ?? item.date).slice(0, 10),
         notify: false,
         notifyOffsetDays: "0",
         notifyTime: "09:00",
@@ -239,6 +268,7 @@ export function FinancialEntryForm({
       recurrenceStartYear: String(nextDefaultDate.getFullYear()),
       recurrenceEndMonth: "12",
       recurrenceEndYear: String(nextDefaultDate.getFullYear()),
+      recurrenceEndDate: defaultDate,
       notify: false,
       notifyOffsetDays: "0",
       notifyTime: "09:00",
@@ -299,11 +329,14 @@ export function FinancialEntryForm({
     event.preventDefault();
     if (saving) return;
     const amount = currencyToNumber(form.amount);
-    const date = new Date(`${form.date}T00:00:00`);
     const isRecurring = form.isFixed && form.recurrenceType !== "NONE";
     const isRecurringExpense = isRecurring && !isIncome;
     const trimmedName = form.name.trim();
-    if (invalidCustomRecurrenceRange) return;
+    const recurrenceStartDate =
+      isRecurring && form.recurrenceType === "WEEKLY"
+        ? firstSelectedWeekdayOnOrAfter(form.date, form.dueDay)
+        : form.date;
+    if (invalidCustomRecurrenceRange || invalidDateRecurrenceRange || invalidRecurringDay) return;
 
     setSaving(true);
     try {
@@ -330,9 +363,9 @@ export function FinancialEntryForm({
         amount,
         type: form.type,
         category: form.category,
-        date: form.date,
-        month: date.getMonth() + 1,
-        year: date.getFullYear(),
+        date: recurrenceStartDate,
+        month: new Date(`${recurrenceStartDate}T00:00:00`).getMonth() + 1,
+        year: new Date(`${recurrenceStartDate}T00:00:00`).getFullYear(),
         dueDate:
           !isIncome && (!isRecurring || form.recurrenceType === "YEARLY")
             ? form.date
@@ -343,13 +376,15 @@ export function FinancialEntryForm({
         isFixed: isRecurring,
         recurrenceType: isRecurring ? form.recurrenceType : "NONE",
         recurrenceGeneration:
-          isRecurring && form.recurrenceType === "MONTHLY"
+          isRecurring
             ? {
                 mode: "CUSTOM",
                 startMonth: Number(form.recurrenceStartMonth),
                 startYear: Number(form.recurrenceStartYear),
                 endMonth: Number(form.recurrenceEndMonth),
                 endYear: Number(form.recurrenceEndYear),
+                startDate: recurrenceStartDate,
+                endDate: form.recurrenceType === "MONTHLY" ? undefined : form.recurrenceEndDate,
               }
             : undefined,
       }, !isIncome && !item && form.notify
@@ -384,6 +419,8 @@ export function FinancialEntryForm({
               !form.name.trim() ||
               !form.category.trim() ||
               invalidCustomRecurrenceRange
+              || invalidDateRecurrenceRange
+              || invalidRecurringDay
             }
             loading={saving}
             loadingLabel={t("saving")}
@@ -527,25 +564,45 @@ export function FinancialEntryForm({
                   </TextField>
 
                   {form.recurrenceType === "WEEKLY" ? (
-                    <TextField
-                      select
-                      label={
-                        isIncome
-                          ? t("incomeWeekDay")
-                          : t("expenseWeekDay")
-                      }
-                      required
-                      value={form.dueDay}
-                      onChange={(event) =>
-                        setForm({ ...form, dueDay: event.target.value })
-                      }
-                    >
-                      {weekDayItems.map((day) => (
-                        <MenuItem key={day.value} value={day.value}>
-                          {day.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <>
+                      <TextField
+                        select
+                        label={
+                          isIncome
+                            ? t("incomeWeekDay")
+                            : t("expenseWeekDay")
+                        }
+                        required
+                        value={form.dueDay}
+                        onChange={(event) =>
+                          setForm({ ...form, dueDay: event.target.value })
+                        }
+                      >
+                        {weekDayItems.map((day) => (
+                          <MenuItem key={day.value} value={day.value}>
+                            {day.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                      {!item ? (
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                          <AppDateField
+                            label="Data inicial"
+                            required
+                            value={form.date}
+                            onChange={(value) => setForm({ ...form, date: value })}
+                          />
+                          <AppDateField
+                            label="Data final"
+                            required
+                            value={form.recurrenceEndDate}
+                            onChange={(value) => setForm({ ...form, recurrenceEndDate: value })}
+                            helperText={invalidDateRecurrenceRange ? t("endAfterStart") : " "}
+                            textFieldProps={{ error: invalidDateRecurrenceRange }}
+                          />
+                        </Stack>
+                      ) : null}
+                    </>
                   ) : null}
 
                   {form.recurrenceType === "MONTHLY" ? (
@@ -652,16 +709,47 @@ export function FinancialEntryForm({
                   ) : null}
 
                   {form.recurrenceType === "YEARLY" ? (
-                    <AppDateField
-                      label={
-                        isIncome
-                          ? t("annualIncomeDate")
-                          : t("annualExpenseDate")
-                      }
-                      required
-                      value={form.date}
-                      onChange={(value) => setForm({ ...form, date: value })}
-                    />
+                    <>
+                      <AppDateField
+                        label={
+                          isIncome
+                            ? t("annualIncomeDate")
+                            : t("annualExpenseDate")
+                        }
+                        required
+                        value={form.date}
+                        onChange={(value) => setForm({ ...form, date: value })}
+                      />
+                      {!item ? (
+                        <AppDateField
+                          label="Data final"
+                          required
+                          value={form.recurrenceEndDate}
+                          onChange={(value) => setForm({ ...form, recurrenceEndDate: value })}
+                          helperText={invalidDateRecurrenceRange ? t("endAfterStart") : " "}
+                          textFieldProps={{ error: invalidDateRecurrenceRange }}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  {form.recurrenceType === "DAILY" && !item ? (
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <AppDateField
+                        label="Data inicial"
+                        required
+                        value={form.date}
+                        onChange={(value) => setForm({ ...form, date: value })}
+                      />
+                      <AppDateField
+                        label="Data final"
+                        required
+                        value={form.recurrenceEndDate}
+                        onChange={(value) => setForm({ ...form, recurrenceEndDate: value })}
+                        helperText={invalidDateRecurrenceRange ? t("endAfterStart") : " "}
+                        textFieldProps={{ error: invalidDateRecurrenceRange }}
+                      />
+                    </Stack>
                   ) : null}
                 </>
               ) : (
