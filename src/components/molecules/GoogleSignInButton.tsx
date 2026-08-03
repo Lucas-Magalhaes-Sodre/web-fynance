@@ -2,6 +2,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { GOOGLE_CLIENT_ID } from '@/config/env';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +37,14 @@ function loadGoogleScript() {
     script.onerror = () => reject(new Error('Nao foi possivel carregar o login do Google.'));
     document.head.appendChild(script);
   });
+}
+
+function errorMessageFromApi(error: unknown, fallback: string) {
+  if (axios.isAxiosError(error)) {
+    const message = error.response?.data?.message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
 }
 
 export function GoogleSignInButton({
@@ -79,8 +88,8 @@ export function GoogleSignInButton({
         try {
           await signInWithGoogle(response.credential, legalAccepted);
           onSuccess();
-        } catch {
-          setError(t('loginError'));
+        } catch (error) {
+          setError(errorMessageFromApi(error, t('loginError')));
         }
       }
     });
