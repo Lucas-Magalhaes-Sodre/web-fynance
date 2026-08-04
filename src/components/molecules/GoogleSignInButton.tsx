@@ -116,11 +116,12 @@ export function GoogleSignInButton({
         ref={buttonRef}
         sx={{
           minHeight: 44,
-          width: '100%',
+          width: 'min(100%, 420px)',
+          mx: 'auto',
           display: 'flex',
           justifyContent: 'center',
-          '& > div': { width: '100% !important' },
-          '& iframe': { mx: 'auto' }
+          '& > div': { width: '100% !important', mx: 'auto' },
+          '& iframe': { mx: 'auto', display: 'block' }
         }}
       />
       {error ? <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert> : null}
