@@ -44,16 +44,17 @@ export function BillingPage() {
     load();
   }, []);
 
-  async function subscribe(planId: string) {
+  async function subscribe(planId: string, paymentMethod: 'CARD' | 'PIX') {
     if (!legalAcceptedByPlan[planId]) {
       setError('Para continuar, aceite os termos e condições do plano escolhido.');
       return;
     }
-    setLoadingPlan(planId);
+    setLoadingPlan(`${planId}:${paymentMethod}`);
     setError('');
     try {
       const checkout = await createCheckout({
         provider: 'MERCADO_PAGO',
+        paymentMethod,
         planId,
         couponCode: validatedCouponByPlan[planId]?.code,
         useReferralCredit: Boolean(useReferralCreditByPlan[planId]),
@@ -234,16 +235,30 @@ export function BillingPage() {
                   )}
                 />
                 <Box flex={1} />
-                <Button
-                  variant="contained"
-                  size="large"
-                  disabled={Boolean(loadingPlan) || !legalAcceptedByPlan[item.id] || (billing?.billingPlanId === item.id && billing.access?.hasPaidAccess)}
-                  onClick={() => subscribe(item.id)}
-                >
-                  {billing?.billingPlanId === item.id && billing.access?.hasPaidAccess
-                    ? 'Plano atual'
-                    : loadingPlan === item.id ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
-                </Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<CreditCardIcon />}
+                    fullWidth
+                    disabled={Boolean(loadingPlan) || !legalAcceptedByPlan[item.id] || (billing?.billingPlanId === item.id && billing.access?.hasPaidAccess)}
+                    onClick={() => subscribe(item.id, 'CARD')}
+                  >
+                    {billing?.billingPlanId === item.id && billing.access?.hasPaidAccess
+                      ? 'Plano atual'
+                      : loadingPlan === `${item.id}:CARD` ? 'Abrindo...' : 'Pagar com cartão'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<PixIcon />}
+                    fullWidth
+                    disabled={Boolean(loadingPlan) || !legalAcceptedByPlan[item.id] || (billing?.billingPlanId === item.id && billing.access?.hasPaidAccess)}
+                    onClick={() => subscribe(item.id, 'PIX')}
+                  >
+                    {loadingPlan === `${item.id}:PIX` ? 'Abrindo...' : 'Pagar com Pix'}
+                  </Button>
+                </Stack>
               </Stack>
             </Paper>
           </Grid>
