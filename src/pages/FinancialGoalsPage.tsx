@@ -210,27 +210,41 @@ export function FinancialGoalsPage() {
   function GoalsSkeleton() {
     return (
       <Stack spacing={2}>
-        <Grid container spacing={2} className="goals-aligned-grid">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            width: '100%',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+          }}
+        >
           {[0, 1, 2].map((item) => (
-            <Grid item xs={12} md={4} key={item}>
+            <Box key={item}>
               <Skeleton variant="rounded" height={86} />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
         <Skeleton variant="rounded" height={126} />
-        <Grid container spacing={2} className="goals-aligned-grid">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            width: '100%',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+          }}
+        >
           {[0, 1, 2].map((item) => (
-            <Grid item xs={12} md={6} lg={4} key={item}>
+            <Box key={item}>
               <Skeleton variant="rounded" height={360} />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Stack>
     );
   }
 
   return (
-    <Stack spacing={3} sx={{ '& .goals-aligned-grid': { mx: 0, width: '100%' } }}>
+    <Stack spacing={3}>
       <Paper className="glass-card" sx={{ p: { xs: 3, md: 4 }, borderRadius: 5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
           <Box>
@@ -290,17 +304,24 @@ export function FinancialGoalsPage() {
 
       {!loading && !error ? (
         <>
-          <Grid container spacing={2} className="goals-aligned-grid">
-            <Grid item xs={12} md={4}>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              width: '100%',
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+            }}
+          >
+            <Box>
               <StatCard label={t('totalGoalValue')} value={totals.targetAmount} tone="saving" />
-            </Grid>
-            <Grid item xs={12} md={4}>
+            </Box>
+            <Box>
               <StatCard label={t('accumulatedProgress')} value={totals.currentAmount} tone="saving" />
-            </Grid>
-            <Grid item xs={12} md={4}>
+            </Box>
+            <Box>
               <StatCard label={t('remainingValue')} value={totals.remainingAmount} tone="expense" />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
           {closestGoal ? (
             <Paper className="soft-card" sx={{ p: 3, borderRadius: 4 }}>
@@ -329,9 +350,17 @@ export function FinancialGoalsPage() {
             </Paper>
           ) : null}
 
-          <Grid container spacing={2} className="goals-aligned-grid">
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              width: '100%',
+              alignItems: 'stretch',
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+            }}
+          >
             {goals.map((goal) => (
-              <Grid item xs={12} md={6} lg={4} key={goal.id}>
+              <Box key={goal.id}>
                 <FinancialGoalCard
                   goal={goal}
                   onDetails={(goal) => openDetails(goal)}
@@ -346,14 +375,14 @@ export function FinancialGoalsPage() {
                     </>
                   }
                 />
-              </Grid>
+              </Box>
             ))}
             {!goals.length ? (
-              <Grid item xs={12}>
+              <Box>
                 <EmptyState message={t('noGoal')} />
-              </Grid>
+              </Box>
             ) : null}
-          </Grid>
+          </Box>
         </>
       ) : null}
       <FinancialGoalFormDialog

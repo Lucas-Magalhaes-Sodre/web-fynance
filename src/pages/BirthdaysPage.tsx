@@ -315,13 +315,20 @@ export function BirthdaysPage() {
 
       {loading ? (
         <Stack spacing={2}>
-          <Grid container spacing={2}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              width: "100%",
+              gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
+            }}
+          >
             {[0, 1, 2].map((item) => (
-              <Grid item xs={12} md={4} key={item}>
+              <Box key={item}>
                 <Skeleton variant="rounded" height={86} />
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
           <Skeleton variant="rounded" height={260} />
         </Stack>
       ) : null}
@@ -330,8 +337,15 @@ export function BirthdaysPage() {
 
       {!loading && !error ? (
         <>
-          <Grid container spacing={2} sx={{ mx: 0, width: "100%" }}>
-            <Grid item xs={12} md={4}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              width: "100%",
+              gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
+            }}
+          >
+            <Box>
               <Paper className="soft-card" sx={{ p: 2, borderRadius: 3, overflow: "hidden", position: "relative" }}>
                 <Box sx={{ position: "absolute", right: -18, top: -22, width: 82, height: 82, borderRadius: "50%", bgcolor: `${birthdayColor}16` }} />
                 <Typography variant="body2" color="text.secondary" fontWeight={700}>
@@ -341,14 +355,14 @@ export function BirthdaysPage() {
                   {birthdays.length}
                 </Typography>
               </Paper>
-            </Grid>
-            <Grid item xs={12} md={4}>
+            </Box>
+            <Box>
               <StatCard label={t("birthdayBudget")} value={totalPlanned} tone="expense" />
-            </Grid>
-            <Grid item xs={12} md={4}>
+            </Box>
+            <Box>
               <StatCard label={t("nextBirthdayValue")} value={nextBirthday?.amount ?? 0} tone="saving" helperText={nextBirthday?.name ?? t("noBirthday")} />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
           <Paper className="soft-card" sx={{ p: 2.5, borderRadius: 4 }}>
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>
@@ -357,12 +371,19 @@ export function BirthdaysPage() {
                 {t("birthdayCalendar")}
               </Typography>
             </Stack>
-            <Grid container spacing={1.5}>
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                width: "100%",
+                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" },
+              }}
+            >
               {groupedByMonth.map((month) => {
                 const visibleItems = month.items.slice(0, 1);
                 const hiddenCount = Math.max(0, month.items.length - visibleItems.length);
                 return (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={month.month}>
+                <Box key={month.month}>
                   <Paper
                     onClick={() => setSelectedMonth(month.month)}
                     role="button"
@@ -455,15 +476,23 @@ export function BirthdaysPage() {
                       </Stack>
                     </Stack>
                   </Paper>
-                </Grid>
+                </Box>
                 );
               })}
-            </Grid>
+            </Box>
           </Paper>
 
-          <Grid container spacing={2} sx={{ mx: 0, width: "100%" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              width: "100%",
+              alignItems: "stretch",
+              gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" },
+            }}
+          >
             {sortedBirthdays.map((item) => (
-              <Grid item xs={12} md={6} lg={4} key={item.id}>
+              <Box key={item.id}>
                 <Paper className="soft-card" sx={{ p: 2.25, borderRadius: 4, borderColor: `${birthdayColor}44` }}>
                   <Stack direction="row" justifyContent="space-between" spacing={1.5}>
                     <Stack direction="row" spacing={1.5} minWidth={0}>
@@ -512,14 +541,14 @@ export function BirthdaysPage() {
                     </Typography>
                   ) : null}
                 </Paper>
-              </Grid>
+              </Box>
             ))}
             {!sortedBirthdays.length ? (
-              <Grid item xs={12}>
+              <Box sx={{ gridColumn: "1 / -1" }}>
                 <EmptyState message={t("noBirthdaysRegistered")} />
-              </Grid>
+              </Box>
             ) : null}
-          </Grid>
+          </Box>
         </>
       ) : null}
 

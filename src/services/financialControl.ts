@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { PaginationInfo } from './billing';
 import type {
   DayControl,
   CreditCard,
@@ -374,6 +375,15 @@ export async function listFinancialCategories(params?: { type?: FinancialCategor
   return data.categories;
 }
 
+export async function listFinancialCategoriesPage(params: {
+  type?: FinancialCategoryType;
+  page?: number;
+  pageSize?: number;
+}) {
+  const { data } = await api.get<{ categories: FinancialCategory[]; pagination: PaginationInfo }>('/financial-categories', { params });
+  return data;
+}
+
 export async function createFinancialCategory(payload: FinancialCategoryPayload) {
   const { data } = await api.post<{ category: FinancialCategory }>('/financial-categories', payload);
   return data.category;
@@ -415,6 +425,20 @@ export async function listSavings(params?: {
 }) {
   const { data } = await api.get<{ savings: Saving[] }>('/savings', { params });
   return data.savings;
+}
+
+export async function listSavingsPage(params?: {
+  startDate?: string;
+  endDate?: string;
+  month?: number;
+  year?: number;
+  category?: string;
+  goalId?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const { data } = await api.get<{ savings: Saving[]; pagination: PaginationInfo }>('/savings', { params });
+  return data;
 }
 
 export async function createSaving(payload: SavingPayload) {

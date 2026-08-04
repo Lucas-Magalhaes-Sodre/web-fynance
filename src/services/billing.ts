@@ -38,6 +38,11 @@ export type PaginationInfo = {
   totalPages: number;
 };
 
+export type PaginationParams = {
+  page?: number;
+  pageSize?: number;
+};
+
 export type BillingPlan = {
   id: string;
   name: string;
@@ -237,9 +242,9 @@ export async function reorderAdminMarketingBanners(bannerIds: string[]) {
   return data.banners;
 }
 
-export async function listAdminBillingCoupons() {
-  const { data } = await api.get<{ coupons: BillingCoupon[] }>('/admin/subscriptions/coupons');
-  return data.coupons;
+export async function listAdminBillingCoupons(params?: PaginationParams) {
+  const { data } = await api.get<{ coupons: BillingCoupon[]; pagination: PaginationInfo }>('/admin/subscriptions/coupons', { params });
+  return data;
 }
 
 export async function createAdminBillingCoupon(payload: Omit<BillingCoupon, 'id' | 'createdAt' | 'updatedAt' | 'usedCount'>) {
@@ -257,9 +262,9 @@ export async function deactivateAdminBillingCoupon(couponId: string) {
   return data.coupon;
 }
 
-export async function listAdminReferralCoupons() {
-  const { data } = await api.get<{ coupons: ReferralCoupon[] }>('/admin/referrals/coupons');
-  return data.coupons;
+export async function listAdminReferralCoupons(params?: PaginationParams) {
+  const { data } = await api.get<{ coupons: ReferralCoupon[]; pagination: PaginationInfo }>('/admin/referrals/coupons', { params });
+  return data;
 }
 
 export async function updateAdminReferralCoupon(couponId: string, payload: {
@@ -275,9 +280,9 @@ export async function updateAdminReferralCoupon(couponId: string, payload: {
   return data.coupon;
 }
 
-export async function listAdminReferralCommissions() {
-  const { data } = await api.get<{ commissions: ReferralCommission[] }>('/admin/referrals/commissions');
-  return data.commissions;
+export async function listAdminReferralCommissions(params?: PaginationParams) {
+  const { data } = await api.get<{ commissions: ReferralCommission[]; pagination: PaginationInfo }>('/admin/referrals/commissions', { params });
+  return data;
 }
 
 export async function updateAdminReferralCommission(commissionId: string, payload: { status: ReferralCommissionStatus; notes?: string | null }) {
@@ -285,9 +290,9 @@ export async function updateAdminReferralCommission(commissionId: string, payloa
   return data.commission;
 }
 
-export async function listAdminReferralWithdrawals() {
-  const { data } = await api.get<{ withdrawals: ReferralWithdrawal[] }>('/admin/referrals/withdrawals');
-  return data.withdrawals;
+export async function listAdminReferralWithdrawals(params?: PaginationParams) {
+  const { data } = await api.get<{ withdrawals: ReferralWithdrawal[]; pagination: PaginationInfo }>('/admin/referrals/withdrawals', { params });
+  return data;
 }
 
 export async function updateAdminReferralWithdrawal(withdrawalId: string, payload: { status: 'PAID' | 'CANCELED'; adminNotes?: string | null }) {
@@ -295,9 +300,9 @@ export async function updateAdminReferralWithdrawal(withdrawalId: string, payloa
   return data.withdrawal;
 }
 
-export async function listAdminMarketingBanners() {
-  const { data } = await api.get<{ banners: MarketingBanner[] }>('/admin/marketing-banners');
-  return data.banners;
+export async function listAdminMarketingBanners(params?: PaginationParams) {
+  const { data } = await api.get<{ banners: MarketingBanner[]; pagination: PaginationInfo }>('/admin/marketing-banners', { params });
+  return data;
 }
 
 export async function createAdminMarketingBanner(payload: Omit<MarketingBanner, 'id' | 'key' | 'createdAt' | 'updatedAt'>) {
