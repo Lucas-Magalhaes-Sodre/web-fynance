@@ -85,6 +85,7 @@ export type User = {
   couponDiscountSnapshot?: number | null;
   subscriptionCurrentPeriodEnd?: string | null;
   lastPaymentAt?: string | null;
+  lastSeenAt?: string | null;
   access?: AccessInfo;
   createdAt: string;
   updatedAt: string;

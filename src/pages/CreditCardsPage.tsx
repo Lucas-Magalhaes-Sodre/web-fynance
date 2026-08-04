@@ -394,13 +394,20 @@ export function CreditCardsPage() {
       </Paper>
 
       {loading ? (
-        <Grid container spacing={2}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            width: "100%",
+            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" },
+          }}
+        >
           {[0, 1, 2].map((item) => (
-            <Grid item xs={12} md={6} xl={4} key={item}>
+            <Box key={item}>
               <Skeleton variant="rounded" height={220} />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       ) : null}
       {error ? <EmptyState message={error} /> : null}
 
@@ -412,11 +419,19 @@ export function CreditCardsPage() {
               <Tab value="INACTIVE" label={`${t("inactive")} (${cards.filter((card) => !card.isActive).length})`} />
             </Tabs>
           </Paper>
-          <Grid container spacing={2}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              width: "100%",
+              alignItems: "stretch",
+              gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" },
+            }}
+          >
           {visibleCards.map((card) => {
             const limitExceeded = isLimitExceeded(card);
             return (
-            <Grid item xs={12} md={6} xl={4} key={card.id}>
+            <Box key={card.id}>
               <Paper
                 sx={{
                   p: 2.5,
@@ -501,15 +516,15 @@ export function CreditCardsPage() {
                   </Stack>
                 </Stack>
               </Paper>
-            </Grid>
+            </Box>
           );
           })}
           {!visibleCards.length ? (
-            <Grid item xs={12}>
+            <Box>
               <EmptyState message={cardTab === "ACTIVE" ? t("noActiveCard") : t("noInactiveCard")} />
-            </Grid>
+            </Box>
           ) : null}
-          </Grid>
+          </Box>
         </Stack>
       ) : null}
 
@@ -582,7 +597,7 @@ export function CreditCardsPage() {
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField select size="small" label={t("year")} value={detailYear} onChange={(event) => setDetailYear(Number(event.target.value))}>
+              <TextField select size="small" label={t("year")} value={detailYear} onChange={(event) => setDetailYear(Number(event.target.value))} disabled={loading}>
                 {yearOptions.map((option) => (
                   <MenuItem key={option} value={option}>
                     {option}
@@ -603,85 +618,106 @@ export function CreditCardsPage() {
                   <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.5} mb={1.5}>
                     <Typography fontWeight={950}>{t("monthlyComparisonShort")}</Typography>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
-                      <IconButton size="small" onClick={() => setDetailYear((value) => value - 1)}>
+                      <IconButton size="small" disabled={loading} onClick={() => setDetailYear((value) => value - 1)}>
                         <ChevronLeftIcon fontSize="small" />
                       </IconButton>
                       <Typography fontWeight={950} sx={{ minWidth: 48, textAlign: "center" }}>
                         {detailYear}
                       </Typography>
-                      <IconButton size="small" onClick={() => setDetailYear((value) => value + 1)}>
+                      <IconButton size="small" disabled={loading} onClick={() => setDetailYear((value) => value + 1)}>
                         <ChevronRightIcon fontSize="small" />
                       </IconButton>
                     </Stack>
                   </Stack>
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-                      alignItems: "end",
-                      gap: { xs: 0.5, md: 1 },
-                      minHeight: 190,
-                      pb: 0.5,
-                      width: "100%",
-                    }}
-                  >
-                    {selectedCard.monthlySummary.map((summary) => (
-                      <Box
-                        key={summary.month}
-                        onClick={() => setSelectedDetailMonth(summary.month)}
-                        sx={{
-                          display: "grid",
-                          gridTemplateRows: "112px auto auto",
-                          justifyItems: "center",
-                          gap: 0.6,
-                          minWidth: 0,
-                          cursor: "pointer",
-                          borderRadius: 2,
-                          px: { xs: 0.25, md: 0.5 },
-                          py: 1,
-                          bgcolor: selectedDetailMonth === summary.month ? "rgba(234,88,12,0.08)" : "transparent",
-                          border: selectedDetailMonth === summary.month ? "1px solid rgba(234,88,12,0.18)" : "1px solid transparent",
-                        }}
-                      >
+                  {loading ? (
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+                        alignItems: "end",
+                        gap: { xs: 0.5, md: 1 },
+                        minHeight: 190,
+                        pb: 0.5,
+                      }}
+                    >
+                      {Array.from({ length: 12 }, (_, index) => (
+                        <Stack key={index} spacing={1} alignItems="center">
+                          <Skeleton variant="rounded" width={18} height={112} sx={{ borderRadius: 99 }} />
+                          <Skeleton variant="text" width={28} />
+                          <Skeleton variant="text" width={48} />
+                        </Stack>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+                        alignItems: "end",
+                        gap: { xs: 0.5, md: 1 },
+                        minHeight: 190,
+                        pb: 0.5,
+                        width: "100%",
+                      }}
+                    >
+                      {selectedCard.monthlySummary.map((summary) => (
                         <Box
+                          key={summary.month}
+                          onClick={() => setSelectedDetailMonth(summary.month)}
                           sx={{
-                            height: 112,
-                            width: { xs: 12, sm: 16, md: 18 },
-                            borderRadius: 99,
-                            bgcolor: "rgba(15,23,42,0.08)",
-                            display: "flex",
-                            alignItems: "flex-end",
-                            overflow: "hidden",
+                            display: "grid",
+                            gridTemplateRows: "112px auto auto",
+                            justifyItems: "center",
+                            gap: 0.6,
+                            minWidth: 0,
+                            cursor: "pointer",
+                            borderRadius: 2,
+                            px: { xs: 0.25, md: 0.5 },
+                            py: 1,
+                            bgcolor: selectedDetailMonth === summary.month ? "rgba(234,88,12,0.08)" : "transparent",
+                            border: selectedDetailMonth === summary.month ? "1px solid rgba(234,88,12,0.18)" : "1px solid transparent",
                           }}
                         >
                           <Box
                             sx={{
-                              width: "100%",
-                              height: `${Math.max(3, (summary.statementAmount / maxMonthlyAmount) * 100)}%`,
+                              height: 112,
+                              width: { xs: 12, sm: 16, md: 18 },
                               borderRadius: 99,
-                              bgcolor:
-                                summary.month === currentMonth && detailYear === currentYear
-                                  ? financeColors.expense
-                                  : "#0F766E",
-                              transition: "height 180ms ease",
+                              bgcolor: "rgba(15,23,42,0.08)",
+                              display: "flex",
+                              alignItems: "flex-end",
+                              overflow: "hidden",
                             }}
-                          />
+                          >
+                            <Box
+                              sx={{
+                                width: "100%",
+                                height: `${Math.max(3, (summary.statementAmount / maxMonthlyAmount) * 100)}%`,
+                                borderRadius: 99,
+                                bgcolor:
+                                  summary.month === currentMonth && detailYear === currentYear
+                                    ? financeColors.expense
+                                    : "#0F766E",
+                                transition: "height 180ms ease",
+                              }}
+                            />
+                          </Box>
+                          <Typography variant="caption" fontWeight={900} textTransform="capitalize" textAlign="center" noWrap>
+                            {summary.label.replace(".", "")}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            textAlign="center"
+                            noWrap
+                            sx={{ maxWidth: "100%", fontSize: { xs: 9, sm: 10, md: 11 } }}
+                          >
+                            {formatMoney(summary.statementAmount)}
+                          </Typography>
                         </Box>
-                        <Typography variant="caption" fontWeight={900} textTransform="capitalize" textAlign="center" noWrap>
-                          {summary.label.replace(".", "")}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          textAlign="center"
-                          noWrap
-                          sx={{ maxWidth: "100%", fontSize: { xs: 9, sm: 10, md: 11 } }}
-                        >
-                          {formatMoney(summary.statementAmount)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
+                      ))}
+                    </Box>
+                  )}
                 </Paper>
               </Grid>
 

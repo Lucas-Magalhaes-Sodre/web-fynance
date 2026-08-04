@@ -73,6 +73,23 @@ function menuPlanLabel(user: ReturnType<typeof useAuth>['user']) {
   return `Sem plano${accessDateLabel(user.trialEndsAt) ? ` · ${accessDateLabel(user.trialEndsAt)}` : ''}`;
 }
 
+function trialWelcomeKeys(user: ReturnType<typeof useAuth>['user']) {
+  if (!user) return [];
+  return [
+    user.id ? `@minha-receita:trial-welcome-seen:id:${user.id}` : '',
+    user.email ? `@minha-receita:trial-welcome-seen:email:${user.email.toLocaleLowerCase('pt-BR')}` : '',
+    user.id ? `@minha-receita:trial-welcome-seen:${user.id}` : '',
+  ].filter(Boolean);
+}
+
+function hasSeenTrialWelcome(user: ReturnType<typeof useAuth>['user']) {
+  return trialWelcomeKeys(user).some((key) => localStorage.getItem(key) === 'true');
+}
+
+function markTrialWelcomeSeen(user: ReturnType<typeof useAuth>['user']) {
+  trialWelcomeKeys(user).forEach((key) => localStorage.setItem(key, 'true'));
+}
+
 export function AppLayout() {
   const { user, signOut } = useAuth();
   const { t } = usePreferences();
@@ -128,11 +145,13 @@ export function AppLayout() {
 
   useEffect(() => {
     if (!user?.id || !trialInfo) return;
-    const key = `@minha-receita:trial-welcome-seen:${user.id}`;
-    if (localStorage.getItem(key)) return;
-    localStorage.setItem(key, 'true');
+    if (hasSeenTrialWelcome(user)) {
+      markTrialWelcomeSeen(user);
+      return;
+    }
+    markTrialWelcomeSeen(user);
     setTrialModalOpen(true);
-  }, [trialInfo, user?.id]);
+  }, [trialInfo, user]);
 
   useEffect(() => {
     let active = true;
@@ -150,6 +169,7 @@ export function AppLayout() {
   }, []);
 
   function goToBilling() {
+    markTrialWelcomeSeen(user);
     setTrialModalOpen(false);
     navigate('/app/billing');
   }
@@ -492,7 +512,15 @@ export function AppLayout() {
           </Box>
         </Box>
       </Box>
-      <Dialog open={trialModalOpen} onClose={() => setTrialModalOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={trialModalOpen}
+        onClose={() => {
+          markTrialWelcomeSeen(user);
+          setTrialModalOpen(false);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
         <Box p={3}>
           <Typography variant="h5" fontWeight={950} mb={1}>Seu teste grátis começou</Typography>
           <Typography color="text.secondary" mb={2}>
@@ -506,7 +534,14 @@ export function AppLayout() {
             Quando quiser, você pode contratar um plano para manter o acesso ao dashboard, controle financeiro, cartões, economias, metas e lembretes.
           </Typography>
           <Box display="flex" justifyContent="flex-end" gap={1}>
-            <Button onClick={() => setTrialModalOpen(false)}>Continuar teste</Button>
+            <Button
+              onClick={() => {
+                markTrialWelcomeSeen(user);
+                setTrialModalOpen(false);
+              }}
+            >
+              Continuar teste
+            </Button>
             <Button variant="contained" onClick={goToBilling}>Ver planos</Button>
           </Box>
         </Box>

@@ -15,14 +15,15 @@ import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
+import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   createFinancialCategory,
   deleteFinancialCategory,
-  listFinancialCategories,
+  listFinancialCategoriesPage,
   updateFinancialCategory,
 } from "@/services/financialControl";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
@@ -36,11 +37,19 @@ import {
 import type { FinancialCategory, FinancialCategoryType } from "@/interfaces/financial";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { translateCategoryName } from "@/i18n/display";
+import type { PaginationInfo } from "@/services/billing";
 
 const emptyForm: CategoryFormState = {
   name: "",
   type: "EXPENSE",
   color: "#EA580C",
+};
+
+const defaultPagination: PaginationInfo = {
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 1,
 };
 
 function CategoriesSkeleton() {
@@ -89,16 +98,14 @@ export function FinancialCategoriesPage() {
   const [editing, setEditing] = useState<FinancialCategory | null>(null);
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState<FinancialCategoryType | "ALL">("ALL");
+  const [pagination, setPagination] = useState<PaginationInfo>(defaultPagination);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const { confirm, dialog } = useConfirmDialog();
 
-  const visibleCategories = useMemo(
-    () => categories.filter((category) => filter === "ALL" || category.type === filter),
-    [categories, filter],
-  );
+  const visibleCategories = categories;
 
   function hasDuplicateName(type: FinancialCategoryType, name: string, ignoreId?: string) {
     const normalizedName = normalizeCategoryName(name);
@@ -113,11 +120,17 @@ export function FinancialCategoriesPage() {
   const formDuplicate = Boolean(form.name.trim()) && hasDuplicateName(form.type, form.name);
   const editDuplicate = Boolean(editForm.name.trim()) && hasDuplicateName(editForm.type, editForm.name, editing?.id);
 
-  async function loadCategories() {
+  async function loadCategories(page = pagination.page, pageSize = pagination.pageSize, type = filter) {
     setLoading(true);
     setError("");
     try {
-      setCategories(await listFinancialCategories());
+      const result = await listFinancialCategoriesPage({
+        page,
+        pageSize,
+        type: type === "ALL" ? undefined : type,
+      });
+      setCategories(result.categories);
+      setPagination(result.pagination);
     } catch {
       setError("Não foi possível carregar as categorias.");
     } finally {
@@ -126,8 +139,13 @@ export function FinancialCategoriesPage() {
   }
 
   useEffect(() => {
-    loadCategories();
+    loadCategories(1, pagination.pageSize, filter);
   }, []);
+
+  function changeFilter(nextFilter: FinancialCategoryType | "ALL") {
+    setFilter(nextFilter);
+    loadCategories(1, pagination.pageSize, nextFilter);
+  }
 
   function startEdit(category: FinancialCategory) {
     setEditing(category);
@@ -246,7 +264,7 @@ export function FinancialCategoriesPage() {
               exclusive
               size="small"
               value={filter}
-              onChange={(_, value) => value && setFilter(value)}
+              onChange={(_, value) => value && changeFilter(value)}
             >
               <ToggleButton value="ALL">{t("all")}</ToggleButton>
               <ToggleButton value="INCOME">{t("incomes")}</ToggleButton>
@@ -303,6 +321,17 @@ export function FinancialCategoriesPage() {
               ) : null}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={pagination.total}
+            page={Math.max(0, pagination.page - 1)}
+            rowsPerPage={pagination.pageSize}
+            onPageChange={(_, nextPage) => loadCategories(nextPage + 1, pagination.pageSize)}
+            onRowsPerPageChange={(event) => loadCategories(1, Number(event.target.value))}
+            rowsPerPageOptions={[10, 20, 50, 100]}
+            labelRowsPerPage="Categorias por página"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+          />
         </Paper>
       ) : null}
 

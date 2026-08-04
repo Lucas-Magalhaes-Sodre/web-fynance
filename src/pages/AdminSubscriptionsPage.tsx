@@ -13,6 +13,7 @@ import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Grid from "@mui/material/Grid";
+import LinearProgress from "@mui/material/LinearProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -141,6 +142,13 @@ const initialLoadedTabs: Record<AdminTab, boolean> = {
   SETTINGS: false,
 };
 
+const defaultTablePagination: PaginationInfo = {
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 1,
+};
+
 function couponDiscountFormValue(coupon: BillingCoupon) {
   return coupon.discountType === "FIXED"
     ? formatMoney(coupon.discountValue)
@@ -192,6 +200,20 @@ function expirationLabel(date?: string | null) {
   return `${formatDate(date)} · expira em ${days} dias`;
 }
 
+function lastSeenLabel(date?: string | null) {
+  if (!date) return "Ainda não registrado";
+  const seenAt = new Date(date);
+  if (Number.isNaN(seenAt.getTime())) return "Ainda não registrado";
+
+  return seenAt.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function userAccessOption(user: AdminSubscriptionUser): AdminAccessOption {
   return user.subscriptionPlan === "LIFETIME" ? "LIFETIME" : user.subscriptionStatus ?? "TRIALING";
 }
@@ -199,6 +221,32 @@ function userAccessOption(user: AdminSubscriptionUser): AdminAccessOption {
 function currentMonthName() {
   const name = new Date().toLocaleDateString("pt-BR", { month: "long" });
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function AdminTablePagination({
+  label,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  label: string;
+  pagination: PaginationInfo;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+}) {
+  return (
+    <TablePagination
+      component="div"
+      count={pagination.total}
+      page={Math.max(0, pagination.page - 1)}
+      rowsPerPage={pagination.pageSize}
+      onPageChange={(_, nextPage) => onPageChange(nextPage + 1)}
+      onRowsPerPageChange={(event) => onPageSizeChange(Number(event.target.value))}
+      rowsPerPageOptions={[10, 20, 50, 100]}
+      labelRowsPerPage={label}
+      labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+    />
+  );
 }
 
 function isAdminAccess(user: AdminSubscriptionUser) {
@@ -297,10 +345,15 @@ export function AdminSubscriptionsPage() {
   const [loadedTabs, setLoadedTabs] = useState<Record<AdminTab, boolean>>(initialLoadedTabs);
   const [plans, setPlans] = useState<BillingPlan[]>([]);
   const [coupons, setCoupons] = useState<BillingCoupon[]>([]);
+  const [couponsPagination, setCouponsPagination] = useState<PaginationInfo>(defaultTablePagination);
   const [referralCoupons, setReferralCoupons] = useState<ReferralCoupon[]>([]);
+  const [referralCouponsPagination, setReferralCouponsPagination] = useState<PaginationInfo>(defaultTablePagination);
   const [referralCommissions, setReferralCommissions] = useState<ReferralCommission[]>([]);
+  const [referralCommissionsPagination, setReferralCommissionsPagination] = useState<PaginationInfo>(defaultTablePagination);
   const [referralWithdrawals, setReferralWithdrawals] = useState<ReferralWithdrawal[]>([]);
+  const [referralWithdrawalsPagination, setReferralWithdrawalsPagination] = useState<PaginationInfo>(defaultTablePagination);
   const [marketingBanners, setMarketingBanners] = useState<MarketingBanner[]>([]);
+  const [marketingBannersPagination, setMarketingBannersPagination] = useState<PaginationInfo>(defaultTablePagination);
   const [overview, setOverview] = useState<AdminBillingOverview | null>(null);
   const [defaultTrialDays, setDefaultTrialDays] = useState("14");
   const [contactEmails, setContactEmails] = useState("");
@@ -324,6 +377,11 @@ export function AdminSubscriptionsPage() {
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<MarketingBanner | null>(null);
   const [savingBanner, setSavingBanner] = useState(false);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [loadingReferralCoupons, setLoadingReferralCoupons] = useState(false);
+  const [loadingReferralCommissions, setLoadingReferralCommissions] = useState(false);
+  const [loadingReferralWithdrawals, setLoadingReferralWithdrawals] = useState(false);
+  const [loadingMarketingBanners, setLoadingMarketingBanners] = useState(false);
   const [bannerError, setBannerError] = useState("");
   const [anonymizeUser, setAnonymizeUser] =
     useState<AdminSubscriptionUser | null>(null);
@@ -409,6 +467,61 @@ export function AdminSubscriptionsPage() {
     setUsersPagination(usersResult.pagination);
   }
 
+  async function loadCoupons(page = couponsPagination.page, pageSize = couponsPagination.pageSize) {
+    setLoadingCoupons(true);
+    try {
+      const result = await listAdminBillingCoupons({ page, pageSize });
+      setCoupons(result.coupons);
+      setCouponsPagination(result.pagination);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  }
+
+  async function loadReferralCoupons(page = referralCouponsPagination.page, pageSize = referralCouponsPagination.pageSize) {
+    setLoadingReferralCoupons(true);
+    try {
+      const result = await listAdminReferralCoupons({ page, pageSize });
+      setReferralCoupons(result.coupons);
+      setReferralCouponsPagination(result.pagination);
+    } finally {
+      setLoadingReferralCoupons(false);
+    }
+  }
+
+  async function loadReferralCommissions(page = referralCommissionsPagination.page, pageSize = referralCommissionsPagination.pageSize) {
+    setLoadingReferralCommissions(true);
+    try {
+      const result = await listAdminReferralCommissions({ page, pageSize });
+      setReferralCommissions(result.commissions);
+      setReferralCommissionsPagination(result.pagination);
+    } finally {
+      setLoadingReferralCommissions(false);
+    }
+  }
+
+  async function loadReferralWithdrawals(page = referralWithdrawalsPagination.page, pageSize = referralWithdrawalsPagination.pageSize) {
+    setLoadingReferralWithdrawals(true);
+    try {
+      const result = await listAdminReferralWithdrawals({ page, pageSize });
+      setReferralWithdrawals(result.withdrawals);
+      setReferralWithdrawalsPagination(result.pagination);
+    } finally {
+      setLoadingReferralWithdrawals(false);
+    }
+  }
+
+  async function loadMarketingBanners(page = marketingBannersPagination.page, pageSize = marketingBannersPagination.pageSize) {
+    setLoadingMarketingBanners(true);
+    try {
+      const result = await listAdminMarketingBanners({ page, pageSize });
+      setMarketingBanners(result.banners);
+      setMarketingBannersPagination(result.pagination);
+    } finally {
+      setLoadingMarketingBanners(false);
+    }
+  }
+
   function markTabLoaded(tab: AdminTab) {
     setLoadedTabs((current) => ({ ...current, [tab]: true }));
   }
@@ -461,34 +574,30 @@ export function AdminSubscriptionsPage() {
     }
 
     if (tab === "COUPONS") {
-      const [couponsResult, plansResult] = await Promise.all([
-        safe(listAdminBillingCoupons(), []),
+      const [, plansResult] = await Promise.all([
+        safe(loadCoupons(1, couponsPagination.pageSize), undefined),
         plans.length ? Promise.resolve(plans) : safe(listAdminBillingPlans(), []),
       ]);
-      setCoupons(couponsResult);
       if (!plans.length) setPlans(plansResult);
       markTabLoaded("COUPONS");
       return;
     }
 
     if (tab === "REFERRALS") {
-      const [referralCouponsResult, referralCommissionsResult, referralWithdrawalsResult, plansResult] =
+      const [, , , plansResult] =
         await Promise.all([
-          safe(listAdminReferralCoupons(), []),
-          safe(listAdminReferralCommissions(), []),
-          safe(listAdminReferralWithdrawals(), []),
+          safe(loadReferralCoupons(1, referralCouponsPagination.pageSize), undefined),
+          safe(loadReferralCommissions(1, referralCommissionsPagination.pageSize), undefined),
+          safe(loadReferralWithdrawals(1, referralWithdrawalsPagination.pageSize), undefined),
           plans.length ? Promise.resolve(plans) : safe(listAdminBillingPlans(), []),
         ]);
-      setReferralCoupons(referralCouponsResult);
-      setReferralCommissions(referralCommissionsResult);
-      setReferralWithdrawals(referralWithdrawalsResult);
       if (!plans.length) setPlans(plansResult);
       markTabLoaded("REFERRALS");
       return;
     }
 
     if (tab === "BANNERS") {
-      setMarketingBanners(await safe(listAdminMarketingBanners(), []));
+      await safe(loadMarketingBanners(1, marketingBannersPagination.pageSize), undefined);
       markTabLoaded("BANNERS");
       return;
     }
@@ -851,7 +960,7 @@ export function AdminSubscriptionsPage() {
         setNotice("Cupom criado com sucesso.");
       }
       setCouponModalOpen(false);
-      setCoupons(await listAdminBillingCoupons());
+      await loadCoupons(couponsPagination.page, couponsPagination.pageSize);
     } catch {
       setError("Não foi possível salvar o cupom.");
     } finally {
@@ -863,7 +972,7 @@ export function AdminSubscriptionsPage() {
     setSavingCoupon(true);
     try {
       await deactivateAdminBillingCoupon(couponId);
-      setCoupons(await listAdminBillingCoupons());
+      await loadCoupons(couponsPagination.page, couponsPagination.pageSize);
       setNotice("Cupom desativado com sucesso.");
     } finally {
       setSavingCoupon(false);
@@ -902,7 +1011,7 @@ export function AdminSubscriptionsPage() {
         planCommissions: referralCouponForm.planCommissions,
       });
       setEditingReferralCoupon(null);
-      setReferralCoupons(await listAdminReferralCoupons());
+      await loadReferralCoupons(referralCouponsPagination.page, referralCouponsPagination.pageSize);
       setNotice("Cupom de indicação atualizado com sucesso.");
     } catch (error: any) {
       setError(error.response?.data?.message ?? "Não foi possível atualizar o cupom de indicação.");
@@ -915,7 +1024,7 @@ export function AdminSubscriptionsPage() {
     setError("");
     try {
       await updateAdminReferralCommission(commission.id, { status, notes: commission.notes ?? null });
-      setReferralCommissions(await listAdminReferralCommissions());
+      await loadReferralCommissions(referralCommissionsPagination.page, referralCommissionsPagination.pageSize);
       setNotice("Comissão atualizada com sucesso.");
     } catch {
       setError("Não foi possível atualizar a comissão.");
@@ -931,7 +1040,7 @@ export function AdminSubscriptionsPage() {
         status: withdrawalAction.status,
         adminNotes: withdrawalAction.status === "PAID" ? "Pagamento PIX confirmado pelo administrador." : "Solicitação cancelada pelo administrador.",
       });
-      setReferralWithdrawals(await listAdminReferralWithdrawals());
+      await loadReferralWithdrawals(referralWithdrawalsPagination.page, referralWithdrawalsPagination.pageSize);
       setWithdrawalAction(null);
       setNotice(withdrawalAction.status === "PAID" ? "Pagamento de comissão marcado como pago." : "Solicitação de saque cancelada.");
     } catch {
@@ -1004,7 +1113,7 @@ export function AdminSubscriptionsPage() {
         setNotice("Banner criado com sucesso.");
       }
       setBannerModalOpen(false);
-      setMarketingBanners(await listAdminMarketingBanners());
+      await loadMarketingBanners(marketingBannersPagination.page, marketingBannersPagination.pageSize);
     } catch {
       setBannerError("Não foi possível salvar o banner.");
     } finally {
@@ -1052,7 +1161,7 @@ export function AdminSubscriptionsPage() {
     setError("");
     try {
       await deleteAdminMarketingBanner(bannerId);
-      setMarketingBanners(await listAdminMarketingBanners());
+      await loadMarketingBanners(marketingBannersPagination.page, marketingBannersPagination.pageSize);
       setNotice("Banner excluído com sucesso.");
     } catch {
       setError("Não foi possível excluir o banner.");
@@ -1168,10 +1277,11 @@ export function AdminSubscriptionsPage() {
       setMarketingBanners(
         await reorderAdminMarketingBanners(nextBanners.map((banner) => banner.id)),
       );
+      await loadMarketingBanners(marketingBannersPagination.page, marketingBannersPagination.pageSize);
       setNotice("Ordem dos banners salva com sucesso.");
     } catch {
       setError("Não foi possível salvar a ordem dos banners.");
-      setMarketingBanners(await listAdminMarketingBanners());
+      await loadMarketingBanners(marketingBannersPagination.page, marketingBannersPagination.pageSize);
     }
   }
 
@@ -1209,7 +1319,15 @@ export function AdminSubscriptionsPage() {
         </Paper>
       ) : null}
 
-      <Grid container spacing={2}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          width: "100%",
+          alignItems: "stretch",
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" },
+        }}
+      >
         {[
           [
             "Faturamento recebido estimado",
@@ -1242,7 +1360,7 @@ export function AdminSubscriptionsPage() {
           ["Em teste grátis", overview ? String(overview.trialUsers) : "-"],
           ["Bloqueados", overview ? String(overview.blockedUsers) : "-"],
         ].map(([label, value]) => (
-          <Grid item xs={12} sm={6} md={4} key={label}>
+          <Box key={label}>
             <Paper
               className="soft-card"
               sx={{ p: 2.5, borderRadius: 4, height: "100%" }}
@@ -1254,9 +1372,9 @@ export function AdminSubscriptionsPage() {
                 {value}
               </Typography>
             </Paper>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
 
       <Paper className="soft-card" sx={{ px: 2, borderRadius: 3 }}>
         <Tabs value={adminTab} onChange={(_, value) => setAdminTab(value)}>
@@ -1481,6 +1599,7 @@ export function AdminSubscriptionsPage() {
               Novo cupom
             </Button>
           </Stack>
+          {loadingCoupons ? <LinearProgress /> : null}
           <Table>
             <TableHead>
               <TableRow>
@@ -1550,6 +1669,12 @@ export function AdminSubscriptionsPage() {
               </Typography>
             </Box>
           ) : null}
+          <AdminTablePagination
+            label="Cupons por página"
+            pagination={couponsPagination}
+            onPageChange={(page) => loadCoupons(page, couponsPagination.pageSize)}
+            onPageSizeChange={(pageSize) => loadCoupons(1, pageSize)}
+          />
         </Paper>
       ) : null}
 
@@ -1566,6 +1691,7 @@ export function AdminSubscriptionsPage() {
                 </Typography>
               </Box>
             </Stack>
+            {loadingReferralCoupons ? <LinearProgress /> : null}
             <Table>
               <TableHead>
                 <TableRow>
@@ -1604,6 +1730,12 @@ export function AdminSubscriptionsPage() {
             {!referralCoupons.length ? (
               <Box p={3}><Typography color="text.secondary">Nenhum cupom de indicação gerado ainda.</Typography></Box>
             ) : null}
+            <AdminTablePagination
+              label="Cupons por página"
+              pagination={referralCouponsPagination}
+              onPageChange={(page) => loadReferralCoupons(page, referralCouponsPagination.pageSize)}
+              onPageSizeChange={(pageSize) => loadReferralCoupons(1, pageSize)}
+            />
           </Paper>
 
           <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
@@ -1611,6 +1743,7 @@ export function AdminSubscriptionsPage() {
               <Typography variant="h5" fontWeight={950}>Saques PIX de comissão</Typography>
               <Typography color="text.secondary">Confira os dados PIX, faça o pagamento manual e marque como pago somente após confirmar o envio.</Typography>
             </Box>
+            {loadingReferralWithdrawals ? <LinearProgress /> : null}
             <Table>
               <TableHead>
                 <TableRow>
@@ -1659,6 +1792,12 @@ export function AdminSubscriptionsPage() {
             {!referralWithdrawals.length ? (
               <Box p={3}><Typography color="text.secondary">Nenhuma solicitação de saque PIX ainda.</Typography></Box>
             ) : null}
+            <AdminTablePagination
+              label="Saques por página"
+              pagination={referralWithdrawalsPagination}
+              onPageChange={(page) => loadReferralWithdrawals(page, referralWithdrawalsPagination.pageSize)}
+              onPageSizeChange={(pageSize) => loadReferralWithdrawals(1, pageSize)}
+            />
           </Paper>
 
           <Paper className="soft-card" sx={{ borderRadius: 4, overflow: "hidden" }}>
@@ -1666,6 +1805,7 @@ export function AdminSubscriptionsPage() {
               <Typography variant="h5" fontWeight={950}>Comissões</Typography>
               <Typography color="text.secondary">Acompanhe valores gerados por indicações e atualize o status de pagamento.</Typography>
             </Box>
+            {loadingReferralCommissions ? <LinearProgress /> : null}
             <Table>
               <TableHead>
                 <TableRow>
@@ -1714,6 +1854,12 @@ export function AdminSubscriptionsPage() {
             {!referralCommissions.length ? (
               <Box p={3}><Typography color="text.secondary">Nenhuma comissão gerada ainda.</Typography></Box>
             ) : null}
+            <AdminTablePagination
+              label="Comissões por página"
+              pagination={referralCommissionsPagination}
+              onPageChange={(page) => loadReferralCommissions(page, referralCommissionsPagination.pageSize)}
+              onPageSizeChange={(pageSize) => loadReferralCommissions(1, pageSize)}
+            />
           </Paper>
         </Stack>
       ) : null}
@@ -1727,6 +1873,7 @@ export function AdminSubscriptionsPage() {
             </Box>
             <Button variant="contained" startIcon={<CampaignIcon />} onClick={openNewBanner}>Novo banner</Button>
           </Stack>
+          {loadingMarketingBanners ? <LinearProgress /> : null}
           <Table>
             <TableHead>
               <TableRow>
@@ -1790,6 +1937,12 @@ export function AdminSubscriptionsPage() {
           {!marketingBanners.length ? (
             <Box p={3}><Typography color="text.secondary">Nenhum banner cadastrado ainda.</Typography></Box>
           ) : null}
+          <AdminTablePagination
+            label="Banners por página"
+            pagination={marketingBannersPagination}
+            onPageChange={(page) => loadMarketingBanners(page, marketingBannersPagination.pageSize)}
+            onPageSizeChange={(pageSize) => loadMarketingBanners(1, pageSize)}
+          />
         </Paper>
       ) : null}
 
@@ -1894,10 +2047,11 @@ export function AdminSubscriptionsPage() {
           </Stack>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>Usuário</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Perfil</TableCell>
+                <TableRow>
+                  <TableCell>Usuário</TableCell>
+                  <TableCell>Último uso</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Perfil</TableCell>
                 <TableCell>Plano</TableCell>
                 <TableCell>Fim do teste</TableCell>
                 <TableCell>Acesso manual até</TableCell>
@@ -1921,6 +2075,14 @@ export function AdminSubscriptionsPage() {
                     <Typography fontWeight={900}>{user.name}</Typography>
                     <Typography variant="caption" color="text.secondary">
                       {user.email}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography fontWeight={800}>
+                      {lastSeenLabel(user.lastSeenAt)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Atualiza quando o usuário entra ou usa o sistema.
                     </Typography>
                   </TableCell>
                   <TableCell>

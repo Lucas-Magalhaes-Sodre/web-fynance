@@ -6,6 +6,7 @@ import Paper from "@mui/material/Paper";
 import Skeleton from "@mui/material/Skeleton";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
+import TablePagination from "@mui/material/TablePagination";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useState } from "react";
@@ -18,12 +19,13 @@ import {
   getSavingsOverview,
   listFinancialCategories,
   listFinancialGoals,
-  listSavings,
+  listSavingsPage,
   transferSaving,
   updateSaving,
   updateSavingsGroup,
   type SavingPayload,
 } from "@/services/financialControl";
+import type { PaginationInfo } from "@/services/billing";
 import { useConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { AppDateField } from "@/components/molecules/AppDateField";
 import { MoneyTextField } from "@/components/molecules/MoneyTextField";
@@ -55,6 +57,13 @@ import { usePreferences } from "@/contexts/PreferencesContext";
 import { translateCategoryName } from "@/i18n/display";
 
 const today = new Date();
+
+const defaultSavingsHistoryPagination: PaginationInfo = {
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 1,
+};
 
 const initialForm: SavingMovementFormState = {
   action: "REGISTER",
@@ -196,6 +205,8 @@ export function EconomyPage() {
   const [form, setForm] = useState<SavingMovementFormState>(initialForm);
   const [periodStart, setPeriodStart] = useState(daysAgo(30));
   const [periodEnd, setPeriodEnd] = useState(isoDate());
+  const [historyPagination, setHistoryPagination] = useState<PaginationInfo>(defaultSavingsHistoryPagination);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [simulation, setSimulation] = useState({
     initial: formatMoney(0),
     monthly: formatMoney(0),
@@ -237,18 +248,6 @@ export function EconomyPage() {
     );
   }, [overview]);
 
-  const currentSavings = useMemo(
-    () =>
-      savings
-        .filter((saving) => saving.amount !== 0)
-        .filter((saving) => {
-          const key = saving.date.slice(0, 10);
-          return key >= periodStart && key <= periodEnd;
-        })
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [periodEnd, periodStart, savings],
-  );
-
   const simulationResult = projectedAmount(
     currencyToNumber(simulation.initial),
     currencyToNumber(simulation.monthly),
@@ -264,16 +263,38 @@ export function EconomyPage() {
       )
     : 0;
 
+  async function loadSavingsHistory(page = historyPagination.page, pageSize = historyPagination.pageSize) {
+    setHistoryLoading(true);
+    try {
+      const result = await listSavingsPage({
+        startDate: periodStart,
+        endDate: periodEnd,
+        page,
+        pageSize,
+      });
+      setSavings(result.savings.filter((saving) => saving.amount !== 0));
+      setHistoryPagination(result.pagination);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
   async function loadData() {
     setLoading(true);
     setError("");
     try {
       const [nextOverview, nextSavings] = await Promise.all([
         getSavingsOverview(),
-        listSavings(),
+        listSavingsPage({
+          startDate: periodStart,
+          endDate: periodEnd,
+          page: 1,
+          pageSize: historyPagination.pageSize,
+        }),
       ]);
       setOverview(nextOverview);
-      setSavings(nextSavings);
+      setSavings(nextSavings.savings.filter((saving) => saving.amount !== 0));
+      setHistoryPagination(nextSavings.pagination);
     } catch {
       setError(t("savingsLoadError"));
     } finally {
@@ -290,6 +311,11 @@ export function EconomyPage() {
       .then(setCategories)
       .catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!overview) return;
+    loadSavingsHistory(1, historyPagination.pageSize);
+  }, [periodStart, periodEnd]);
 
   useEffect(() => {
     const savingId = searchParams.get("saving");
@@ -592,13 +618,28 @@ export function EconomyPage() {
                 />
               </Stack>
             </Stack>
-            <EconomyTable
-              savings={currentSavings}
-              goals={goals}
-              onEdit={openEdit}
-              onDelete={removeSaving}
-              onDetails={setDetailSaving}
-            />
+            {historyLoading ? <Skeleton variant="rounded" height={160} /> : (
+              <>
+                <EconomyTable
+                  savings={savings}
+                  goals={goals}
+                  onEdit={openEdit}
+                  onDelete={removeSaving}
+                  onDetails={setDetailSaving}
+                />
+                <TablePagination
+                  component="div"
+                  count={historyPagination.total}
+                  page={Math.max(0, historyPagination.page - 1)}
+                  rowsPerPage={historyPagination.pageSize}
+                  onPageChange={(_, nextPage) => loadSavingsHistory(nextPage + 1, historyPagination.pageSize)}
+                  onRowsPerPageChange={(event) => loadSavingsHistory(1, Number(event.target.value))}
+                  rowsPerPageOptions={[10, 20, 50, 100]}
+                  labelRowsPerPage="Economias por página"
+                  labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                />
+              </>
+            )}
           </Stack>
         </>
       ) : null}
