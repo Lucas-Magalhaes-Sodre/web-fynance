@@ -14,6 +14,7 @@ import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/atoms/EmptyState";
 import { AppDialog } from "@/components/molecules/AppDialog";
+import { AppDateField } from "@/components/molecules/AppDateField";
 import { LoadingActionButton } from "@/components/molecules/LoadingActionButton";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import type { FinancialItem, FinancialReminder } from "@/interfaces/financial";
@@ -43,18 +44,33 @@ function reminderDate(baseDate: string, offsetDays: number, time: string) {
   return date.toISOString();
 }
 
+function exactReminderDate(dateValue: string, time: string) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+}
+
 export function FinancialRemindersDialog({ item, open, onClose }: FinancialRemindersDialogProps) {
   const { t } = usePreferences();
   const [reminders, setReminders] = useState<FinancialReminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reminderMode, setReminderMode] = useState<"offset" | "exact">("offset");
   const [offsetDays, setOffsetDays] = useState("0");
+  const [exactDate, setExactDate] = useState("");
   const [time, setTime] = useState("09:00");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const baseDate = useMemo(() => dateOnly(item?.dueDate ?? item?.date), [item]);
-  const canCreate = Boolean(item && baseDate && reminders.length < 3 && Number(offsetDays) >= 0 && time);
+  const canCreate = Boolean(
+    item &&
+      reminders.length < 3 &&
+      time &&
+      (reminderMode === "exact" ? exactDate : baseDate && Number(offsetDays) >= 0),
+  );
 
   async function loadReminders() {
     if (!item) return;
@@ -71,11 +87,13 @@ export function FinancialRemindersDialog({ item, open, onClose }: FinancialRemin
 
   useEffect(() => {
     if (!open) return;
+    setReminderMode("offset");
     setOffsetDays("0");
+    setExactDate(baseDate);
     setTime("09:00");
     setMessage("");
     loadReminders();
-  }, [open, item?.id]);
+  }, [open, item?.id, baseDate]);
 
   async function addReminder() {
     if (!item || !canCreate) return;
@@ -83,12 +101,13 @@ export function FinancialRemindersDialog({ item, open, onClose }: FinancialRemin
     setError("");
     try {
       const days = Number(offsetDays);
+      const isExact = reminderMode === "exact";
       await createFinancialReminder({
         financialItemId: item.id,
         title: item.name ?? item.title,
         message: message.trim() || null,
-        offsetDays: days,
-        remindAt: reminderDate(baseDate, days, time),
+        offsetDays: isExact ? null : days,
+        remindAt: isExact ? exactReminderDate(exactDate, time) : reminderDate(baseDate, days, time),
       });
       setMessage("");
       await loadReminders();
@@ -151,7 +170,9 @@ export function FinancialRemindersDialog({ item, open, onClose }: FinancialRemin
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <NotificationsIcon sx={{ color: "#EC4899", fontSize: 20 }} />
                       <Typography fontWeight={900}>
-                        {reminder.offsetDays === 0
+                        {reminder.offsetDays == null
+                          ? t("specificDate")
+                          : reminder.offsetDays === 0
                           ? t("sameDay")
                           : t("daysBefore").replace("{days}", String(reminder.offsetDays))}
                       </Typography>
@@ -180,20 +201,40 @@ export function FinancialRemindersDialog({ item, open, onClose }: FinancialRemin
         <Paper sx={{ p: 2, borderRadius: 3, boxShadow: "none", border: "1px solid", borderColor: "divider" }}>
           <Stack spacing={1.5}>
             <Typography fontWeight={950}>{t("addReminder")}</Typography>
+            <TextField
+              select
+              label={t("reminderType")}
+              value={reminderMode}
+              onChange={(event) => setReminderMode(event.target.value as "offset" | "exact")}
+              fullWidth
+            >
+              <MenuItem value="offset">{t("quickReminder")}</MenuItem>
+              <MenuItem value="exact">{t("specificDate")}</MenuItem>
+            </TextField>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
-              <TextField
-                select
-                label={t("whenRemind")}
-                value={offsetDays}
-                onChange={(event) => setOffsetDays(event.target.value)}
-                fullWidth
-              >
-                {[0, 1, 2, 3, 5, 7, 15, 30].map((days) => (
-                  <MenuItem key={days} value={String(days)}>
-                    {days === 0 ? t("sameDay") : t("daysBefore").replace("{days}", String(days))}
-                  </MenuItem>
-                ))}
-              </TextField>
+              {reminderMode === "offset" ? (
+                <TextField
+                  select
+                  label={t("whenRemind")}
+                  value={offsetDays}
+                  onChange={(event) => setOffsetDays(event.target.value)}
+                  fullWidth
+                >
+                  {[0, 1, 2, 3, 5, 7, 15, 30].map((days) => (
+                    <MenuItem key={days} value={String(days)}>
+                      {days === 0 ? t("sameDay") : t("daysBefore").replace("{days}", String(days))}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              ) : (
+                <AppDateField
+                  label={t("specificDate")}
+                  value={exactDate}
+                  onChange={setExactDate}
+                  required
+                  fullWidth
+                />
+              )}
               <TextField
                 label={t("time")}
                 type="time"
