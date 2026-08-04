@@ -162,9 +162,9 @@ export function BirthdaysPage() {
     loadBirthdays();
   }, [year]);
 
-  function openCreate() {
+  function openCreate(date = "") {
     setEditingBirthday(null);
-    setForm(initialForm);
+    setForm({ ...initialForm, date });
     setFormOpen(true);
   }
 
@@ -280,7 +280,7 @@ export function BirthdaysPage() {
           <Button
             startIcon={<AddIcon />}
             variant="contained"
-            onClick={openCreate}
+            onClick={() => openCreate()}
             sx={{ alignSelf: { xs: "stretch", md: "center" }, minHeight: 48, borderRadius: 2.5, fontWeight: 950 }}
           >
             {t("newBirthday")}
@@ -546,9 +546,23 @@ export function BirthdaysPage() {
                   ? selectedMonthData.items.filter((item) => birthdayDateParts(item.date).day === day)
                   : [];
                 const hasBirthdays = dayBirthdays.length > 0;
+                const date = day ? yearDate(year, selectedMonthData.month, day) : "";
                 return (
                   <Grid item xs={12 / 7} key={`${day ?? "empty"}-${index}`}>
                     <Paper
+                      role={day ? "button" : undefined}
+                      tabIndex={day ? 0 : undefined}
+                      onClick={() => {
+                        if (!day) return;
+                        setSelectedMonth(null);
+                        openCreate(date);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!day || (event.key !== "Enter" && event.key !== " ")) return;
+                        event.preventDefault();
+                        setSelectedMonth(null);
+                        openCreate(date);
+                      }}
                       sx={{
                         p: 1,
                         minHeight: { xs: 78, md: 112 },
@@ -563,6 +577,15 @@ export function BirthdaysPage() {
                               : "rgba(253,242,248,0.96)"
                             : "background.default",
                         opacity: day ? 1 : 0.36,
+                        cursor: day ? "pointer" : "default",
+                        transition: "transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
+                        "&:hover": day
+                          ? {
+                              transform: "translateY(-2px)",
+                              borderColor: `${birthdayColor}AA`,
+                              boxShadow: "0 14px 28px rgba(15,23,42,0.16)",
+                            }
+                          : undefined,
                       }}
                     >
                       {day ? (
