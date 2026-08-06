@@ -7,6 +7,7 @@ import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import PaidIcon from "@mui/icons-material/Paid";
 import Paper from "@mui/material/Paper";
 import ShareIcon from "@mui/icons-material/Share";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -83,8 +84,53 @@ function formatReferralRule(type?: "PERCENT" | "FIXED", value?: number) {
   return `${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
+function DashboardSkeleton() {
+  return (
+    <Stack spacing={3.5}>
+      <Skeleton variant="rounded" height={150} sx={{ borderRadius: 4 }} />
+
+      <Grid container spacing={2}>
+        {Array.from({ length: 9 }).map((_, index) => (
+          <Grid item xs={12} md={4} key={index}>
+            <Skeleton variant="rounded" height={86} sx={{ borderRadius: 3 }} />
+          </Grid>
+        ))}
+      </Grid>
+
+      <Skeleton variant="rounded" height={142} sx={{ borderRadius: 4 }} />
+      <Skeleton variant="rounded" height={380} sx={{ borderRadius: 4 }} />
+      <Skeleton variant="rounded" height={390} sx={{ borderRadius: 4 }} />
+      <Skeleton variant="rounded" height={116} sx={{ borderRadius: 4 }} />
+
+      <Grid container spacing={2}>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Grid item xs={12} md={3} key={index}>
+            <Skeleton variant="rounded" height={104} sx={{ borderRadius: 3 }} />
+          </Grid>
+        ))}
+      </Grid>
+
+      <Grid container spacing={2}>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Grid item xs={12} md={6} lg={4} key={index}>
+            <Skeleton variant="rounded" height={130} sx={{ borderRadius: 3 }} />
+          </Grid>
+        ))}
+      </Grid>
+
+      <Skeleton variant="rounded" height={250} sx={{ borderRadius: 4 }} />
+
+      <Stack spacing={1.25}>
+        <Skeleton variant="text" width={220} height={34} />
+        <Skeleton variant="rounded" height={240} sx={{ borderRadius: 4 }} />
+      </Stack>
+    </Stack>
+  );
+}
+
 export function DashboardPage() {
   const { language, t } = usePreferences();
+  const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState<DashboardTotals | null>(null);
   const [annualTotals, setAnnualTotals] = useState({
     totalIncome: 0,
@@ -108,7 +154,10 @@ export function DashboardPage() {
   const [banners, setBanners] = useState<MarketingBanner[]>([]);
   const [referralProgram, setReferralProgram] = useState<ReferralProgram | null>(null);
 
-  async function loadDashboard() {
+  async function loadDashboard(showLoading = false) {
+    if (showLoading) {
+      setLoading(true);
+    }
     const today = new Date();
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
@@ -142,28 +191,34 @@ export function DashboardPage() {
       safe(listMarketingBanners("DASHBOARD"), []),
       safe(getMyReferralProgram(), null),
     ]);
-    if (summary) {
-      setTotals(summary.totals);
-      setRecentItems(summary.recentItems);
+    try {
+      if (summary) {
+        setTotals(summary.totals);
+        setRecentItems(summary.recentItems);
+      }
+      if (nextYearControl) {
+        setAnnualTotals({
+          totalIncome: nextYearControl.totals.totalIncome,
+          totalExpense: nextYearControl.totals.totalExpense,
+        });
+      }
+      setSavingsSummary(nextSavingsSummary);
+      setPaymentSummary(nextPaymentSummary);
+      setGoals(nextGoals);
+      setInsights(nextInsights);
+      setComparison(nextComparison);
+      setDueReminders(nextDueReminders);
+      setBanners(nextBanners);
+      setReferralProgram(nextReferralProgram);
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
     }
-    if (nextYearControl) {
-      setAnnualTotals({
-        totalIncome: nextYearControl.totals.totalIncome,
-        totalExpense: nextYearControl.totals.totalExpense,
-      });
-    }
-    setSavingsSummary(nextSavingsSummary);
-    setPaymentSummary(nextPaymentSummary);
-    setGoals(nextGoals);
-    setInsights(nextInsights);
-    setComparison(nextComparison);
-    setDueReminders(nextDueReminders);
-    setBanners(nextBanners);
-    setReferralProgram(nextReferralProgram);
   }
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard(true);
   }, []);
 
   const financialFlowData = [
@@ -355,6 +410,10 @@ export function DashboardPage() {
         </Stack>
       </Paper>
 
+      {loading ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
       {banners.map((banner) => (
         <Box
           key={banner.id}
@@ -1163,6 +1222,8 @@ export function DashboardPage() {
           </Table>
         </Paper>
       </motion.div>
+        </>
+      )}
 
       <FinancialItemForm
         open={formOpen}
