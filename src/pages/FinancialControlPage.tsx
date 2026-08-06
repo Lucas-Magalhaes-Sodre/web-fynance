@@ -1362,6 +1362,7 @@ export function FinancialControlPage() {
         <ValueEditModal
           open={Boolean(cellEdit)}
           category={cellEdit.name}
+          sourceCategory={cellEdit.category}
           month={cellEdit.month}
           year={year}
           currentValue={cellEdit.value}

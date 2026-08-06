@@ -18,6 +18,7 @@ import { listCreditCards } from '@/services/financialControl';
 type Props = {
   open: boolean;
   category: string;
+  sourceCategory?: string;
   month: number;
   year: number;
   currentValue: number;
@@ -45,6 +46,7 @@ type Props = {
 export function ValueEditModal({
   open,
   category,
+  sourceCategory,
   month,
   year,
   currentValue,
@@ -68,6 +70,16 @@ export function ValueEditModal({
   const [firstInstallmentMonth, setFirstInstallmentMonth] = useState(String(month));
   const [firstInstallmentYear, setFirstInstallmentYear] = useState(String(year));
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const isCreditCardExpenseCategory = useMemo(() => {
+    const normalized = (sourceCategory ?? category)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('pt-BR')
+      .trim();
+    return ['cartao', 'cartoes', 'cartao de credito', 'cartoes de credito'].includes(normalized);
+  }, [category, sourceCategory]);
+  const canPayWithCreditCard = type === 'EXPENSE' && !isCreditCardExpenseCategory;
+  const effectivePaidWithCreditCard = canPayWithCreditCard && paidWithCreditCard;
 
   useEffect(() => {
     setAmount(formatMoney(currentValue || 0));
@@ -81,7 +93,10 @@ export function ValueEditModal({
   }, [currentValue, initialCreditCardId, initialCreditCardInstallments, initialPaidWithCreditCard, month, open, year]);
 
   useEffect(() => {
-    if (!open || type !== 'EXPENSE') return;
+    if (!open || !canPayWithCreditCard) {
+      setCreditCards([]);
+      return;
+    }
     let active = true;
     listCreditCards({ month, year })
       .then((overview) => {
@@ -93,15 +108,15 @@ export function ValueEditModal({
     return () => {
       active = false;
     };
-  }, [month, open, type, year]);
+  }, [canPayWithCreditCard, month, open, year]);
 
   const numericAmount = currencyToNumber(amount) || 0;
   const installmentCount = Math.max(1, Number(creditCardInstallments || 1));
   const installmentAmount = installmentCount > 0 ? numericAmount / installmentCount : numericAmount;
   const selectedCreditCard = creditCards.find((card) => card.id === creditCardId);
   const firstInstallmentLabel = `${months[Number(firstInstallmentMonth || month) - 1] ?? months[month - 1]} de ${firstInstallmentYear || year}`;
-  const currentAmountInTotals = initialPaidWithCreditCard ? 0 : currentValue;
-  const nextAmountInTotals = paidWithCreditCard ? 0 : numericAmount;
+  const currentAmountInTotals = initialPaidWithCreditCard && canPayWithCreditCard ? 0 : currentValue;
+  const nextAmountInTotals = effectivePaidWithCreditCard ? 0 : numericAmount;
   const delta = nextAmountInTotals - currentAmountInTotals;
   const preview = useMemo(() => {
     const income = type === 'INCOME' ? currentMonthIncome + delta : currentMonthIncome;
@@ -115,13 +130,13 @@ export function ValueEditModal({
     if (saving) return;
     await onSubmit({
       amount: numericAmount,
-      scope: paidWithCreditCard ? 'ONLY_THIS_PERIOD' : scope,
+      scope: effectivePaidWithCreditCard ? 'ONLY_THIS_PERIOD' : scope,
       description: description || null,
-      paidWithCreditCard: type === 'EXPENSE' ? paidWithCreditCard : undefined,
-      creditCardId: paidWithCreditCard ? creditCardId : null,
-      creditCardInstallments: paidWithCreditCard ? Number(creditCardInstallments || 1) : null,
-      creditCardFirstInstallmentMonth: paidWithCreditCard ? Number(firstInstallmentMonth || month) : null,
-      creditCardFirstInstallmentYear: paidWithCreditCard ? Number(firstInstallmentYear || year) : null,
+      paidWithCreditCard: canPayWithCreditCard ? paidWithCreditCard : undefined,
+      creditCardId: effectivePaidWithCreditCard ? creditCardId : null,
+      creditCardInstallments: effectivePaidWithCreditCard ? Number(creditCardInstallments || 1) : null,
+      creditCardFirstInstallmentMonth: effectivePaidWithCreditCard ? Number(firstInstallmentMonth || month) : null,
+      creditCardFirstInstallmentYear: effectivePaidWithCreditCard ? Number(firstInstallmentYear || year) : null,
     });
   }
 
@@ -139,7 +154,7 @@ export function ValueEditModal({
             variant="contained"
             loading={saving}
             loadingLabel="Salvando..."
-            disabled={paidWithCreditCard && (!creditCardId || numericAmount <= 0)}
+            disabled={effectivePaidWithCreditCard && (!creditCardId || numericAmount <= 0)}
           >
             Salvar alteracao
           </LoadingActionButton>
@@ -155,7 +170,7 @@ export function ValueEditModal({
           </Stack>
           <MoneyTextField label="Novo valor" required value={amount} onValueChange={setAmount} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
           <TextField label="Descrição opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
-          {type === 'EXPENSE' ? (
+          {canPayWithCreditCard ? (
             <S.PreviewPanel spacing={1.5}>
               <FormControlLabel
                 control={
@@ -218,7 +233,7 @@ export function ValueEditModal({
               ) : null}
             </S.PreviewPanel>
           ) : null}
-          {paidWithCreditCard ? (
+          {effectivePaidWithCreditCard ? (
             <Typography variant="body2" color="text.secondary">
               Essa configuração será aplicada somente a esta célula.
             </Typography>
@@ -229,7 +244,7 @@ export function ValueEditModal({
               <FormControlLabel value="ALL_YEAR" control={<Radio />} label="Alterar todos os meses do ano" />
             </RadioGroup>
           )}
-          {paidWithCreditCard ? (
+          {effectivePaidWithCreditCard ? (
             <S.PreviewPanel spacing={1.2}>
               <Typography fontWeight={900}>Resumo do lançamento no cartão</Typography>
               <Typography color="text.secondary">
