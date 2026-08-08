@@ -11,6 +11,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import RemoveIcon from "@mui/icons-material/Remove";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -117,6 +118,7 @@ type SearchOption = {
 export type YearPaymentCellState = {
   status: "empty" | "pending" | "paid" | "mixed";
   selected: boolean;
+  isOverdue: boolean;
   itemsCount: number;
   payableCount: number;
   paidCount: number;
@@ -562,7 +564,8 @@ export function YearSpreadsheet({
     const hasLinkedValue = !isCategory && linkedValue > 0;
     const visibleValue = displayValue > 0 || !hasLinkedValue ? displayValue : linkedValue;
     const cleanNotes = [...notes, ...linkedNotes].filter(Boolean);
-    const canShowPaymentStatus = paymentCell && paymentState && paymentState.status !== "empty";
+    const visiblePaymentState =
+      paymentCell && paymentState && paymentState.itemsCount > 0 ? paymentState : null;
     const paymentTooltip =
       paymentState?.status === "paid"
         ? "Pago. Clique para marcar como pendente."
@@ -577,6 +580,7 @@ export function YearSpreadsheet({
           : paymentState?.selected
             ? "primary.main"
             : "text.secondary";
+    const showOverdueWarning = paymentState?.isOverdue && paymentState.status !== "paid";
 
     return (
       <TableCell
@@ -650,21 +654,29 @@ export function YearSpreadsheet({
                   tone === "INCOME"
                     ? (theme) => theme.palette.mode === "dark" ? "rgba(37,99,235,0.18)" : "rgba(37,99,235,0.06)"
                     : (theme) => theme.palette.mode === "dark" ? "rgba(234,88,12,0.18)" : "rgba(234,88,12,0.06)",
+                "& .year-payment-checkbox": {
+                  opacity: 1,
+                  pointerEvents: "auto",
+                },
               }
             : undefined,
+          "&:focus-within .year-payment-checkbox": {
+            opacity: 1,
+            pointerEvents: "auto",
+          },
         }}
       >
         {noteMarker(cleanNotes)}
-        {canShowPaymentStatus ? (
+        {visiblePaymentState ? (
           <Tooltip title={paymentTooltip} placement="top" arrow>
             <Checkbox
               size="small"
-              checked={paymentState.status === "paid" || paymentState.selected}
-              indeterminate={paymentState.status === "mixed" && !paymentState.selected}
+              checked={visiblePaymentState.status === "paid" || visiblePaymentState.selected}
+              indeterminate={visiblePaymentState.status === "mixed" && !visiblePaymentState.selected}
               onClick={(event) => {
                 event.stopPropagation();
                 if (!paymentCell) return;
-                if (paymentState.status === "paid") {
+                if (visiblePaymentState.status === "paid") {
                   onMarkPaymentCellPending?.(paymentCell);
                   return;
                 }
@@ -677,12 +689,14 @@ export function YearSpreadsheet({
                 zIndex: 2,
                 p: 0.1,
                 color: paymentColor,
-                opacity: paymentState.status === "pending" && !paymentState.selected ? 0.58 : 1,
+                opacity: visiblePaymentState.selected ? 1 : 0,
                 bgcolor: (theme) =>
                   theme.palette.mode === "dark"
                     ? "rgba(15,23,42,0.78)"
                     : "rgba(255,255,255,0.8)",
                 borderRadius: "999px",
+                pointerEvents: visiblePaymentState.selected ? "auto" : "none",
+                transition: "opacity 0.15s ease",
                 "&:hover": {
                   opacity: 1,
                   bgcolor: (theme) =>
@@ -692,6 +706,7 @@ export function YearSpreadsheet({
                 },
                 "& .MuiSvgIcon-root": { fontSize: 16 },
               }}
+              className="year-payment-checkbox"
             />
           </Tooltip>
         ) : null}
@@ -718,6 +733,17 @@ export function YearSpreadsheet({
                 : { display: "inline-flex", alignItems: "center", gap: 0.5 }
             }
           >
+            {showOverdueWarning ? (
+              <Tooltip title="Vencido e ainda não marcado como pago." placement="top" arrow>
+                <WarningAmberIcon
+                  sx={{
+                    fontSize: 14,
+                    color: "#FACC15",
+                    filter: "drop-shadow(0 1px 2px rgba(15,23,42,0.45))",
+                  }}
+                />
+              </Tooltip>
+            ) : null}
             {hasLinkedValue ? <CreditCardIcon sx={{ fontSize: 13 }} /> : null}
             {formatMoney(visibleValue)}
           </Box>
@@ -1328,35 +1354,6 @@ export function YearSpreadsheet({
           alignItems={{ xs: "stretch", sm: "center" }}
           spacing={1}
         >
-          {selectedPaymentCellsCount > 0 ? (
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              alignItems={{ xs: "stretch", sm: "center" }}
-              spacing={1}
-              sx={{
-                px: 1.25,
-                py: 0.75,
-                minHeight: 38,
-                border: "1px solid",
-                borderColor: "primary.main",
-                borderRadius: 2,
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "rgba(45,212,191,0.12)"
-                    : "rgba(204,251,241,0.7)",
-              }}
-            >
-              <Typography variant="body2" fontWeight={850} color="primary.main">
-                {selectedPaymentCellsCount} selecionada(s)
-              </Typography>
-              <Button size="small" variant="contained" onClick={onMarkSelectedPaymentCellsPaid}>
-                Marcar como pagas
-              </Button>
-              <Button size="small" variant="text" onClick={onClearPaymentCellSelection}>
-                Limpar
-              </Button>
-            </Stack>
-          ) : null}
           <Tooltip title="Ações da tabela">
             <IconButton
               size="small"
@@ -2449,6 +2446,55 @@ export function YearSpreadsheet({
           </TableBody>
         </Table>
       </Paper>
+      {selectedPaymentCellsCount > 0 ? (
+        <Box
+          sx={{
+            position: "fixed",
+            left: { xs: 12, md: 96 },
+            right: { xs: 12, md: 24 },
+            bottom: { xs: 12, md: 18 },
+            zIndex: 60,
+            display: "flex",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            alignItems={{ xs: "stretch", sm: "center" }}
+            spacing={1}
+            sx={{
+              pointerEvents: "auto",
+              width: { xs: "100%", sm: "auto" },
+              maxWidth: 720,
+              px: 1.5,
+              py: 1.1,
+              border: "1px solid",
+              borderColor: "primary.main",
+              borderRadius: 3,
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(15,27,45,0.96)"
+                  : "rgba(255,255,255,0.98)",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 18px 44px rgba(0,0,0,0.44)"
+                  : "0 18px 44px rgba(15,23,42,0.18)",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            <Typography variant="body2" fontWeight={900} color="text.primary">
+              {selectedPaymentCellsCount} item(ns) selecionado(s)
+            </Typography>
+            <Button size="small" variant="contained" onClick={onMarkSelectedPaymentCellsPaid}>
+              Marcar como pagas
+            </Button>
+            <Button size="small" variant="text" onClick={onClearPaymentCellSelection}>
+              Limpar seleção
+            </Button>
+          </Stack>
+        </Box>
+      ) : null}
     </Stack>
   );
 }

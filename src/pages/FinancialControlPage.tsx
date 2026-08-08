@@ -434,6 +434,11 @@ export function FinancialControlPage() {
     const paidItems = items.filter((item) => item.status === "PAGO");
     const payableIds = payableItems.map((item) => item.id);
     const selected = payableIds.length > 0 && payableIds.every((id) => yearPaymentSelection.includes(id));
+    const today = isoDate();
+    const isOverdue = payableItems.some((item) => {
+      const itemDate = (item.dueDate ?? item.date ?? "").slice(0, 10);
+      return Boolean(itemDate && itemDate < today);
+    });
     const status =
       !items.length
         ? "empty"
@@ -445,6 +450,7 @@ export function FinancialControlPage() {
     return {
       status,
       selected,
+      isOverdue,
       itemsCount: items.length,
       payableCount: payableItems.length,
       paidCount: paidItems.length,
