@@ -32,6 +32,7 @@ import {
   transferSaving,
   updateCreditCardStatementValue,
   updateEntry,
+  updateEntryMonthlyValues,
   updateEntryPaymentStatus,
   updateEntryValue,
   updateFinancialTablePreferences,
@@ -1082,6 +1083,30 @@ export function FinancialControlPage() {
     });
   }
 
+  function findLineTemplateItem(category: string, name: string, type: EntryType) {
+    return yearData?.items.find((item) => {
+      const itemType = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
+      return (
+        item.category === category &&
+        (item.name ?? item.title ?? item.category) === name &&
+        itemType === type
+      );
+    });
+  }
+
+  function monthValuesForCell(cell: SpreadsheetCellEdit) {
+    if (cell.type === "INVESTMENT") return {};
+    const row = rowsForCategory(cell.type, cell.category).find(
+      (detailRow) => detailRow.name === cell.name,
+    );
+    return Object.fromEntries(
+      Array.from({ length: 12 }, (_, index) => {
+        const monthValue = index + 1;
+        return [monthValue, row?.months[monthValue] ?? 0];
+      }),
+    ) as Record<number, number>;
+  }
+
   function savingsForLine(category: string, name: string) {
     return (yearData?.savings ?? []).filter(
       (saving) =>
@@ -1164,6 +1189,7 @@ export function FinancialControlPage() {
     creditCardInstallments?: number | null;
     creditCardFirstInstallmentMonth?: number | null;
     creditCardFirstInstallmentYear?: number | null;
+    monthlyValues?: Array<{ month: number; amount: number }>;
   }) {
     if (!cellEdit) return;
     if (cellEdit.type === "INVESTMENT") {
@@ -1174,6 +1200,33 @@ export function FinancialControlPage() {
         setCellEdit(null);
         await Promise.all([loadData({ silent: true }), loadAvailableSavings()]);
         setNotice("Valor atualizado com sucesso.");
+      } finally {
+        setCellSaving(false);
+        setUpdatingCell(null);
+      }
+      return;
+    }
+
+    if (payload.monthlyValues?.length) {
+      const item =
+        findCellItem(cellEdit.category, cellEdit.name, cellEdit.month, cellEdit.type) ??
+        findLineTemplateItem(cellEdit.category, cellEdit.name, cellEdit.type);
+      if (!item) {
+        setDefaultType(cellEdit.type);
+        setFormOpen(true);
+        return;
+      }
+      setUpdatingCell(cellEdit);
+      setCellSaving(true);
+      try {
+        await updateEntryMonthlyValues(item.id, {
+          year,
+          description: payload.description,
+          values: payload.monthlyValues,
+        });
+        setCellEdit(null);
+        await loadData({ silent: true });
+        setNotice("Valores do ano atualizados com sucesso.");
       } finally {
         setCellSaving(false);
         setUpdatingCell(null);
@@ -1561,6 +1614,7 @@ export function FinancialControlPage() {
           initialPaidWithCreditCard={Boolean(editedCellItem?.excludedFromTotals)}
           initialCreditCardId={editedCellItem?.linkedCreditCardId ?? ""}
           initialCreditCardInstallments={editedCellItem?.linkedCreditCardInstallments ?? 1}
+          yearMonthValues={monthValuesForCell(cellEdit)}
           saving={cellSaving}
           onClose={() => setCellEdit(null)}
           onSubmit={saveCellValue}
