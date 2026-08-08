@@ -1054,42 +1054,42 @@ export function FinancialControlPage() {
       return;
     }
 
-    let item = findCellItem(
+    if (isCreditCardExpenseCategory(cellEdit.category, cellEdit.type)) {
+      setUpdatingCell(cellEdit);
+      setCellSaving(true);
+      try {
+        const occurrenceDate = dateForMonthlyOccurrence(year, cellEdit.month, 1);
+        await updateCreditCardStatementValue({
+          category: cellEdit.category,
+          name: cellEdit.name,
+          month: cellEdit.month,
+          year,
+          amount: payload.amount,
+          date: occurrenceDate,
+          scope: payload.scope,
+          periodType: "MONTH",
+          description: payload.description,
+        });
+        setCellEdit(null);
+        await loadData({ silent: true });
+        setNotice("Valor atualizado com sucesso.");
+      } finally {
+        setCellSaving(false);
+        setUpdatingCell(null);
+      }
+      return;
+    }
+
+    const item = findCellItem(
       cellEdit.category,
       cellEdit.name,
       cellEdit.month,
       cellEdit.type,
     );
     if (!item) {
-      if (isCreditCardExpenseCategory(cellEdit.category, cellEdit.type)) {
-        setUpdatingCell(cellEdit);
-        setCellSaving(true);
-        try {
-          const occurrenceDate = dateForMonthlyOccurrence(year, cellEdit.month, 1);
-          await updateCreditCardStatementValue({
-            category: cellEdit.category,
-            name: cellEdit.name,
-            month: cellEdit.month,
-            year,
-            amount: payload.amount,
-            date: occurrenceDate,
-            scope: payload.scope,
-            periodType: "MONTH",
-            description: payload.description,
-          });
-          setCellEdit(null);
-          await loadData({ silent: true });
-          setNotice("Valor atualizado com sucesso.");
-        } finally {
-          setCellSaving(false);
-          setUpdatingCell(null);
-        }
-        return;
-      } else {
-        setDefaultType(cellEdit.type);
-        setFormOpen(true);
-        return;
-      }
+      setDefaultType(cellEdit.type);
+      setFormOpen(true);
+      return;
     }
     setUpdatingCell(cellEdit);
     setCellSaving(true);
