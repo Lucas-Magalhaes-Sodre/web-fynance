@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type { CreditCard, EntryType, ValueUpdateScope } from '@/interfaces/financial';
 import { balanceColor, currencyToNumber, financeColors, formatMoney, months } from '@/utils/format';
 import { AppDialog, AppDialogStyles as S } from '@/components/molecules/AppDialog';
@@ -61,6 +61,7 @@ export function ValueEditModal({
   onClose,
   onSubmit
 }: Props) {
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
   const [amount, setAmount] = useState(formatMoney(currentValue || 0));
   const [scope, setScope] = useState<ValueUpdateScope>('ONLY_THIS_PERIOD');
   const [description, setDescription] = useState('');
@@ -91,6 +92,15 @@ export function ValueEditModal({
     setFirstInstallmentMonth(String(month));
     setFirstInstallmentYear(String(year));
   }, [currentValue, initialCreditCardId, initialCreditCardInstallments, initialPaidWithCreditCard, month, open, year]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
+      amountInputRef.current?.focus();
+      amountInputRef.current?.select();
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [open, category, month, year]);
 
   useEffect(() => {
     if (!open || !canPayWithCreditCard) {
@@ -168,7 +178,14 @@ export function ValueEditModal({
               {months[month - 1]} de {year} • {type === 'INCOME' ? 'Receita' : type === 'EXPENSE' ? 'Despesa' : 'Economia'}
             </Typography>
           </Stack>
-          <MoneyTextField label="Novo valor" required value={amount} onValueChange={setAmount} helperText={`Valor atual: ${formatMoney(currentValue)}`} />
+          <MoneyTextField
+            label="Novo valor"
+            required
+            value={amount}
+            onValueChange={setAmount}
+            inputRef={amountInputRef}
+            helperText={`Valor atual: ${formatMoney(currentValue)}`}
+          />
           <TextField label="Descrição opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
           {canPayWithCreditCard ? (
             <S.PreviewPanel spacing={1.5}>

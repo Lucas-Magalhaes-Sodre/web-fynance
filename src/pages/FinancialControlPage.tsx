@@ -69,7 +69,10 @@ import type {
   ViewMode,
 } from "@/modules/financial-control/components/types";
 import { WeekOverview } from "@/modules/financial-control/components/WeekOverview";
-import { YearSpreadsheet } from "@/modules/financial-control/components/YearSpreadsheet";
+import {
+  YearSpreadsheet,
+  type YearPaymentCellState,
+} from "@/modules/financial-control/components/YearSpreadsheet";
 import { PeriodSummaryCards } from "@/components/organisms/PeriodSummaryCards";
 import { ValueEditModal } from "@/components/organisms/ValueEditModal";
 import { AppDialog } from "@/components/molecules/AppDialog";
@@ -218,6 +221,7 @@ export function FinancialControlPage() {
   const [cellEdit, setCellEdit] = useState<SpreadsheetCellEdit | null>(null);
   const [cellSaving, setCellSaving] = useState(false);
   const [updatingCell, setUpdatingCell] = useState<SpreadsheetCellEdit | null>(null);
+  const [yearPaymentSelection, setYearPaymentSelection] = useState<string[]>([]);
   const [lineEdit, setLineEdit] = useState<LineEditState | null>(null);
   const [lineSaving, setLineSaving] = useState(false);
   const [copyCategory, setCopyCategory] = useState<{
@@ -408,6 +412,64 @@ export function FinancialControlPage() {
     });
   }
 
+  function expenseItemsForYearCell(cell: SpreadsheetCellEdit) {
+    if (cell.type !== "EXPENSE") return [];
+    return (yearData?.items ?? []).filter((item) => {
+      const itemType = item.type.includes("INCOME") ? "INCOME" : "EXPENSE";
+      return (
+        itemType === "EXPENSE" &&
+        item.category === cell.category &&
+        (item.name ?? item.title ?? item.category) === cell.name &&
+        item.month === cell.month &&
+        item.year === year &&
+        !item.excludedFromTotals &&
+        item.status !== "CANCELADO"
+      );
+    });
+  }
+
+  function yearPaymentCellState(cell: SpreadsheetCellEdit): YearPaymentCellState {
+    const items = expenseItemsForYearCell(cell);
+    const payableItems = items.filter((item) => item.status !== "PAGO");
+    const paidItems = items.filter((item) => item.status === "PAGO");
+    const payableIds = payableItems.map((item) => item.id);
+    const selected = payableIds.length > 0 && payableIds.every((id) => yearPaymentSelection.includes(id));
+    const status =
+      !items.length
+        ? "empty"
+        : paidItems.length > 0 && payableItems.length > 0
+          ? "mixed"
+          : paidItems.length > 0
+            ? "paid"
+            : "pending";
+    return {
+      status,
+      selected,
+      itemsCount: items.length,
+      payableCount: payableItems.length,
+      paidCount: paidItems.length,
+    };
+  }
+
+  function toggleYearPaymentCell(cell: SpreadsheetCellEdit) {
+    const payableIds = expenseItemsForYearCell(cell)
+      .filter((item) => item.status !== "PAGO")
+      .map((item) => item.id);
+    if (!payableIds.length) return;
+    setYearPaymentSelection((currentSelection) => {
+      const allSelected = payableIds.every((id) => currentSelection.includes(id));
+      if (allSelected) {
+        return currentSelection.filter((id) => !payableIds.includes(id));
+      }
+      return Array.from(new Set([...currentSelection, ...payableIds]));
+    });
+  }
+
+  const selectedYearPaymentItems = useMemo(() => {
+    const selectedIds = new Set(yearPaymentSelection);
+    return (yearData?.items ?? []).filter((item) => selectedIds.has(item.id));
+  }, [yearData, yearPaymentSelection]);
+
   function notesForCategory(
     type: EntryType,
     category: string,
@@ -545,6 +607,10 @@ export function FinancialControlPage() {
     setYearInput(String(year));
     window.localStorage.setItem(FINANCIAL_CONTROL_YEAR_KEY, String(year));
   }, [year]);
+
+  useEffect(() => {
+    setYearPaymentSelection([]);
+  }, [mode, year]);
 
   function openCreate(type: EntryType) {
     setDefaultType(type);
@@ -736,7 +802,7 @@ export function FinancialControlPage() {
     const payableItems = items.filter(
       (item) => item.type.includes("EXPENSE") && item.status !== "PAGO",
     );
-    if (!payableItems.length) return;
+    if (!payableItems.length) return false;
 
     const confirmed = await confirm({
       title: payableItems.length === 1 ? t("confirmPaymentTitle") : t("confirmPaymentsTitle"),
@@ -772,7 +838,7 @@ export function FinancialControlPage() {
       cancelLabel: t("cancel"),
       tone: "primary",
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
 
     await Promise.all(
       payableItems.map((item) =>
@@ -781,6 +847,7 @@ export function FinancialControlPage() {
     );
     await loadData({ silent: true });
     setNotice(payableItems.length === 1 ? "Conta marcada como paga." : "Contas marcadas como pagas.");
+    return true;
   }
 
   async function markCalendarDayPaid(day: FinancialCalendarDay) {
@@ -791,6 +858,60 @@ export function FinancialControlPage() {
     await updateEntryPaymentStatus(item.id, { status: "PENDENTE" });
     await loadData({ silent: true });
     setNotice("Conta marcada como pendente.");
+  }
+
+  async function markSelectedYearPaymentsPaid() {
+    const updated = await markItemsPaid(selectedYearPaymentItems);
+    if (updated) setYearPaymentSelection([]);
+  }
+
+  async function markYearPaymentCellPending(cell: SpreadsheetCellEdit) {
+    const paidItems = expenseItemsForYearCell(cell).filter((item) => item.status === "PAGO");
+    if (!paidItems.length) return;
+
+    const confirmed = await confirm({
+      title: paidItems.length === 1 ? "Marcar como pendente" : "Marcar parcelas como pendentes",
+      description: (
+        <Stack spacing={1.5}>
+          <Typography color="text.secondary">
+            {paidItems.length === 1
+              ? "Confirme para remover o status de pago desta parcela."
+              : "Confirme para remover o status de pago das parcelas desta célula."}
+          </Typography>
+          <Stack spacing={1}>
+            {paidItems.map((item) => (
+              <Box
+                key={item.id}
+                sx={{
+                  p: 1.25,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.default",
+                }}
+              >
+                <Typography fontWeight={900}>{item.name ?? item.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t("dueDate")}: {formatDate(item.dueDate ?? item.date)} · {t("value")}: {formatMoney(item.amount)}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Stack>
+      ),
+      confirmLabel: "Marcar como pendente",
+      cancelLabel: t("cancel"),
+      tone: "primary",
+    });
+    if (!confirmed) return;
+
+    await Promise.all(
+      paidItems.map((item) =>
+        updateEntryPaymentStatus(item.id, { status: "PENDENTE" }),
+      ),
+    );
+    await loadData({ silent: true });
+    setNotice(paidItems.length === 1 ? "Conta marcada como pendente." : "Contas marcadas como pendentes.");
   }
 
   function itemPayload(
@@ -1365,6 +1486,12 @@ export function FinancialControlPage() {
             const query = cardName ? `?card=${encodeURIComponent(cardName)}` : "";
             navigate(`/app/cards${query}`);
           }}
+          paymentCellState={yearPaymentCellState}
+          selectedPaymentCellsCount={selectedYearPaymentItems.length}
+          onTogglePaymentCell={toggleYearPaymentCell}
+          onClearPaymentCellSelection={() => setYearPaymentSelection([])}
+          onMarkSelectedPaymentCellsPaid={markSelectedYearPaymentsPaid}
+          onMarkPaymentCellPending={markYearPaymentCellPending}
         />
       ) : null}
 

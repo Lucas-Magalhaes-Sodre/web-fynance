@@ -14,6 +14,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
@@ -96,6 +97,12 @@ type YearSpreadsheetProps = {
   onEditCell: (cellEdit: SpreadsheetCellEdit) => void;
   onFillCells: (source: SpreadsheetCellEdit, target: SpreadsheetCellEdit) => void;
   onOpenCreditCard?: (cardName?: string) => void;
+  paymentCellState?: (cell: SpreadsheetCellEdit) => YearPaymentCellState;
+  selectedPaymentCellsCount?: number;
+  onTogglePaymentCell?: (cell: SpreadsheetCellEdit) => void;
+  onClearPaymentCellSelection?: () => void;
+  onMarkSelectedPaymentCellsPaid?: () => void;
+  onMarkPaymentCellPending?: (cell: SpreadsheetCellEdit) => void;
 };
 
 type SearchOption = {
@@ -105,6 +112,14 @@ type SearchOption = {
   type: EntryType | "INVESTMENT";
   category: string;
   name?: string;
+};
+
+export type YearPaymentCellState = {
+  status: "empty" | "pending" | "paid" | "mixed";
+  selected: boolean;
+  itemsCount: number;
+  payableCount: number;
+  paidCount: number;
 };
 
 export function YearSpreadsheet({
@@ -144,6 +159,12 @@ export function YearSpreadsheet({
   onEditCell,
   onFillCells,
   onOpenCreditCard,
+  paymentCellState,
+  selectedPaymentCellsCount = 0,
+  onTogglePaymentCell,
+  onClearPaymentCellSelection,
+  onMarkSelectedPaymentCellsPaid,
+  onMarkPaymentCellPending,
 }: YearSpreadsheetProps) {
   const { user } = useAuth();
   const { language, t } = usePreferences();
@@ -155,7 +176,12 @@ export function YearSpreadsheet({
     useState<SearchOption | null>(null);
   const [fillDrag, setFillDrag] = useState<SpreadsheetCellEdit | null>(null);
   const [fillHover, setFillHover] = useState<SpreadsheetCellEdit | null>(null);
+  const [monthRulerVisible, setMonthRulerVisible] = useState(false);
   const categoryResizeRef = useRef({ startX: 0, startWidth: 220 });
+  const monthRulerRef = useRef<HTMLDivElement | null>(null);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const tableHeaderRef = useRef<HTMLTableSectionElement | null>(null);
+  const scrollSyncingRef = useRef(false);
   const stickyCategoryWidth = categoryColumnWidth + tableScale * 14;
   const totalColumnWidth = 96 + tableScale * 12;
   const monthColumnMinWidth = 74 + tableScale * 10;
@@ -293,6 +319,18 @@ export function YearSpreadsheet({
     }
   }
 
+  function syncHorizontalScroll(
+    source: HTMLDivElement | null,
+    target: HTMLDivElement | null,
+  ) {
+    if (!source || !target || scrollSyncingRef.current) return;
+    scrollSyncingRef.current = true;
+    target.scrollLeft = source.scrollLeft;
+    window.requestAnimationFrame(() => {
+      scrollSyncingRef.current = false;
+    });
+  }
+
   useEffect(() => {
     if (!printRequested || !categoryGroupsExpanded || !allCategoryRowsExpanded) return;
     const timer = window.setTimeout(() => {
@@ -301,6 +339,21 @@ export function YearSpreadsheet({
     }, 220);
     return () => window.clearTimeout(timer);
   }, [allCategoryRowsExpanded, categoryGroupsExpanded, printRequested]);
+
+  useEffect(() => {
+    const header = tableHeaderRef.current;
+    if (!header) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setMonthRulerVisible(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+    observer.observe(header);
+
+    return () => observer.disconnect();
+  }, []);
 
   function printExpandedTable() {
     setSettingsAnchor(null);
@@ -477,6 +530,8 @@ export function YearSpreadsheet({
     linkedNotes = [],
     onClick,
     fillCell,
+    paymentState,
+    paymentCell,
     key,
   }: {
     value: number;
@@ -489,6 +544,8 @@ export function YearSpreadsheet({
     linkedNotes?: string[];
     onClick?: () => void;
     fillCell?: SpreadsheetCellEdit;
+    paymentState?: YearPaymentCellState;
+    paymentCell?: SpreadsheetCellEdit;
     key?: string | number;
   }) {
     const isSameFillLine =
@@ -505,6 +562,21 @@ export function YearSpreadsheet({
     const hasLinkedValue = !isCategory && linkedValue > 0;
     const visibleValue = displayValue > 0 || !hasLinkedValue ? displayValue : linkedValue;
     const cleanNotes = [...notes, ...linkedNotes].filter(Boolean);
+    const canShowPaymentStatus = paymentCell && paymentState && paymentState.status !== "empty";
+    const paymentTooltip =
+      paymentState?.status === "paid"
+        ? "Pago. Clique para marcar como pendente."
+        : paymentState?.status === "mixed"
+          ? `${paymentState.paidCount} paga(s) e ${paymentState.payableCount} pendente(s). Clique para selecionar as pendentes.`
+          : "Selecionar para marcar como paga.";
+    const paymentColor =
+      paymentState?.status === "paid"
+        ? "success.main"
+        : paymentState?.status === "mixed"
+          ? "warning.main"
+          : paymentState?.selected
+            ? "primary.main"
+            : "text.secondary";
 
     return (
       <TableCell
@@ -583,6 +655,46 @@ export function YearSpreadsheet({
         }}
       >
         {noteMarker(cleanNotes)}
+        {canShowPaymentStatus ? (
+          <Tooltip title={paymentTooltip} placement="top" arrow>
+            <Checkbox
+              size="small"
+              checked={paymentState.status === "paid" || paymentState.selected}
+              indeterminate={paymentState.status === "mixed" && !paymentState.selected}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!paymentCell) return;
+                if (paymentState.status === "paid") {
+                  onMarkPaymentCellPending?.(paymentCell);
+                  return;
+                }
+                onTogglePaymentCell?.(paymentCell);
+              }}
+              sx={{
+                position: "absolute",
+                left: 2,
+                top: 2,
+                zIndex: 2,
+                p: 0.1,
+                color: paymentColor,
+                opacity: paymentState.status === "pending" && !paymentState.selected ? 0.58 : 1,
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(15,23,42,0.78)"
+                    : "rgba(255,255,255,0.8)",
+                borderRadius: "999px",
+                "&:hover": {
+                  opacity: 1,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(15,23,42,0.95)"
+                      : "rgba(255,255,255,0.96)",
+                },
+                "& .MuiSvgIcon-root": { fontSize: 16 },
+              }}
+            />
+          </Tooltip>
+        ) : null}
         <Tooltip
           title={
             hasLinkedValue
@@ -817,8 +929,25 @@ export function YearSpreadsheet({
             </Tooltip>
           </Stack>
         </TableCell>
-        {yearData.months.map((monthItem) =>
-          valueCell({
+        {yearData.months.map((monthItem) => {
+          const cell = {
+            category: child.category,
+            name: child.name,
+            month: monthItem.value,
+            type,
+            value: (child.months[monthItem.value] ?? 0) || (child.linkedMonths?.[monthItem.value] ?? 0),
+            linkedValue: child.linkedMonths?.[monthItem.value] ?? 0,
+          };
+          const fillCell = child.linkedMonths?.[monthItem.value]
+            ? undefined
+            : {
+                category: child.category,
+                name: child.name,
+                month: monthItem.value,
+                type,
+                value: child.months[monthItem.value] ?? 0,
+              };
+          return valueCell({
             key: monthItem.value,
             value: child.months[monthItem.value] ?? 0,
             notes: child.notes[monthItem.value] ?? [],
@@ -826,26 +955,12 @@ export function YearSpreadsheet({
             linkedNotes: child.linkedInfo?.[monthItem.value] ?? [],
             color,
             tone: type,
-            onClick: () =>
-              onEditCell({
-                category: child.category,
-                name: child.name,
-                month: monthItem.value,
-                type,
-                value: (child.months[monthItem.value] ?? 0) || (child.linkedMonths?.[monthItem.value] ?? 0),
-                linkedValue: child.linkedMonths?.[monthItem.value] ?? 0,
-              }),
-            fillCell: child.linkedMonths?.[monthItem.value]
-              ? undefined
-              : {
-                  category: child.category,
-                  name: child.name,
-                  month: monthItem.value,
-                  type,
-                  value: child.months[monthItem.value] ?? 0,
-                },
-          }),
-        )}
+            onClick: () => onEditCell(cell),
+            fillCell,
+            paymentCell: type === "EXPENSE" ? cell : undefined,
+            paymentState: type === "EXPENSE" ? paymentCellState?.(cell) : undefined,
+          });
+        })}
         <TableCell
           align="right"
           sx={{
@@ -1207,7 +1322,41 @@ export function YearSpreadsheet({
             </Box>
           )}
         />
-        <Stack direction="row" justifyContent="flex-end" spacing={1}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="flex-end"
+          alignItems={{ xs: "stretch", sm: "center" }}
+          spacing={1}
+        >
+          {selectedPaymentCellsCount > 0 ? (
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ xs: "stretch", sm: "center" }}
+              spacing={1}
+              sx={{
+                px: 1.25,
+                py: 0.75,
+                minHeight: 38,
+                border: "1px solid",
+                borderColor: "primary.main",
+                borderRadius: 2,
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(45,212,191,0.12)"
+                    : "rgba(204,251,241,0.7)",
+              }}
+            >
+              <Typography variant="body2" fontWeight={850} color="primary.main">
+                {selectedPaymentCellsCount} selecionada(s)
+              </Typography>
+              <Button size="small" variant="contained" onClick={onMarkSelectedPaymentCellsPaid}>
+                Marcar como pagas
+              </Button>
+              <Button size="small" variant="text" onClick={onClearPaymentCellSelection}>
+                Limpar
+              </Button>
+            </Stack>
+          ) : null}
           <Tooltip title="Ações da tabela">
             <IconButton
               size="small"
@@ -1452,13 +1601,131 @@ export function YearSpreadsheet({
           </Button>
         </Stack>
       </Popover>
-      <Paper
-        className="soft-card premium-scrollbar financial-year-print-area"
+      <Box
+        ref={monthRulerRef}
+        className="premium-scrollbar"
+        onScroll={() => syncHorizontalScroll(monthRulerRef.current, tableScrollRef.current)}
         sx={{
-          borderRadius: 3,
+          display: monthRulerVisible ? "block" : "none",
+          position: "sticky",
+          top: 0,
+          zIndex: 28,
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+          border: `1px solid ${sheetColors.grid}`,
+          borderRadius: "12px 12px 0 0",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#132238" : "#FFFFFF",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 12px 24px rgba(0,0,0,0.28)"
+              : "0 12px 24px rgba(15,23,42,0.12)",
+        }}
+      >
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: `${stickyCategoryWidth}px repeat(${yearData.months.length}, minmax(${monthColumnMinWidth}px, 1fr)) ${totalColumnWidth}px`,
+            minWidth: tableMinWidth,
+          }}
+        >
+          <Box
+            sx={{
+              minHeight: 40,
+              borderRight: `2px solid ${sheetColors.grid}`,
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark" ? "#132238" : "#FFFFFF",
+            }}
+          />
+          {yearData.months.map((monthItem) => {
+            const isCurrent =
+              year === realCurrentYear &&
+              monthItem.value === realCurrentMonth;
+            return (
+              <Box
+                key={monthItem.value}
+                sx={{
+                  position: "relative",
+                  minHeight: 40,
+                  px: 0.5,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRight: "1px solid",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(148,163,184,0.18)"
+                      : "rgba(15,23,42,0.08)",
+                  bgcolor: (theme) =>
+                    isCurrent
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(37,99,235,0.18)"
+                        : "rgba(239,246,255,0.95)"
+                      : theme.palette.mode === "dark"
+                        ? "#132238"
+                        : "#FFFFFF",
+                  }}
+                >
+                  {isCurrent ? (
+                    <Box
+                      component="span"
+                      sx={{
+                        position: "absolute",
+                        top: 3,
+                        right: 4,
+                        px: 0.55,
+                        py: 0.15,
+                        borderRadius: 999,
+                        bgcolor: financeColors.income,
+                        color: "white",
+                        fontSize: 9,
+                        fontWeight: 950,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {t("current")}
+                    </Box>
+                  ) : null}
+                  <Typography
+                    variant="caption"
+                    fontWeight={950}
+                    color="text.primary"
+                    lineHeight={1}
+                  >
+                    {compactMonthLabels[monthItem.value] ?? monthItem.label}
+                  </Typography>
+              </Box>
+            );
+          })}
+          <Box
+            sx={{
+              minHeight: 40,
+              px: 0.75,
+              display: "grid",
+              placeItems: "center end",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(15,118,110,0.26)"
+                  : "rgba(15,118,110,0.11)",
+              color: (theme) =>
+                theme.palette.mode === "dark" ? "#5EEAD4" : "#0F766E",
+              fontWeight: 950,
+              ...totalColumnSx,
+            }}
+          >
+            {t("total")}
+          </Box>
+        </Box>
+      </Box>
+      <Paper
+        ref={tableScrollRef}
+        className="soft-card premium-scrollbar financial-year-print-area"
+        onScroll={() => syncHorizontalScroll(tableScrollRef.current, monthRulerRef.current)}
+        sx={{
+          borderRadius: "0 0 12px 12px",
           overflow: "auto",
-          maxHeight: "none",
-          pt: 0.75,
+          pt: 0,
           border: `1px solid ${sheetColors.grid}`,
           background: (theme) =>
             theme.palette.mode === "dark"
@@ -1515,13 +1782,14 @@ export function YearSpreadsheet({
             ))}
             <col style={{ width: totalColumnWidth }} />
           </colgroup>
-          <TableHead sx={{ overflow: "visible" }}>
+          <TableHead ref={tableHeaderRef} sx={{ overflow: "visible" }}>
             <TableRow sx={{ overflow: "visible" }}>
               <TableCell
                 sx={{
                   position: "sticky",
+                  top: 0,
                   left: 0,
-                  zIndex: 3,
+                  zIndex: 30,
                   bgcolor: (theme) =>
                     theme.palette.mode === "dark"
                       ? "#132238 !important"
@@ -1534,7 +1802,8 @@ export function YearSpreadsheet({
                   minWidth: stickyCategoryWidth,
                   maxWidth: stickyCategoryWidth,
                   fontWeight: 950,
-                  py: 1.45,
+                  height: 40,
+                  py: 0,
                   borderColor: (theme) =>
                     theme.palette.mode === "dark"
                       ? "rgba(148,163,184,0.22)"
@@ -1612,18 +1881,24 @@ export function YearSpreadsheet({
                     key={monthItem.value}
                     align="right"
                     sx={{
-                      position: "relative",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 20,
                       overflow: "visible",
                       fontWeight: 950,
-                      pt: 1.05,
-                      pb: 1.05,
-                      px: 0.35,
+                      height: 40,
+                      py: 0,
+                      px: 0.5,
                       minWidth: monthColumnMinWidth,
                       fontSize: tableHeaderFontSize,
                       bgcolor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "#132238 !important"
-                          : "#FFFFFF !important",
+                        isCurrent
+                          ? theme.palette.mode === "dark"
+                            ? "rgba(37,99,235,0.18) !important"
+                            : "rgba(239,246,255,0.95) !important"
+                          : theme.palette.mode === "dark"
+                            ? "#132238 !important"
+                            : "#FFFFFF !important",
                       color: (theme) =>
                         theme.palette.mode === "dark" ? "#E5EEF8" : "#0F172A",
                       borderLeft: isCurrent
@@ -1650,46 +1925,42 @@ export function YearSpreadsheet({
                   >
                     <Box
                       component="span"
-                      sx={{ display: "grid", justifyItems: "center", gap: 0.15 }}
+                      sx={{
+                        position: "relative",
+                        minHeight: 40,
+                        display: "grid",
+                        placeItems: "center",
+                      }}
                     >
                       {isCurrent ? (
                         <Box
                           component="span"
                           sx={{
-                            justifySelf: "end",
-                            mr: 0.25,
-                            minWidth: 40,
-                            height: 16,
-                            px: 0.5,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            position: "absolute",
+                            top: 3,
+                            right: 4,
+                            px: 0.55,
+                            py: 0.15,
                             borderRadius: 999,
                             bgcolor: financeColors.income,
                             color: "white",
                             fontSize: 9,
                             fontWeight: 950,
                             lineHeight: 1,
-                            boxShadow: "0 8px 18px rgba(37,99,235,0.22)",
-                            border: (theme) =>
-                              `2px solid ${theme.palette.mode === "dark" ? "#132238" : "white"}`,
                           }}
                         >
                           {t("current")}
                         </Box>
-                      ) : (
-                        <Box component="span" sx={{ height: 16 }} />
-                      )}
-                      <Box
-                        component="span"
-                        sx={{
-                          color: (theme) =>
-                            theme.palette.mode === "dark" ? "#E5EEF8" : "#0F172A",
-                          whiteSpace: "nowrap",
-                        }}
+                      ) : null}
+                      <Typography
+                        variant="caption"
+                        fontWeight={950}
+                        color="text.primary"
+                        lineHeight={1}
+                        sx={{ whiteSpace: "nowrap" }}
                       >
                         {compactMonthLabels[monthItem.value] ?? monthItem.label}
-                      </Box>
+                      </Typography>
                     </Box>
                   </TableCell>
                 );
@@ -1697,6 +1968,9 @@ export function YearSpreadsheet({
               <TableCell
                 align="right"
                 sx={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 21,
                   bgcolor: (theme) =>
                     theme.palette.mode === "dark"
                       ? "rgba(15,118,110,0.26) !important"
@@ -1707,7 +1981,8 @@ export function YearSpreadsheet({
                       : "#0F766E !important",
                   fontWeight: 950,
                   width: totalColumnWidth,
-                  py: 1.45,
+                  height: 40,
+                  py: 0,
                   borderBottom: `2px solid ${sheetColors.grid}`,
                   ...totalColumnSx,
                 }}
