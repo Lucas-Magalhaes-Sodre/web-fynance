@@ -22,6 +22,7 @@ type Props = {
   month: number;
   year: number;
   currentValue: number;
+  yearMonthValues?: Record<number, number>;
   type: EntryType | 'INVESTMENT';
   currentMonthIncome: number;
   currentMonthExpense: number;
@@ -40,6 +41,7 @@ type Props = {
     creditCardInstallments?: number | null;
     creditCardFirstInstallmentMonth?: number | null;
     creditCardFirstInstallmentYear?: number | null;
+    monthlyValues?: Array<{ month: number; amount: number }>;
   }) => Promise<void>;
 };
 
@@ -50,6 +52,7 @@ export function ValueEditModal({
   month,
   year,
   currentValue,
+  yearMonthValues,
   type,
   currentMonthIncome,
   currentMonthExpense,
@@ -70,6 +73,8 @@ export function ValueEditModal({
   const [creditCardInstallments, setCreditCardInstallments] = useState(String(initialCreditCardInstallments || 1));
   const [firstInstallmentMonth, setFirstInstallmentMonth] = useState(String(month));
   const [firstInstallmentYear, setFirstInstallmentYear] = useState(String(year));
+  const [monthlyMode, setMonthlyMode] = useState(false);
+  const [monthlyAmounts, setMonthlyAmounts] = useState<Record<number, string>>({});
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const isCreditCardExpenseCategory = useMemo(() => {
     const normalized = (sourceCategory ?? category)
@@ -81,9 +86,23 @@ export function ValueEditModal({
   }, [category, sourceCategory]);
   const canPayWithCreditCard = type === 'EXPENSE' && !isCreditCardExpenseCategory;
   const effectivePaidWithCreditCard = canPayWithCreditCard && paidWithCreditCard;
+  const canUseMonthlyMode = type !== 'INVESTMENT' && !effectivePaidWithCreditCard;
+  const yearMonthValuesKey = useMemo(
+    () => months.map((_, index) => `${index + 1}:${yearMonthValues?.[index + 1] ?? 0}`).join('|'),
+    [yearMonthValues]
+  );
 
   useEffect(() => {
+    const nextMonthlyAmounts = Object.fromEntries(
+      months.map((_, index) => {
+        const monthNumber = index + 1;
+        const value = monthNumber === month ? currentValue : yearMonthValues?.[monthNumber] ?? 0;
+        return [monthNumber, formatMoney(value || 0)];
+      })
+    );
     setAmount(formatMoney(currentValue || 0));
+    setMonthlyMode(false);
+    setMonthlyAmounts(nextMonthlyAmounts);
     setScope('ONLY_THIS_PERIOD');
     setDescription('');
     setPaidWithCreditCard(initialPaidWithCreditCard);
@@ -91,7 +110,11 @@ export function ValueEditModal({
     setCreditCardInstallments(String(initialCreditCardInstallments || 1));
     setFirstInstallmentMonth(String(month));
     setFirstInstallmentYear(String(year));
-  }, [currentValue, initialCreditCardId, initialCreditCardInstallments, initialPaidWithCreditCard, month, open, year]);
+  }, [currentValue, initialCreditCardId, initialCreditCardInstallments, initialPaidWithCreditCard, month, open, year, yearMonthValuesKey]);
+
+  useEffect(() => {
+    if (effectivePaidWithCreditCard) setMonthlyMode(false);
+  }, [effectivePaidWithCreditCard]);
 
   useEffect(() => {
     if (!open) return;
@@ -121,6 +144,15 @@ export function ValueEditModal({
   }, [canPayWithCreditCard, month, open, year]);
 
   const numericAmount = currencyToNumber(amount) || 0;
+  const numericMonthlyValues = useMemo(
+    () => months.map((_, index) => ({
+      month: index + 1,
+      amount: currencyToNumber(monthlyAmounts[index + 1] ?? '') || 0
+    })),
+    [monthlyAmounts]
+  );
+  const monthlyFilledCount = numericMonthlyValues.filter((item) => item.amount > 0).length;
+  const monthlyAnnualTotal = numericMonthlyValues.reduce((sum, item) => sum + item.amount, 0);
   const installmentCount = Math.max(1, Number(creditCardInstallments || 1));
   const installmentAmount = installmentCount > 0 ? numericAmount / installmentCount : numericAmount;
   const selectedCreditCard = creditCards.find((card) => card.id === creditCardId);
@@ -138,6 +170,15 @@ export function ValueEditModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
+    if (monthlyMode && canUseMonthlyMode) {
+      await onSubmit({
+        amount: numericAmount,
+        scope: 'ONLY_THIS_PERIOD',
+        description: description || null,
+        monthlyValues: numericMonthlyValues
+      });
+      return;
+    }
     await onSubmit({
       amount: numericAmount,
       scope: effectivePaidWithCreditCard ? 'ONLY_THIS_PERIOD' : scope,
@@ -178,14 +219,72 @@ export function ValueEditModal({
               {months[month - 1]} de {year} • {type === 'INCOME' ? 'Receita' : type === 'EXPENSE' ? 'Despesa' : 'Economia'}
             </Typography>
           </Stack>
-          <MoneyTextField
-            label="Novo valor"
-            required
-            value={amount}
-            onValueChange={setAmount}
-            inputRef={amountInputRef}
-            helperText={`Valor atual: ${formatMoney(currentValue)}`}
-          />
+          {canUseMonthlyMode ? (
+            <S.PreviewPanel spacing={1}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={monthlyMode}
+                    onChange={(event) => setMonthlyMode(event.target.checked)}
+                  />
+                }
+                label="Informar valores diferentes por mês"
+              />
+              <Typography variant="body2" color="text.secondary">
+                Use essa opção para preencher vários meses desta mesma linha de uma vez, sem editar célula por célula.
+              </Typography>
+            </S.PreviewPanel>
+          ) : null}
+          {monthlyMode && canUseMonthlyMode ? (
+            <Stack spacing={1.5}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                gap={1}
+                flexWrap="wrap"
+              >
+                <Typography fontWeight={900}>Valores de {year}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {monthlyFilledCount} mês(es) preenchido(s) • Total anual {formatMoney(monthlyAnnualTotal)}
+                </Typography>
+              </Stack>
+              <Stack
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+                  gap: 1.5
+                }}
+              >
+                {months.map((label, index) => {
+                  const monthNumber = index + 1;
+                  return (
+                    <MoneyTextField
+                      key={label}
+                      label={label.charAt(0).toUpperCase() + label.slice(1)}
+                      value={monthlyAmounts[monthNumber] ?? formatMoney(0)}
+                      onValueChange={(value) => {
+                        setMonthlyAmounts((current) => ({ ...current, [monthNumber]: value }));
+                      }}
+                      helperText={monthNumber === month ? 'Mês selecionado' : undefined}
+                    />
+                  );
+                })}
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                Meses deixados em zero ficarão sem lançamento nesta linha.
+              </Typography>
+            </Stack>
+          ) : (
+            <MoneyTextField
+              label="Novo valor"
+              required
+              value={amount}
+              onValueChange={setAmount}
+              inputRef={amountInputRef}
+              helperText={`Valor atual: ${formatMoney(currentValue)}`}
+            />
+          )}
           <TextField label="Descrição opcional" multiline minRows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
           {canPayWithCreditCard ? (
             <S.PreviewPanel spacing={1.5}>
@@ -250,7 +349,17 @@ export function ValueEditModal({
               ) : null}
             </S.PreviewPanel>
           ) : null}
-          {effectivePaidWithCreditCard ? (
+          {monthlyMode && canUseMonthlyMode ? (
+            <S.PreviewPanel spacing={1.2}>
+              <Typography fontWeight={900}>Resumo da edição em massa</Typography>
+              <Typography color="text.secondary">
+                Os 12 meses desta linha serão sincronizados com os valores informados acima.
+              </Typography>
+              <Typography color={type === 'INCOME' ? financeColors.income : financeColors.expense}>
+                Total anual informado: {formatMoney(monthlyAnnualTotal)}
+              </Typography>
+            </S.PreviewPanel>
+          ) : effectivePaidWithCreditCard ? (
             <Typography variant="body2" color="text.secondary">
               Essa configuração será aplicada somente a esta célula.
             </Typography>
@@ -261,7 +370,7 @@ export function ValueEditModal({
               <FormControlLabel value="ALL_YEAR" control={<Radio />} label="Alterar todos os meses do ano" />
             </RadioGroup>
           )}
-          {effectivePaidWithCreditCard ? (
+          {monthlyMode && canUseMonthlyMode ? null : effectivePaidWithCreditCard ? (
             <S.PreviewPanel spacing={1.2}>
               <Typography fontWeight={900}>Resumo do lançamento no cartão</Typography>
               <Typography color="text.secondary">

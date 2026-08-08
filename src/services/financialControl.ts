@@ -415,6 +415,15 @@ export async function updateEntryValue(id: string, payload: {
   return data;
 }
 
+export async function updateEntryMonthlyValues(id: string, payload: {
+  year: number;
+  description?: string | null;
+  values: Array<{ month: number; amount: number }>;
+}) {
+  const { data } = await api.patch(`/financial-items/${id}/month-values`, payload);
+  return data;
+}
+
 export async function updateCreditCardStatementValue(payload: {
   category: string;
   name: string;
