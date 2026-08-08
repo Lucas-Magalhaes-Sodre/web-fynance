@@ -963,6 +963,21 @@ export function FinancialControlPage() {
     return Array.from({ length: 12 }, (_, index) => index + 1);
   }
 
+  function isCreditCardExpenseCategory(category: string, type: EntryType) {
+    if (type !== "EXPENSE") return false;
+    const normalizedCategory = category
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pt-BR")
+      .trim();
+    return [
+      "cartao",
+      "cartoes",
+      "cartao de credito",
+      "cartoes de credito",
+    ].includes(normalizedCategory);
+  }
+
   async function saveInvestmentCellValue(payload: {
     amount: number;
     scope: ValueUpdateScope;
@@ -1028,16 +1043,47 @@ export function FinancialControlPage() {
       return;
     }
 
-    const item = findCellItem(
+    let item = findCellItem(
       cellEdit.category,
       cellEdit.name,
       cellEdit.month,
       cellEdit.type,
     );
     if (!item) {
-      setDefaultType(cellEdit.type);
-      setFormOpen(true);
-      return;
+      if (isCreditCardExpenseCategory(cellEdit.category, cellEdit.type)) {
+        if (payload.amount <= 0) {
+          setCellEdit(null);
+          setNotice("Valor atualizado com sucesso.");
+          return;
+        }
+
+        setCellSaving(true);
+        try {
+          const occurrenceDate = dateForMonthlyOccurrence(year, cellEdit.month, 1);
+          item = await createEntry({
+            name: cellEdit.name,
+            description: payload.description ?? null,
+            amount: payload.amount,
+            type: "EXPENSE",
+            category: cellEdit.category,
+            date: occurrenceDate,
+            month: cellEdit.month,
+            year,
+            dueDate: occurrenceDate,
+            paymentDate: null,
+            status: "PENDENTE",
+            isFixed: false,
+            recurrenceType: "NONE",
+          });
+        } catch (error) {
+          setCellSaving(false);
+          throw error;
+        }
+      } else {
+        setDefaultType(cellEdit.type);
+        setFormOpen(true);
+        return;
+      }
     }
     setCellSaving(true);
     try {
