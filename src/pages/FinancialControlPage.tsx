@@ -30,6 +30,7 @@ import {
   listFinancialGoals,
   SavingPayload,
   transferSaving,
+  updateCreditCardStatementValue,
   updateEntry,
   updateEntryPaymentStatus,
   updateEntryValue,
@@ -216,6 +217,7 @@ export function FinancialControlPage() {
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [cellEdit, setCellEdit] = useState<SpreadsheetCellEdit | null>(null);
   const [cellSaving, setCellSaving] = useState(false);
+  const [updatingCell, setUpdatingCell] = useState<SpreadsheetCellEdit | null>(null);
   const [lineEdit, setLineEdit] = useState<LineEditState | null>(null);
   const [lineSaving, setLineSaving] = useState(false);
   const [copyCategory, setCopyCategory] = useState<{
@@ -431,16 +433,19 @@ export function FinancialControlPage() {
     return Array.from(options).sort((a, b) => a - b);
   }, [year]);
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
-    if (mode === "year") setYearData(null);
-    if (mode === "month") {
-      setMonthData(null);
-      setCalendarData(null);
+  async function loadData(options?: { silent?: boolean }) {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setLoading(true);
+      setError("");
+      if (mode === "year") setYearData(null);
+      if (mode === "month") {
+        setMonthData(null);
+        setCalendarData(null);
+      }
+      if (mode === "day") setDayData(null);
+      if (mode === "week") setWeekData(null);
     }
-    if (mode === "day") setDayData(null);
-    if (mode === "week") setWeekData(null);
     try {
       if (mode === "year") setYearData(await getYearControl(year));
       if (mode === "month") {
@@ -454,17 +459,21 @@ export function FinancialControlPage() {
       if (mode === "day") setDayData(await getDayControl(date));
       if (mode === "week")
         setWeekData(await getWeekControl(week.startDate, week.endDate));
+      return true;
     } catch {
-      if (mode === "year") setYearData(null);
-      if (mode === "month") {
-        setMonthData(null);
-        setCalendarData(null);
+      if (!silent) {
+        if (mode === "year") setYearData(null);
+        if (mode === "month") {
+          setMonthData(null);
+          setCalendarData(null);
+        }
+        if (mode === "day") setDayData(null);
+        if (mode === "week") setWeekData(null);
+        setError("Não foi possível carregar os dados financeiros.");
       }
-      if (mode === "day") setDayData(null);
-      if (mode === "week") setWeekData(null);
-      setError("Não foi possível carregar os dados financeiros.");
+      return false;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -674,7 +683,7 @@ export function FinancialControlPage() {
         });
       }
       setSavingFormOpen(false);
-      await loadData();
+      await loadData({ silent: true });
       await loadAvailableSavings();
       setNotice(savingForm.action === "REGISTER" ? "Economia registrada com sucesso." : "Resgate realizado com sucesso.");
     } finally {
@@ -703,7 +712,7 @@ export function FinancialControlPage() {
       await Promise.all((createdItem.generatedItems ?? [createdItem]).map((item) => createEntryReminder(item, reminder)));
       setNotice("Lançamento criado com sucesso.");
     }
-    await loadData();
+    await loadData({ silent: true });
   }
 
   async function removeItem(item: FinancialItem) {
@@ -715,7 +724,7 @@ export function FinancialControlPage() {
     });
     if (!confirmed) return;
     await deleteEntry(item.id);
-    await loadData();
+    await loadData({ silent: true });
     setNotice("Lançamento excluído com sucesso.");
   }
 
@@ -770,7 +779,7 @@ export function FinancialControlPage() {
         updateEntryPaymentStatus(item.id, { status: "PAGO" }),
       ),
     );
-    await loadData();
+    await loadData({ silent: true });
     setNotice(payableItems.length === 1 ? "Conta marcada como paga." : "Contas marcadas como pagas.");
   }
 
@@ -780,7 +789,7 @@ export function FinancialControlPage() {
 
   async function markItemPending(item: FinancialItem) {
     await updateEntryPaymentStatus(item.id, { status: "PENDENTE" });
-    await loadData();
+    await loadData({ silent: true });
     setNotice("Conta marcada como pendente.");
   }
 
@@ -818,7 +827,7 @@ export function FinancialControlPage() {
         items.map((item) => updateEntry(item.id, itemPayload(item, newName))),
       );
       setLineEdit(null);
-      await loadData();
+      await loadData({ silent: true });
       setNotice("Linha renomeada com sucesso.");
     } finally {
       setLineSaving(false);
@@ -839,7 +848,7 @@ export function FinancialControlPage() {
     if (!confirmed) return;
     const items = lineItems(category, name, type);
     await Promise.all(items.map((item) => deleteEntry(item.id)));
-    await loadData();
+    await loadData({ silent: true });
     setNotice("Linha excluída com sucesso.");
   }
 
@@ -858,7 +867,7 @@ export function FinancialControlPage() {
         saving.year === year,
     );
     await Promise.all(savings.map((saving) => deleteSaving(saving.id)));
-    await Promise.all([loadData(), loadAvailableSavings()]);
+    await Promise.all([loadData({ silent: true }), loadAvailableSavings()]);
     setNotice("Subitem de economia excluído com sucesso.");
   }
 
@@ -891,7 +900,7 @@ export function FinancialControlPage() {
       });
       setCopyDialogOpen(false);
       setCopyCategory(null);
-      await loadData();
+      await loadData({ silent: true });
       setNotice("Dados copiados com sucesso.");
     } finally {
       setCopySaving(false);
@@ -922,7 +931,7 @@ export function FinancialControlPage() {
       setBulkDeleteDialogOpen(false);
       setBulkDeleteCategory(null);
       setBulkDeleteSelectedSubItems([]);
-      await Promise.all([loadData(), loadAvailableSavings()]);
+      await Promise.all([loadData({ silent: true }), loadAvailableSavings()]);
       setNotice("Dados excluídos com sucesso.");
     } finally {
       setBulkDeleting(false);
@@ -1031,14 +1040,16 @@ export function FinancialControlPage() {
   }) {
     if (!cellEdit) return;
     if (cellEdit.type === "INVESTMENT") {
+      setUpdatingCell(cellEdit);
       setCellSaving(true);
       try {
         await saveInvestmentCellValue(payload);
         setCellEdit(null);
-        await Promise.all([loadData(), loadAvailableSavings()]);
+        await Promise.all([loadData({ silent: true }), loadAvailableSavings()]);
         setNotice("Valor atualizado com sucesso.");
       } finally {
         setCellSaving(false);
+        setUpdatingCell(null);
       }
       return;
     }
@@ -1051,40 +1062,36 @@ export function FinancialControlPage() {
     );
     if (!item) {
       if (isCreditCardExpenseCategory(cellEdit.category, cellEdit.type)) {
-        if (payload.amount <= 0) {
-          setCellEdit(null);
-          setNotice("Valor atualizado com sucesso.");
-          return;
-        }
-
+        setUpdatingCell(cellEdit);
         setCellSaving(true);
         try {
           const occurrenceDate = dateForMonthlyOccurrence(year, cellEdit.month, 1);
-          item = await createEntry({
-            name: cellEdit.name,
-            description: payload.description ?? null,
-            amount: payload.amount,
-            type: "EXPENSE",
+          await updateCreditCardStatementValue({
             category: cellEdit.category,
-            date: occurrenceDate,
+            name: cellEdit.name,
             month: cellEdit.month,
             year,
-            dueDate: occurrenceDate,
-            paymentDate: null,
-            status: "PENDENTE",
-            isFixed: false,
-            recurrenceType: "NONE",
+            amount: payload.amount,
+            date: occurrenceDate,
+            scope: payload.scope,
+            periodType: "MONTH",
+            description: payload.description,
           });
-        } catch (error) {
+          setCellEdit(null);
+          await loadData({ silent: true });
+          setNotice("Valor atualizado com sucesso.");
+        } finally {
           setCellSaving(false);
-          throw error;
+          setUpdatingCell(null);
         }
+        return;
       } else {
         setDefaultType(cellEdit.type);
         setFormOpen(true);
         return;
       }
     }
+    setUpdatingCell(cellEdit);
     setCellSaving(true);
     try {
       await updateEntryValue(item.id, {
@@ -1100,10 +1107,11 @@ export function FinancialControlPage() {
         creditCardFirstInstallmentYear: payload.creditCardFirstInstallmentYear,
       });
       setCellEdit(null);
-      await loadData();
+      await loadData({ silent: true });
       setNotice("Valor atualizado com sucesso.");
     } finally {
       setCellSaving(false);
+      setUpdatingCell(null);
     }
   }
 
@@ -1143,7 +1151,7 @@ export function FinancialControlPage() {
         description: item.description ?? null,
       });
       setFillConfirmation(null);
-      await loadData();
+      await loadData({ silent: true });
       setNotice("Valores copiados com sucesso.");
     } finally {
       setCellSaving(false);
@@ -1295,6 +1303,7 @@ export function FinancialControlPage() {
           categoryColor={categoryColor}
           rowsForCategory={rowsForCategory}
           notesForCategory={notesForCategory}
+          updatingCell={updatingCell}
           isDetailExpanded={isDetailExpanded}
           isInvestmentDetailExpanded={isInvestmentDetailExpanded}
           onToggleIncomeRows={() => setIncomeRowsExpanded((expanded) => !expanded)}

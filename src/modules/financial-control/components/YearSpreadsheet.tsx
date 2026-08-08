@@ -14,6 +14,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -71,6 +72,7 @@ type YearSpreadsheetProps = {
     category: string,
     monthValue: number,
   ) => string[];
+  updatingCell?: SpreadsheetCellEdit | null;
   isDetailExpanded: (type: EntryType, category: string) => boolean;
   isInvestmentDetailExpanded: (category: string) => boolean;
   onToggleIncomeRows: () => void;
@@ -118,6 +120,7 @@ export function YearSpreadsheet({
   categoryColor,
   rowsForCategory,
   notesForCategory,
+  updatingCell,
   isDetailExpanded,
   isInvestmentDetailExpanded,
   onToggleIncomeRows,
@@ -210,6 +213,15 @@ export function YearSpreadsheet({
     const base = theme.palette.mode === "dark" ? "#0f1b2d" : "#FFFFFF";
     return readableTableValueBackground(color, base);
   };
+  const isUpdatingSpreadsheetCell = (cell?: SpreadsheetCellEdit) =>
+    Boolean(
+      updatingCell &&
+        cell &&
+        updatingCell.category === cell.category &&
+        updatingCell.name === cell.name &&
+        updatingCell.type === cell.type &&
+        updatingCell.month === cell.month,
+    );
   const resultAmountColor = (value: number) => (theme: Theme) =>
     value === 0 && theme.palette.mode === "dark" ? "#E5EEF8" : amountColor(value);
   const positiveResultBg = (theme: Theme) =>
@@ -489,6 +501,7 @@ export function YearSpreadsheet({
       fillCell!.month > fillDrag!.month &&
       fillCell!.month <= fillHover!.month;
     const displayValue = isFillPreview ? fillDrag?.value ?? value : value;
+    const isUpdating = isUpdatingSpreadsheetCell(fillCell);
     const hasLinkedValue = !isCategory && linkedValue > 0;
     const visibleValue = displayValue > 0 || !hasLinkedValue ? displayValue : linkedValue;
     const cleanNotes = [...notes, ...linkedNotes].filter(Boolean);
@@ -548,6 +561,12 @@ export function YearSpreadsheet({
             ? {
                 boxShadow:
                   "inset 0 0 0 2px rgba(20,184,166,0.85), inset 0 0 0 9999px rgba(20,184,166,0.08)",
+              }
+            : {}),
+          ...(isUpdating
+            ? {
+                boxShadow:
+                  "inset 0 0 0 2px rgba(45,212,191,0.9), inset 0 0 0 9999px rgba(45,212,191,0.08)",
               }
             : {}),
           "&:hover": onClick
@@ -618,6 +637,24 @@ export function YearSpreadsheet({
               }}
             />
           </Tooltip>
+        ) : null}
+        {isUpdating ? (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(2,6,23,0.48)"
+                  : "rgba(255,255,255,0.58)",
+              pointerEvents: "none",
+            }}
+          >
+            <CircularProgress size={18} thickness={5} />
+          </Box>
         ) : null}
       </TableCell>
     );
@@ -983,37 +1020,63 @@ export function YearSpreadsheet({
               </Tooltip>
             </Stack>
           </TableCell>
-          {yearData.months.map((monthItem) => (
-            <TableCell
-              key={monthItem.value}
-              align="right"
-              sx={{
-                position: "relative",
-                color: tableValueText(color),
-                bgcolor: tableValueBg(color),
-                fontWeight: 750,
-                borderRight: `1px solid ${color}`,
-                borderBottom: `1px solid ${color}`,
-                cursor: "pointer",
-                "&:hover": {
-                  bgcolor: (theme) =>
-                    theme.palette.mode === "dark" ? "rgba(212,160,23,0.18)" : "rgba(212,160,23,0.08)",
-                },
-              }}
-              onClick={() =>
-                onEditCell({
-                  category: child.category,
-                  name: child.name,
-                  month: monthItem.value,
-                  type: "INVESTMENT",
-                  value: child.months[monthItem.value] ?? 0,
-                })
-              }
-            >
-              {noteMarker(child.notes[monthItem.value] ?? [])}
-              {formatMoney(child.months[monthItem.value] ?? 0)}
-            </TableCell>
-          ))}
+          {yearData.months.map((monthItem) => {
+            const cell = {
+              category: child.category,
+              name: child.name,
+              month: monthItem.value,
+              type: "INVESTMENT" as const,
+              value: child.months[monthItem.value] ?? 0,
+            };
+            const isUpdating = isUpdatingSpreadsheetCell(cell);
+            return (
+              <TableCell
+                key={monthItem.value}
+                align="right"
+                sx={{
+                  position: "relative",
+                  color: tableValueText(color),
+                  bgcolor: tableValueBg(color),
+                  fontWeight: 750,
+                  borderRight: `1px solid ${color}`,
+                  borderBottom: `1px solid ${color}`,
+                  cursor: "pointer",
+                  ...(isUpdating
+                    ? {
+                        boxShadow:
+                          "inset 0 0 0 2px rgba(45,212,191,0.9), inset 0 0 0 9999px rgba(45,212,191,0.08)",
+                      }
+                    : {}),
+                  "&:hover": {
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark" ? "rgba(212,160,23,0.18)" : "rgba(212,160,23,0.08)",
+                  },
+                }}
+                onClick={() => onEditCell(cell)}
+              >
+                {noteMarker(child.notes[monthItem.value] ?? [])}
+                {formatMoney(child.months[monthItem.value] ?? 0)}
+                {isUpdating ? (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(2,6,23,0.48)"
+                          : "rgba(255,255,255,0.58)",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <CircularProgress size={18} thickness={5} />
+                  </Box>
+                ) : null}
+              </TableCell>
+            );
+          })}
           <TableCell
             align="right"
             sx={{

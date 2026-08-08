@@ -415,6 +415,22 @@ export async function updateEntryValue(id: string, payload: {
   return data;
 }
 
+export async function updateCreditCardStatementValue(payload: {
+  category: string;
+  name: string;
+  month: number;
+  year: number;
+  amount: number;
+  date: string;
+  scope: ValueUpdateScope;
+  periodType: PeriodType;
+  endMonth?: number;
+  description?: string | null;
+}) {
+  const { data } = await api.patch('/financial-items/credit-card-statement/value', payload);
+  return data;
+}
+
 export async function listSavings(params?: {
   startDate?: string;
   endDate?: string;
